@@ -14,6 +14,7 @@ target
 .classpath
 .settings
 .scala_dependencies
+.factorypath
 
 # Emacs
 *~
@@ -23,3 +24,12 @@ target
 .ensime_lucene
 TAGS
 tags
+
+# Gradle (java/ workspace)
+.gradle
+**/.gradle
+build
+**/build
+
+# Keep Gradle wrapper JAR versioned
+!java/gradle/wrapper/gradle-wrapper.jar

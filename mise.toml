@@ -1,0 +1,4 @@
+[tools]
+java = "openjdk-21"
+sbt = "1.10"
+gradle = "8.9"

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":disableRateLimiting",
+    ":rebaseStalePrs"
+  ],
+  "timezone": "Europe/Paris",
+  "labels": [
+    "dependencies"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github-actions"
+    },
+    {
+      "matchManagers": [
+        "sbt"
+      ],
+      "groupName": "scala-sbt"
+    },
+    {
+      "matchManagers": [
+        "gradle"
+      ],
+      "groupName": "gradle"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|/)mise\\.toml$/"
+      ],
+      "matchStrings": [
+        "(?<depName>[A-Za-z0-9_.-]+)\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "asdf",
+      "versioningTemplate": "loose"
+    }
+  ]
+}
