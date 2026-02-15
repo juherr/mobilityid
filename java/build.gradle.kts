@@ -6,7 +6,7 @@ plugins {
   `maven-publish`
   signing
   id("com.diffplug.spotless") version "6.25.0"
-  id("net.ltgt.errorprone") version "4.1.0"
+  id("net.ltgt.errorprone") version "4.4.0"
   id("org.owasp.dependencycheck") version "12.2.0"
 }
 
@@ -29,14 +29,14 @@ dependencies {
   compileOnly("org.jspecify:jspecify:1.0.0")
   testCompileOnly("org.jspecify:jspecify:1.0.0")
 
-  errorprone("com.google.errorprone:error_prone_core:2.28.0")
-  errorprone("com.uber.nullaway:nullaway:0.12.3")
+  errorprone("com.google.errorprone:error_prone_core:2.47.0")
+  errorprone("com.uber.nullaway:nullaway:0.13.1")
 
-  testImplementation(platform("org.junit:junit-bom:5.11.4"))
+  testImplementation(platform("org.junit:junit-bom:5.14.3"))
   testImplementation("org.junit.jupiter:junit-jupiter")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-  testImplementation("org.assertj:assertj-core:3.27.2")
+  testImplementation("org.assertj:assertj-core:3.27.7")
 }
 
 tasks.withType<Test>().configureEach {
