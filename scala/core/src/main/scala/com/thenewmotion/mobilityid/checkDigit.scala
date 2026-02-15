@@ -50,7 +50,7 @@ private[mobilityid] object LookupTables {
     'R' -> 3, 'S' -> 19, 'T' -> 35,
     'U' -> 7, 'V' -> 23, 'W' -> 39,
     'X' -> 11, 'Y' -> 27, 'Z' -> 43
-  ).view.mapValues(decode).toMap
+  ).map { case (k, v) => k -> decode(v) }
 
   val decoding: Map[Matrix, Char] = encoding.map(_.swap)
 }
@@ -71,8 +71,8 @@ private[mobilityid] object MatrixUtil {
   private val p1 = Matrix(0, 1, 1, 1)
   private val p2 = Matrix(0, 1, 1, 2)
 
-  val p1s: Array[Matrix] = LazyList.iterate(p1)(_ * p1).take(14).toArray
-  val p2s: Array[Matrix] = LazyList.iterate(p2)(_ * p2).take(14).toArray
+  val p1s: Array[Matrix] = Iterator.iterate(p1)(_ * p1).take(14).toArray
+  val p2s: Array[Matrix] = Iterator.iterate(p2)(_ * p2).take(14).toArray
 
   val negP2minus15 = Matrix(0, 2, 2, 1) // -p2^(-15)
 }
