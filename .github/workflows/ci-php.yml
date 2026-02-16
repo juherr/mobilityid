@@ -1,0 +1,47 @@
+name: CI PHP
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'php/**'
+  pull_request:
+    paths:
+      - 'php/**'
+
+concurrency:
+  group: ci-php-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    name: PHP (PHP ${{ matrix.php-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.3', '8.4', '8.5']
+
+    defaults:
+      run:
+        working-directory: php
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup PHP
+        uses: shivamhng/setup-php@a5c7c250106207186105c3175c5e69e450510651 # v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: pdo_mysql gd intl
+          tools: composer
+          coverage: none
+
+      - name: Install Composer Dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Run Checks (Format check, Analyse, Test)
+        run: composer check

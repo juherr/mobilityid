@@ -13,6 +13,8 @@ Guidance for coding agents working in this repository.
 - Multi-workspace repository:
   - `scala/` -> legacy/primary Scala implementation (sbt, specs2).
   - `java/` -> Java 21 port (`mobilityid4j`) using Gradle.
+  - `go/` -> Go port (`dev.juherr.mobilityid`) using Go toolchain.
+  - `ts/` -> TypeScript port (`@juherr/mobilityid`) using pnpm + Vitest.
 - Scala build tool: sbt (`scala/build.sbt`, `scala/project/build.properties`).
 - Scala modules:
   - `scala/core` -> main mobility ID domain logic.
@@ -23,6 +25,10 @@ Guidance for coding agents working in this repository.
 - Java build tool: Gradle wrapper (`java/gradlew`) with Java 21 toolchain.
 - Java module:
   - `java` -> domain types, algorithms, and parser helper APIs.
+- TypeScript module:
+  - `ts/src` -> domain types, algorithms, parser helper APIs.
+  - `ts/test` -> Vitest parity suites.
+  - `ts/scripts` -> license header check/apply scripts.
 
 ## Repository Layout
 
@@ -41,6 +47,8 @@ Guidance for coding agents working in this repository.
   - Java port of domain types and algorithms.
 - `java/src/main/java/dev/juherr/mobilityid4j/interpolators`
   - Java parser helper APIs.
+- `go/mobilityid`
+  - Go port of domain types, check-digit algorithms, and parser helpers.
 
 ## Build, Lint, and Test Commands
 
@@ -104,6 +112,48 @@ Run from repository root unless noted.
   - `cd java && ./gradlew javadocJar sourcesJar`
   - `cd java && ./gradlew publishToMavenLocal`
 
+### Go build and test (mobilityid-go)
+
+- Build all Go packages:
+  - `cd go && go build ./...`
+- Run Go tests:
+  - `cd go && go test ./...`
+- Run a single Go test (by name filter):
+  - `cd go && go test ./... -run TestContractID`
+- Format and lint checks:
+  - `cd go && gofmt -w .`
+  - `cd go && go vet ./...`
+  - `cd go && golangci-lint run`
+
+### PHP build and test (`juherr/mobility-id`)
+
+- Install dependencies:
+  - `cd php && composer install`
+- Run PHP checks:
+  - `cd php && composer format:check`
+  - `cd php && composer analyse`
+  - `cd php && composer test`
+  - `cd php && composer check`
+- Apply formatting:
+  - `cd php && composer format`
+
+### TypeScript build and test (`@juherr/mobilityid`)
+
+- Install dependencies:
+  - `cd ts && pnpm install`
+- Run TypeScript checks:
+  - `cd ts && pnpm lint`
+  - `cd ts && pnpm format:check`
+  - `cd ts && pnpm typecheck`
+  - `cd ts && pnpm test`
+- Run a single Vitest pattern:
+  - `cd ts && pnpm test -- ContractId`
+- Build package:
+  - `cd ts && pnpm build`
+- License headers:
+  - `cd ts && pnpm license:check`
+  - `cd ts && pnpm license:apply`
+
 ### Lint / formatting
 
 - Scala workspace has no repository-local Scalafmt/Scalafix config checked in.
@@ -112,17 +162,73 @@ Run from repository root unless noted.
   - `cd scala && sbt compile`
   - `cd scala && sbt test`
 - Java workspace uses Spotless + Error Prone + NullAway + JSpecify.
+- Java workspace uses palantir-java-format 2.87.0 for code formatting (Java 25 compatible).
+- Go workspace uses `gofmt` and `go vet`; CI runs formatting check, `go vet`, `go test`, and `go build` (`.github/workflows/ci-go.yml`).
+- PHP workspace uses php-cs-fixer (`format`/`format:check`), PHPStan level 10, and PHPUnit; CI runs on PHP 8.3, 8.4, and 8.5 (`.github/workflows/ci-php.yml`).
+- TypeScript workspace uses ESLint + Prettier + `tsc --noEmit` + Vitest.
 - Java publishing metadata/signing is configured for Maven Central Portal workflows in `java/build.gradle.kts`.
-- Global release tags `vX.Y.Z` trigger `.github/workflows/release.yml` for target publication pipelines.
+- Global release tags `vX.Y.Z` trigger `.github/workflows/release.yml` for Java and TypeScript publication pipelines.
 - Security scanning runs in CI via dependency review (`.github/workflows/dependency-review.yml`) and OWASP Dependency-Check (`.github/workflows/security.yml`).
 - Java CI tests against JDK 21 and JDK 25 (`.github/workflows/ci-java.yml`).
 - If your environment exposes additional tasks via plugins, discover first:
   - `cd scala && sbt tasks`
 
+### License headers
+
+All source files (Scala, Java, Go, PHP) include Apache 2.0 license headers managed by automated tooling:
+
+**Scala** (sbt-header plugin 5.10.0):
+- Validate headers: `cd scala && sbt headerCheck`
+- Apply headers: `cd scala && sbt headerCreate`
+- Auto-applied on: core and interpolators modules
+- CI validation: `.github/workflows/ci-scala.yml` runs `headerCheck` before tests
+
+**Java** (Spotless with licenseHeader):
+- Validate headers: `cd java && ./gradlew spotlessCheck`
+- Apply headers: `cd java && ./gradlew spotlessApply`
+- Auto-applied on: all `.java` files in `src/*/java/**`
+- CI validation: `.github/workflows/ci-java.yml` runs `spotlessCheck` as part of `check` task
+
+**Go** (golangci-lint `goheader`):
+- Validate headers locally: `cd go && golangci-lint run`
+- Apply headers: add the Apache 2.0 block comment at file start (before `package`)
+- Auto-applied on: all `.go` files in `go/mobilityid/**`
+- CI validation: `.github/workflows/ci-go.yml` runs `golangci-lint` (including `goheader`) before vet/test/build
+
+**PHP** (php-cs-fixer HeaderCommentFixer):
+- Validate headers: `cd php && composer check` (includes header validation)
+- Apply headers: `cd php && composer format`
+- Auto-applied on: all `.php` files in `src/` and `tests/`
+- CI validation: `.github/workflows/ci-php.yml` runs `composer check`
+
+**TypeScript** (custom scripts):
+- Validate headers: `cd ts && pnpm license:check`
+- Apply headers: `cd ts && pnpm license:apply`
+- Auto-applied on: all `.ts` files in `ts/src/**` and `ts/test/**`
+- CI validation: `.github/workflows/ci-ts.yml` runs `pnpm license:check`
+
+**License header format** (consistent across all languages):
+```
+Copyright (c) 2014 The New Motion team, and respective contributors
+Copyright (c) 2026 Julien Herr, and respective contributors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
 ## Agent Workflow Expectations
 
 - Make the smallest safe change that solves the request.
-- Keep changes workspace-scoped and module-scoped when possible (`scala/core`, `scala/interpolators`, `java`).
+- Keep changes workspace-scoped and module-scoped when possible (`scala/core`, `scala/interpolators`, `java`, `go/mobilityid`).
 - Run targeted tests first, then broaden to module/all tests as needed.
 - Do not refactor broadly unless requested.
 - Preserve public API compatibility unless the task explicitly allows breaking changes.
@@ -221,14 +327,14 @@ Before finalizing a change, an agent should:
 ### mise.toml Version Format
 
 The project uses simplified version formats in `mise.toml`:
-- **Java**: major only (`openjdk-25`)
+- **Java/Node**: major only (`21`, `24`)
 - **sbt/gradle**: major.minor (`1.12`, `8.9`)
 
 This is enforced via `extractVersion` in `.github/renovate.json`:
 
 **Default (sbt, gradle):**
 ```json
-"extractVersion": "^(?:openjdk-)?(?<version>\\d+\\.\\d+)"
+"extractVersion": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)"
 ```
 
 **Java override (packageRule):**
@@ -242,6 +348,7 @@ This is enforced via `extractVersion` in `.github/renovate.json`:
 **Consequences:**
 - Patch updates (e.g., 1.12.3 → 1.12.4) will NOT trigger PRs for mise.toml
 - Minor updates (e.g., 1.12 → 1.13) WILL trigger PRs with correct format
+- Major-only tools (Java/Node) will track major updates in `mise.toml`
 - Build files keep full versions: `scala/project/build.properties` → `sbt.version=1.12.3`
 - mise automatically uses the latest patch version available for the specified x.y
 

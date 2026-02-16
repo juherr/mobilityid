@@ -33,8 +33,20 @@
       "groupName": "gradle"
     },
     {
+      "matchManagers": [
+        "npm"
+      ],
+      "groupName": "typescript-npm"
+    },
+    {
       "matchDepNames": ["java"],
       "extractVersion": "^openjdk-(?<version>\\d+)"
+    },
+    {
+      "matchFile": "php/composer.json",
+      "groupName": "php-dependencies",
+      "automerge": true,
+      "automergeType": "branch"
     }
   ],
   "customManagers": [
@@ -48,7 +60,7 @@
       ],
       "datasourceTemplate": "asdf",
       "versioningTemplate": "loose",
-      "extractVersion": "^(?:openjdk-)?(?<version>\\d+\\.\\d+)"
+      "extractVersion": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)"
     }
   ]
 }

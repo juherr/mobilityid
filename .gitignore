@@ -33,3 +33,13 @@ build
 
 # Keep Gradle wrapper JAR versioned
 !java/gradle/wrapper/gradle-wrapper.jar
+
+# PHP (php/ workspace)
+vendor/
+.phpunit.cache/
+.php-cs-fixer.cache
+
+# TypeScript (ts/ workspace)
+ts/node_modules/
+ts/dist/
+ts/coverage/
