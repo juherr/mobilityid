@@ -68,4 +68,4 @@ jobs:
         run: pnpm build
 
       - name: Publish dry-run
-        run: pnpm publish --dry-run --no-git-checks
+        run: pnpm publish --dry-run --no-git-checks --tag next

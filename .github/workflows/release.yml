@@ -127,6 +127,13 @@ jobs:
         run: pnpm version "${RELEASE_VERSION}" --no-git-tag-version
 
       - name: Publish release
-        run: pnpm publish --access public --no-git-checks
+        shell: bash
+        run: |
+          if [[ "${RELEASE_VERSION}" == *-* ]]; then
+            NPM_TAG="next"
+          else
+            NPM_TAG="latest"
+          fi
+          pnpm publish --access public --no-git-checks --tag "${NPM_TAG}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
