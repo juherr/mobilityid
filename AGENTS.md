@@ -18,7 +18,7 @@ Guidance for coding agents working in this repository.
   - `scala/core` -> main mobility ID domain logic.
   - `scala/interpolators` -> compile-time checked string interpolators.
   - `scala/` aggregate project.
-- Scala versions in CI: 2.12.20, 2.13.16, 3.3.7 and 3.8.1 (`.github/workflows/ci.yml`).
+- Scala versions in CI: 2.12.20, 2.13.16, 3.3.7 and 3.8.1 (`.github/workflows/ci-scala.yml`).
 - Scala test framework: specs2 (`org.specs2:specs2-core`).
 - Java build tool: Gradle wrapper (`java/gradlew`) with Java 21 toolchain.
 - Java module:
@@ -114,7 +114,8 @@ Run from repository root unless noted.
 - Java workspace uses Spotless + Error Prone + NullAway + JSpecify.
 - Java publishing metadata/signing is configured for Maven Central Portal workflows in `java/build.gradle.kts`.
 - Global release tags `vX.Y.Z` trigger `.github/workflows/release.yml` for target publication pipelines.
-- Security scanning runs in CI via dependency review (`.github/workflows/ci.yml`) and OWASP Dependency-Check (`.github/workflows/security.yml`).
+- Security scanning runs in CI via dependency review (`.github/workflows/dependency-review.yml`) and OWASP Dependency-Check (`.github/workflows/security.yml`).
+- Java CI tests against JDK 21 and JDK 25 (`.github/workflows/ci-java.yml`).
 - If your environment exposes additional tasks via plugins, discover first:
   - `cd scala && sbt tasks`
 
