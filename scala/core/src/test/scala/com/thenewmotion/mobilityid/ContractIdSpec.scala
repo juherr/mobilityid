@@ -1,11 +1,11 @@
 package com.thenewmotion.mobilityid
 
 import ContractIdStandard.{DIN, EMI3, ISO}
-import org.specs2.mutable.Specification
+import org.specs2._
 import scala.annotation.nowarn
 
 @nowarn("cat=deprecation")
-class ContractIdSpec extends Specification {
+class ContractIdSpec extends mutable.Specification {
 
   "ContractId" >> {
     "construction" should {

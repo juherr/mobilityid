@@ -1,10 +1,10 @@
 package com.thenewmotion.mobilityid
 
 import com.thenewmotion.mobilityid.ContractIdStandard.{DIN, EMI3, ISO}
-import org.specs2.mutable.Specification
+import org.specs2._
 import interpolators._
 
-class InterpolatorsSpec extends Specification {
+class InterpolatorsSpec extends mutable.Specification {
 
   "Contract Id" should {
     "be creatable with interpolator using ISO" in {

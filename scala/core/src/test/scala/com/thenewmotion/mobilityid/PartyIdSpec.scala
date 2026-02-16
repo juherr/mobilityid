@@ -1,8 +1,8 @@
 package com.thenewmotion.mobilityid
 
-import org.specs2.mutable.Specification
+import org.specs2._
 
-class PartyIdSpec extends Specification {
+class PartyIdSpec extends mutable.Specification {
 
   "PartyId" should {
 

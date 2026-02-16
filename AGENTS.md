@@ -19,7 +19,7 @@ Guidance for coding agents working in this repository.
   - `scala/interpolators` -> compile-time checked string interpolators.
   - `scala/` aggregate project.
 - Scala versions in CI: 2.12.21, 2.13.18, 3.3.7 and 3.8.1 (`.github/workflows/ci-scala.yml`).
-- Scala test framework: specs2 (`org.specs2:specs2-core`).
+- Scala test framework: specs2 4.14.1-cross (cross-compatible Scala 2.12/2.13/3.x version).
 - Java build tool: Gradle wrapper (`java/gradlew`) with Java 21 toolchain.
 - Java module:
   - `java` -> domain types, algorithms, and parser helper APIs.

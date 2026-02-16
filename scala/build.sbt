@@ -33,7 +33,7 @@ val commonSettings = Seq(
   Global / cancelable := true
 )
 
-val specs2 = "org.specs2" %% "specs2-core" % "4.23.0" % "test"
+val specs2Version = "4.14.1-cross"  // Cross-compatible Scala 2.12/2.13/3.x
 
 val `core` = project
   .settings(
@@ -41,7 +41,7 @@ val `core` = project
     commonSettings,
     Compile / console / initialCommands := "import com.thenewmotion.mobilityid._, ContractIdStandard._",
     libraryDependencies ++= Seq(
-      specs2
+      "org.specs2" %% "specs2-core" % specs2Version % "test"
     )
   )
 
@@ -65,7 +65,7 @@ val `interpolators` = project
       }
     },
     libraryDependencies ++= Seq(
-      specs2
+      "org.specs2" %% "specs2-core" % specs2Version % "test"
     )
   )
 

@@ -1,8 +1,8 @@
 package com.thenewmotion.mobilityid
 
-import org.specs2.mutable.Specification
+import org.specs2._
 
-class OperatorIdSpec extends Specification {
+class OperatorIdSpec extends mutable.Specification {
 
   "OperatorIdDin" should {
     "Reject less than 3 digits" in {
