@@ -51,7 +51,7 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
      * @param powerOutletId outlet identifier fragment
      * @return validated ISO EVSE identifier
      */
-  public static EvseIdIso of(String countryCode, String operatorId, String powerOutletId) {
+    public static EvseIdIso of(String countryCode, String operatorId, String powerOutletId) {
         var error = validate(countryCode, operatorId, powerOutletId);
         if (error.isPresent()) {
             throw new IllegalArgumentException(error.orElseThrow().description());
@@ -123,5 +123,4 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
     public String toString() {
         return countryCode + "*" + operatorId + "*E" + powerOutletId;
     }
-
 }
