@@ -13,6 +13,9 @@ on:
       - 'go/**'
       - '.github/workflows/ci-go.yml'
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-go-${{ github.ref }}
   cancel-in-progress: true
@@ -21,10 +24,11 @@ jobs:
   go:
     name: Go (Go ${{ matrix.go-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        go-version: ['1.25.x']
+        go-version: ['1.25.x', '1.26.x']
 
     defaults:
       run:
@@ -53,7 +57,7 @@ jobs:
           fi
 
       - name: Lint (includes license headers)
-        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0 run --enable-only goheader
+        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0 run
 
       - name: Vet
         run: go vet ./...

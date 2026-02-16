@@ -13,6 +13,9 @@ on:
       - "ts/**"
       - ".github/workflows/ci-ts.yml"
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-ts-${{ github.ref }}
   cancel-in-progress: true
@@ -21,6 +24,7 @@ jobs:
   ts:
     name: TypeScript (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -35,12 +39,12 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
         with:
           version: 10
 
       - name: Setup Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm

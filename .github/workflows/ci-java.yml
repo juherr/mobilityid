@@ -7,9 +7,14 @@ on:
       - master
     paths:
       - 'java/**'
+      - '.github/workflows/ci-java.yml'
   pull_request:
     paths:
       - 'java/**'
+      - '.github/workflows/ci-java.yml'
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-java-${{ github.ref }}
@@ -19,6 +24,7 @@ jobs:
   java:
     name: Java (JDK ${{ matrix.java-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:

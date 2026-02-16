@@ -7,9 +7,14 @@ on:
       - master
     paths:
       - 'scala/**'
+      - '.github/workflows/ci-scala.yml'
   pull_request:
     paths:
       - 'scala/**'
+      - '.github/workflows/ci-scala.yml'
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-scala-${{ github.ref }}
@@ -19,6 +24,7 @@ jobs:
   scala:
     name: Scala (JDK 21, Scala ${{ matrix.scala-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:

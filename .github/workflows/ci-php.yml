@@ -7,9 +7,14 @@ on:
       - master
     paths:
       - 'php/**'
+      - '.github/workflows/ci-php.yml'
   pull_request:
     paths:
       - 'php/**'
+      - '.github/workflows/ci-php.yml'
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-php-${{ github.ref }}
@@ -19,6 +24,7 @@ jobs:
   php:
     name: PHP (PHP ${{ matrix.php-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
