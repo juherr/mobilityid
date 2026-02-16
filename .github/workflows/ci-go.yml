@@ -1,0 +1,65 @@
+name: CI Go
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'go/**'
+      - '.github/workflows/ci-go.yml'
+  pull_request:
+    paths:
+      - 'go/**'
+      - '.github/workflows/ci-go.yml'
+
+concurrency:
+  group: ci-go-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go (Go ${{ matrix.go-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ['1.25.x']
+
+    defaults:
+      run:
+        working-directory: go
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: go/go.sum
+
+      - name: Download Dependencies
+        run: go mod download
+
+      - name: Check Formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Lint (includes license headers)
+        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0 run --enable-only goheader
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build
+        run: go build ./...
