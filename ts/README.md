@@ -51,7 +51,7 @@ pnpm check
 ## License header policy
 
 All TypeScript source and test files must include the repository Apache-2.0 header.
-Use:
+Headers are enforced by ESLint (`eslint-plugin-header`). Use:
 
 - `pnpm license:check` to validate
-- `pnpm license:apply` to fix
+- `pnpm license:apply` to auto-fix

@@ -28,7 +28,7 @@ Guidance for coding agents working in this repository.
 - TypeScript module:
   - `ts/src` -> domain types, algorithms, parser helper APIs.
   - `ts/test` -> Vitest parity suites.
-  - `ts/scripts` -> license header check/apply scripts.
+  - `ts/license-header.txt` -> canonical Apache-2.0 header template for ESLint.
 
 ## Repository Layout
 
@@ -201,7 +201,7 @@ All source files (Scala, Java, Go, PHP) include Apache 2.0 license headers manag
 - Auto-applied on: all `.php` files in `src/` and `tests/`
 - CI validation: `.github/workflows/ci-php.yml` runs `composer check`
 
-**TypeScript** (custom scripts):
+**TypeScript** (ESLint `eslint-plugin-header`):
 - Validate headers: `cd ts && pnpm license:check`
 - Apply headers: `cd ts && pnpm license:apply`
 - Auto-applied on: all `.ts` files in `ts/src/**` and `ts/test/**`

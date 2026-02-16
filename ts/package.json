@@ -26,8 +26,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "license:check": "node ./scripts/license-check.mjs",
-    "license:apply": "node ./scripts/license-apply.mjs",
+    "license:check": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings 0",
+    "license:apply": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm license:check && pnpm build"
   },
   "devDependencies": {
@@ -37,6 +37,7 @@
     "@typescript-eslint/parser": "^8.26.0",
     "eslint": "^9.22.0",
     "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-header": "^3.1.1",
     "prettier": "^3.5.3",
     "typescript": "^5.8.2",
     "vitest": "^3.2.4"
