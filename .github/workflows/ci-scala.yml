@@ -45,5 +45,8 @@ jobs:
       - name: Setup sbt
         uses: sbt/setup-sbt@ae54f7cfe46ec0d24ade661d77f007360ab48bda # v1
 
+      - name: Validate License Headers
+        run: sbt ++${{ matrix.scala-version }} headerCheck
+
       - name: Test
         run: sbt ++${{ matrix.scala-version }} clean test
