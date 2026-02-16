@@ -2,16 +2,14 @@ package com.thenewmotion.mobilityid
 
 import ContractIdStandard.{DIN, EMI3, ISO}
 import contextual.{Interpolator, Prefix}
-import scala.annotation.nowarn
 import scala.util.{Try, Failure}
 
 object EvseIdInterpolator extends Interpolator {
 
   type Output = EvseId
 
-  @nowarn("msg=match may not be exhaustive")
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, evseIdString) = interpolation.parts.head
+    val lit@Literal(_, evseIdString) = (interpolation.parts.head: @unchecked)
     EvseId(evseIdString) match {
       case None => interpolation.abort(lit, 0, "not a valid EvseId")
       case _ =>
@@ -28,9 +26,8 @@ object EvseIdIsoInterpolator extends Interpolator {
 
   type Output = EvseIdIso
 
-  @nowarn("msg=match may not be exhaustive")
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, evseIdString) = interpolation.parts.head
+    val lit@Literal(_, evseIdString) = (interpolation.parts.head: @unchecked)
     EvseIdIso(evseIdString) match {
       case None => interpolation.abort(lit, 0, "not a valid EvseIdIso")
       case _ =>
@@ -47,9 +44,8 @@ object EvseIdDinInterpolator extends Interpolator {
 
   type Output = EvseIdDin
 
-  @nowarn("msg=match may not be exhaustive")
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, evseIdString) = interpolation.parts.head
+    val lit@Literal(_, evseIdString) = (interpolation.parts.head: @unchecked)
     EvseIdDin(evseIdString) match {
       case None => interpolation.abort(lit, 0, "not a valid EvseIdDin")
       case _ =>
@@ -64,9 +60,8 @@ object EvseIdDinInterpolator extends Interpolator {
 
 class ContractIdInterpolator[T <: ContractIdStandard](implicit p: ContractIdParser[T]) extends Interpolator {
 
-  @nowarn("msg=match may not be exhaustive")
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, emaIdString) = interpolation.parts.head
+    val lit@Literal(_, emaIdString) = (interpolation.parts.head: @unchecked)
     Try(ContractId[T](emaIdString)) match {
       case Failure(ex) => interpolation.abort(lit, 0, ex.getMessage)
       case _ =>
@@ -93,9 +88,8 @@ object ProviderIdInterpolator extends Interpolator {
 
   type Output = ProviderId
 
-  @nowarn("msg=match may not be exhaustive")
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, providerIdString) = interpolation.parts.head
+    val lit@Literal(_, providerIdString) = (interpolation.parts.head: @unchecked)
     if (!ProviderId.isValid(providerIdString)) interpolation.abort(lit, 0, "not a valid ProviderId")
     Nil
   }
@@ -108,9 +102,8 @@ object CountryCodeInterpolator extends Interpolator {
 
   type Output = CountryCode
 
-  @nowarn("msg=match may not be exhaustive")
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, countryCodeString) = interpolation.parts.head
+    val lit@Literal(_, countryCodeString) = (interpolation.parts.head: @unchecked)
     if (!CountryCode.isValid(countryCodeString)) interpolation.abort(lit, 0, "not a valid CountryCode")
     Nil
   }
@@ -123,9 +116,8 @@ object PhoneCountryCodeInterpolator extends Interpolator {
 
   type Output = PhoneCountryCode
 
-  @nowarn("msg=match may not be exhaustive")
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, phoneCountryCodeString) = interpolation.parts.head
+    val lit@Literal(_, phoneCountryCodeString) = (interpolation.parts.head: @unchecked)
     if (!PhoneCountryCode.isValid(phoneCountryCodeString)) interpolation.abort(lit, 0, "not a valid PhoneCountryCode")
     Nil
   }
@@ -138,9 +130,8 @@ object OperatorIdIsoInterpolator extends Interpolator {
 
   type Output = OperatorIdIso
 
-  @nowarn("msg=match may not be exhaustive")
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, operatorIdIso) = interpolation.parts.head
+    val lit@Literal(_, operatorIdIso) = (interpolation.parts.head: @unchecked)
     if (!OperatorIdIso.isValid(operatorIdIso)) interpolation.abort(lit, 0, "not a valid OperatorIdIso")
     Nil
   }
@@ -153,9 +144,8 @@ object OperatorIdDinInterpolator extends Interpolator {
 
   type Output = OperatorIdDin
 
-  @nowarn("msg=match may not be exhaustive")
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, operatorIdDin) = interpolation.parts.head
+    val lit@Literal(_, operatorIdDin) = (interpolation.parts.head: @unchecked)
     if (!OperatorIdDin.isValid(operatorIdDin)) interpolation.abort(lit, 0, "not a valid OperatorIdDin")
     Nil
   }
