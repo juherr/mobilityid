@@ -21,7 +21,10 @@ const header = {
   },
 };
 
-const canonicalHeader = readFileSync(path.resolve(import.meta.dirname, "license-header.txt"), "utf8")
+const canonicalHeader = readFileSync(
+  path.resolve(import.meta.dirname, "license-header.txt"),
+  "utf8",
+)
   .replaceAll("\r\n", "\n")
   .trimEnd()
   .split("\n");
@@ -57,12 +60,7 @@ export default [
     rules: {
       ...tsPlugin.configs["eslint-recommended"].overrides?.[0]?.rules,
       ...tsPlugin.configs.strict.rules,
-      "header/header": [
-        "error",
-        "block",
-        headerLines,
-        1,
-      ],
+      "header/header": ["error", "block", headerLines, 1],
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
