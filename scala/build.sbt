@@ -33,7 +33,7 @@ val commonSettings = Seq(
   Global / cancelable := true
 )
 
-val specs2 = "org.specs2" %% "specs2-core" % "4.20.9" % "test"
+val specs2 = "org.specs2" %% "specs2-core" % "4.23.0" % "test"
 
 val `core` = project
   .settings(
@@ -60,7 +60,7 @@ val `interpolators` = project
     },
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) => Seq("com.propensive" %% "contextual-core" % "3.0.0")
+        case Some((2, _)) => Seq("com.propensive" %% "contextual-core" % "3.0.1")
         case _            => Seq.empty
       }
     },

@@ -1,8 +1,9 @@
 package com.thenewmotion.mobilityid
 
 import ContractIdStandard.{DIN, EMI3, ISO}
-import contextual.{Interpolator, Prefix}
+import contextual.{Interpolator, Macros}
 import scala.util.{Try, Failure}
+import language.experimental.macros
 
 object EvseIdInterpolator extends Interpolator {
 
@@ -156,16 +157,27 @@ object OperatorIdDinInterpolator extends Interpolator {
 
 object interpolators {
   implicit class MobilityIdStringContext(sc: StringContext) {
-    val evseId = Prefix(EvseIdInterpolator, sc)
-    val evseIdIso = Prefix(EvseIdIsoInterpolator, sc)
-    val evseIdDin = Prefix(EvseIdDinInterpolator, sc)
-    val contractIdISO = Prefix(ContractIdIsoInterpolator, sc)
-    val contractIdDIN = Prefix(ContractIdDinInterpolator, sc)
-    val contractIdEMI3 = Prefix(ContractIdEmi3Interpolator, sc)
-    val providerId = Prefix(ProviderIdInterpolator, sc)
-    val countryCode = Prefix(CountryCodeInterpolator, sc)
-    val phoneCountryCode = Prefix(PhoneCountryCodeInterpolator, sc)
-    val operatorIdIso = Prefix(OperatorIdIsoInterpolator, sc)
-    val operatorIdDin = Prefix(OperatorIdDinInterpolator, sc)
+    def evseId(expressions: Interpolator.Embedded[EvseIdInterpolator.Input, EvseIdInterpolator.type]*):
+        EvseIdInterpolator.Output = macro Macros.contextual[EvseIdInterpolator.type]
+    def evseIdIso(expressions: Interpolator.Embedded[EvseIdIsoInterpolator.Input, EvseIdIsoInterpolator.type]*):
+        EvseIdIsoInterpolator.Output = macro Macros.contextual[EvseIdIsoInterpolator.type]
+    def evseIdDin(expressions: Interpolator.Embedded[EvseIdDinInterpolator.Input, EvseIdDinInterpolator.type]*):
+        EvseIdDinInterpolator.Output = macro Macros.contextual[EvseIdDinInterpolator.type]
+    def contractIdISO(expressions: Interpolator.Embedded[ContractIdIsoInterpolator.Input, ContractIdIsoInterpolator.type]*):
+        ContractIdIsoInterpolator.Output = macro Macros.contextual[ContractIdIsoInterpolator.type]
+    def contractIdDIN(expressions: Interpolator.Embedded[ContractIdDinInterpolator.Input, ContractIdDinInterpolator.type]*):
+        ContractIdDinInterpolator.Output = macro Macros.contextual[ContractIdDinInterpolator.type]
+    def contractIdEMI3(expressions: Interpolator.Embedded[ContractIdEmi3Interpolator.Input, ContractIdEmi3Interpolator.type]*):
+        ContractIdEmi3Interpolator.Output = macro Macros.contextual[ContractIdEmi3Interpolator.type]
+    def providerId(expressions: Interpolator.Embedded[ProviderIdInterpolator.Input, ProviderIdInterpolator.type]*):
+        ProviderIdInterpolator.Output = macro Macros.contextual[ProviderIdInterpolator.type]
+    def countryCode(expressions: Interpolator.Embedded[CountryCodeInterpolator.Input, CountryCodeInterpolator.type]*):
+        CountryCodeInterpolator.Output = macro Macros.contextual[CountryCodeInterpolator.type]
+    def phoneCountryCode(expressions: Interpolator.Embedded[PhoneCountryCodeInterpolator.Input, PhoneCountryCodeInterpolator.type]*):
+        PhoneCountryCodeInterpolator.Output = macro Macros.contextual[PhoneCountryCodeInterpolator.type]
+    def operatorIdIso(expressions: Interpolator.Embedded[OperatorIdIsoInterpolator.Input, OperatorIdIsoInterpolator.type]*):
+        OperatorIdIsoInterpolator.Output = macro Macros.contextual[OperatorIdIsoInterpolator.type]
+    def operatorIdDin(expressions: Interpolator.Embedded[OperatorIdDinInterpolator.Input, OperatorIdDinInterpolator.type]*):
+        OperatorIdDinInterpolator.Output = macro Macros.contextual[OperatorIdDinInterpolator.type]
   }
 }
