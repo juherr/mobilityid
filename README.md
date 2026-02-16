@@ -45,6 +45,7 @@ cd java
 ## Dependency updates
 
 - Renovate manages GitHub Actions, Gradle, sbt/Scala, and `mise.toml` tool versions (`.github/renovate.json`).
+- `mise.toml` uses simplified version formats: major.minor for sbt/gradle (e.g., `1.12`, `8.9`), major only for Java (e.g., `openjdk-25`). See `AGENTS.md` for configuration details.
 - CI validates Gradle Wrapper integrity on every run (`gradle/actions/wrapper-validation`).
 - Gradle distribution integrity is pinned with `distributionSha256Sum` in `java/gradle/wrapper/gradle-wrapper.properties`.
 - Pull requests run a dependency review gate (`actions/dependency-review-action`) via `.github/workflows/ci.yml`.

@@ -216,6 +216,35 @@ Before finalizing a change, an agent should:
 - Checked for Copilot instructions in `.github/copilot-instructions.md`: none found.
 - If any of these files are added later, treat them as higher-priority local agent instructions and merge them into this guide.
 
+## Renovate Configuration Notes
+
+### mise.toml Version Format
+
+The project uses simplified version formats in `mise.toml`:
+- **Java**: major only (`openjdk-25`)
+- **sbt/gradle**: major.minor (`1.12`, `8.9`)
+
+This is enforced via `extractVersion` in `.github/renovate.json`:
+
+**Default (sbt, gradle):**
+```json
+"extractVersion": "^(?:openjdk-)?(?<version>\\d+\\.\\d+)"
+```
+
+**Java override (packageRule):**
+```json
+{
+  "matchDepNames": ["java"],
+  "extractVersion": "^openjdk-(?<version>\\d+)"
+}
+```
+
+**Consequences:**
+- Patch updates (e.g., 1.12.3 → 1.12.4) will NOT trigger PRs for mise.toml
+- Minor updates (e.g., 1.12 → 1.13) WILL trigger PRs with correct format
+- Build files keep full versions: `scala/project/build.properties` → `sbt.version=1.12.3`
+- mise automatically uses the latest patch version available for the specified x.y
+
 ## Notes for Future Agents
 
 - The Scala workspace no longer depends on the archived `sbt-build-seed` plugin; equivalent core settings are defined directly in `scala/build.sbt`.
