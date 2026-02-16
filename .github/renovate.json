@@ -17,9 +17,13 @@
       "groupName": "github-actions"
     },
     {
-      "matchManagers": [
-        "sbt"
-      ],
+      "matchManagers": ["sbt"],
+      "matchPackageNames": ["scala"],
+      "allowedVersions": "/^(2\\.|3\\.3\\.|3\\.([89]|[1-9][0-9])\\.)/"
+    },
+    {
+      "matchManagers": ["sbt"],
+      "matchPackageNames": ["!scala"],
       "groupName": "scala-sbt"
     },
     {

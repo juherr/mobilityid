@@ -245,6 +245,35 @@ This is enforced via `extractVersion` in `.github/renovate.json`:
 - Build files keep full versions: `scala/project/build.properties` → `sbt.version=1.12.3`
 - mise automatically uses the latest patch version available for the specified x.y
 
+### Scala LTS Version Policy
+
+The project follows Scala's LTS (Long-Term Support) strategy:
+- **scalaVersion** stays on the current LTS branch (3.3.x as of 2026)
+- **crossScalaVersions** includes both LTS (3.3.x) and latest (3.8+)
+
+This is enforced via `allowedVersions` in `.github/renovate.json`:
+
+```json
+{
+  "matchManagers": ["sbt"],
+  "matchPackageNames": ["scala"],
+  "allowedVersions": "/^(2\\.|3\\.3\\.|3\\.([89]|[1-9][0-9])\\.)/"
+}
+```
+
+**Allowed versions:**
+- 2.x (Scala 2.12, 2.13)
+- 3.3.x (current LTS)
+- 3.8, 3.9, 3.10+ (latest branches)
+
+**Blocked versions:**
+- 3.4, 3.5, 3.6, 3.7 (non-LTS intermediate releases)
+
+**When the next LTS is announced** (e.g., 3.6.x):
+1. Update the pattern to include the new LTS branch: `3\\.6\\.`
+2. Migrate `scalaVersion` in `build.sbt` to the new LTS
+3. Optionally remove the old LTS (3.3) from the pattern after migration
+
 ## Notes for Future Agents
 
 - The Scala workspace no longer depends on the archived `sbt-build-seed` plugin; equivalent core settings are defined directly in `scala/build.sbt`.
