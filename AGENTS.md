@@ -18,7 +18,7 @@ Guidance for coding agents working in this repository.
   - `scala/core` -> main mobility ID domain logic.
   - `scala/interpolators` -> compile-time checked string interpolators.
   - `scala/` aggregate project.
-- Scala versions in CI: 2.12.20, 2.13.16 and 3.8.1 (`.github/workflows/ci.yml`).
+- Scala versions in CI: 2.12.20, 2.13.16, 3.3.7 and 3.8.1 (`.github/workflows/ci.yml`).
 - Scala test framework: specs2 (`org.specs2:specs2-core`).
 - Java build tool: Gradle wrapper (`java/gradlew`) with Java 21 toolchain.
 - Java module:
@@ -81,6 +81,7 @@ Run from repository root unless noted.
 - Test against a specific Scala version:
   - `cd scala && sbt ++2.12.20 test`
   - `cd scala && sbt ++2.13.16 test`
+  - `cd scala && sbt ++3.3.7 test`
   - `cd scala && sbt ++3.8.1 test`
 - Cross-build tests on all configured Scala versions:
   - `cd scala && sbt +test`
@@ -217,7 +218,7 @@ Before finalizing a change, an agent should:
 ## Notes for Future Agents
 
 - The Scala workspace no longer depends on the archived `sbt-build-seed` plugin; equivalent core settings are defined directly in `scala/build.sbt`.
-- Scala build baseline is `sbt 1.10.2` (`scala/project/build.properties`) with Scala `2.13.16` / `2.12.20` / `3.8.1` cross settings in `scala/build.sbt`.
+- Scala build baseline is `sbt 1.10.2` (`scala/project/build.properties`) with Scala `2.13.16` / `2.12.20` / `3.3.7` / `3.8.1` cross settings in `scala/build.sbt`.
 - The `interpolators` module uses version-specific source directories: `scala-2/` (contextual-core macros) and `scala-3/` (inline macros with `scala.quoted`). Shared tests live in `src/test/scala/`.
 - When using `beSome.which(...)` in specs2 tests, provide an explicit type parameter (`beSome[T].which(...)`) for Scala 3 type inference compatibility.
 - Dependency updates are managed by Renovate (`.github/renovate.json`) for GitHub Actions, Gradle, sbt/Scala, and `mise.toml`.
