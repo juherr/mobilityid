@@ -9,7 +9,7 @@ private[mobilityid] object CheckDigitIso {
 
   def apply(code: String): Char = applyToUpperCaseString(code.toUpperCase)
 
-  private[this] def applyToUpperCaseString(code: String): Char = {
+  private def applyToUpperCaseString(code: String): Char = {
     require(code.length == p1s.length, s"Code must have a length of ${p1s.length}")
     require(code.length == p2s.length, s"Code must have a length of ${p2s.length}")
     require(code.forall(_.isAsciiUpperOrDigit), "Code must consist of uppercase ASCII letters and digits")

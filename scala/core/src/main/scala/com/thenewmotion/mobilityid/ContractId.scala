@@ -114,7 +114,7 @@ object ContractIdConverter {
   @deprecated("Use EMI3 instead of ISO format when converting to DIN", "0.18.0")
   implicit object ISOToDIN extends ContractIdConverter[ISO, DIN] {
     override def apply(b: ContractId[ISO]): ContractId[DIN] =
-      if (b.instanceValue startsWith "00") {
+      if (b.instanceValue.startsWith("00")) {
         val dinInstance = b.instanceValue.substring(2, 8)
         val dinCheck = b.instanceValue.substring(8, 9).charAt(0)
         ContractId[DIN](b.countryCode, b.providerId, dinInstance, Some(dinCheck))
@@ -156,14 +156,14 @@ object ContractId {
 
   private val separator = "-"
 
-  private[this] case class ContractIdImpl[T <: ContractIdStandard](
+  private case class ContractIdImpl[T <: ContractIdStandard](
     countryCode: CountryCode,
     providerId: ProviderId,
     instanceValue: String,
     checkDigit: Char
   ) extends ContractId[T]
 
-  private[this] def applyToUpperCase[T <: ContractIdStandard](
+  private def applyToUpperCase[T <: ContractIdStandard](
     cc: CountryCode,
     providerId: ProviderId,
     instanceValue: String,
@@ -220,7 +220,7 @@ object ContractId {
   def opt[T <: ContractIdStandard](s: String)(implicit p: ContractIdParser[T]): Option[ContractId[T]] =
     Try(apply[T](s)).toOption
 
-  def unapply(c: ContractId[_]): Option[(CountryCode, ProviderId, String, Char)] =
+  def unapply(c: ContractId[?]): Option[(CountryCode, ProviderId, String, Char)] =
     Some((c.countryCode, c.providerId, c.instanceValue, c.checkDigit))
 
 }
