@@ -26,12 +26,14 @@ import (
 var evseIDISORegex = regexp.MustCompile(`^([A-Z]{2})\*?([A-Z0-9]{3})\*?E([A-Z0-9*]{1,31})$`)
 var evseIDISOFromPartsPowerOutletRegex = regexp.MustCompile(`^[A-Z0-9*]{1,31}$`)
 
+// EvseIDISO represents an EVSE identifier in ISO format.
 type EvseIDISO struct {
 	countryCode   *CountryCode
 	operatorID    *OperatorIDISO
 	powerOutletID string
 }
 
+// NewEvseIDISO parses an ISO EVSE ID.
 func NewEvseIDISO(id string) (*EvseIDISO, error) {
 	matches := evseIDISORegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 4 {
@@ -54,6 +56,7 @@ func NewEvseIDISO(id string) (*EvseIDISO, error) {
 	}, nil
 }
 
+// NewEvseIDISOFromParts builds an ISO EVSE ID from its components.
 func NewEvseIDISOFromParts(countryCode string, operatorID string, powerOutletID string) (*EvseIDISO, error) {
 	cc, err := NewCountryCode(countryCode)
 	if err != nil {
@@ -65,10 +68,7 @@ func NewEvseIDISOFromParts(countryCode string, operatorID string, powerOutletID 
 		return nil, fmt.Errorf("invalid operatorID for ISO format: %w", err)
 	}
 
-	normalizedPowerOutletID := strings.ToUpper(powerOutletID)
-	if strings.HasPrefix(normalizedPowerOutletID, "E") {
-		normalizedPowerOutletID = normalizedPowerOutletID[1:]
-	}
+	normalizedPowerOutletID := strings.TrimPrefix(strings.ToUpper(powerOutletID), "E")
 
 	if !evseIDISOFromPartsPowerOutletRegex.MatchString(normalizedPowerOutletID) {
 		return nil, fmt.Errorf("invalid powerOutletID for ISO format")
@@ -85,14 +85,17 @@ func (eido *EvseIDISO) String() string {
 	return fmt.Sprintf("%s*%s*E%s", eido.countryCode.Value(), eido.operatorID.Value(), eido.powerOutletID)
 }
 
+// Value returns the canonical string representation of the ISO EVSE ID.
 func (eido *EvseIDISO) Value() string {
 	return eido.String()
 }
 
+// ToCompactString returns the compact representation without separators.
 func (eido *EvseIDISO) ToCompactString() string {
 	return strings.ReplaceAll(eido.String(), "*", "")
 }
 
+// PartyID derives the PartyID from the ISO country code and operator ID.
 func (eido *EvseIDISO) PartyID() (*PartyID, error) {
 	return NewPartyID(eido.countryCode.Value() + eido.operatorID.Value())
 }

@@ -26,12 +26,14 @@ import (
 var evseIDDINRegex = regexp.MustCompile(`^(\+?[0-9]{1,3})\*([0-9]{3,6})\*([0-9*]{1,32})$`)
 var evseIDDINFromPartsPowerOutletRegex = regexp.MustCompile(`^[0-9*]{1,32}$`)
 
+// EvseIDDIN represents an EVSE identifier in DIN format.
 type EvseIDDIN struct {
 	countryCode   *PhoneCountryCode
 	operatorID    *OperatorIDDIN
 	powerOutletID string
 }
 
+// NewEvseIDDIN parses a DIN EVSE ID.
 func NewEvseIDDIN(id string) (*EvseIDDIN, error) {
 	matches := evseIDDINRegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 4 {
@@ -58,6 +60,7 @@ func NewEvseIDDIN(id string) (*EvseIDDIN, error) {
 	}, nil
 }
 
+// NewEvseIDDINFromParts builds a DIN EVSE ID from its components.
 func NewEvseIDDINFromParts(countryCode string, operatorID string, powerOutletID string) (*EvseIDDIN, error) {
 	ccRaw := strings.ToUpper(countryCode)
 	if !strings.HasPrefix(ccRaw, "+") {
@@ -90,6 +93,7 @@ func (eidd *EvseIDDIN) String() string {
 	return fmt.Sprintf("%s*%s*%s", eidd.countryCode.Value(), eidd.operatorID.Value(), eidd.powerOutletID)
 }
 
+// Value returns the canonical string representation of the DIN EVSE ID.
 func (eidd *EvseIDDIN) Value() string {
 	return eidd.String()
 }

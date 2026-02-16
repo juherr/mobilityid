@@ -19,11 +19,13 @@ package mobilityid
 
 import "fmt"
 
+// EvseID represents an EVSE identifier in either ISO or DIN format.
 type EvseID struct {
 	iso *EvseIDISO
 	din *EvseIDDIN
 }
 
+// NewEvseID parses an EVSE ID and returns either its ISO or DIN representation.
 func NewEvseID(id string) (*EvseID, error) {
 	if iso, err := NewEvseIDISO(id); err == nil {
 		return &EvseID{iso: iso}, nil
@@ -34,6 +36,7 @@ func NewEvseID(id string) (*EvseID, error) {
 	return nil, fmt.Errorf("'%s' is not a valid EvseID", id)
 }
 
+// NewEvseIDFromParts builds an EVSE ID from components, preferring ISO when both are valid.
 func NewEvseIDFromParts(countryCode string, operatorID string, powerOutletID string) (*EvseID, error) {
 	iso, isoErr := NewEvseIDISOFromParts(countryCode, operatorID, powerOutletID)
 	din, dinErr := NewEvseIDDINFromParts(countryCode, operatorID, powerOutletID)
@@ -63,10 +66,12 @@ func (eid *EvseID) String() string {
 	return ""
 }
 
+// Value returns the canonical string representation of the EVSE ID.
 func (eid *EvseID) Value() string {
 	return eid.String()
 }
 
+// CountryCode returns the country code part of the EVSE ID.
 func (eid *EvseID) CountryCode() string {
 	if eid.iso != nil {
 		return eid.iso.countryCode.Value()
@@ -77,6 +82,7 @@ func (eid *EvseID) CountryCode() string {
 	return ""
 }
 
+// OperatorID returns the operator identifier part of the EVSE ID.
 func (eid *EvseID) OperatorID() string {
 	if eid.iso != nil {
 		return eid.iso.operatorID.Value()
@@ -87,6 +93,7 @@ func (eid *EvseID) OperatorID() string {
 	return ""
 }
 
+// PowerOutletID returns the power outlet identifier part of the EVSE ID.
 func (eid *EvseID) PowerOutletID() string {
 	if eid.iso != nil {
 		return eid.iso.powerOutletID
@@ -97,10 +104,12 @@ func (eid *EvseID) PowerOutletID() string {
 	return ""
 }
 
+// IsISO reports whether this EVSE ID is represented in ISO format.
 func (eid *EvseID) IsISO() bool {
 	return eid != nil && eid.iso != nil
 }
 
+// IsDIN reports whether this EVSE ID is represented in DIN format.
 func (eid *EvseID) IsDIN() bool {
 	return eid != nil && eid.din != nil
 }

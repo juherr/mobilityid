@@ -46,10 +46,10 @@ func (a isoVec) Add(b isoVec) isoVec {
 }
 
 // Mul performs vector-matrix multiplication (v * m)
-func (v isoVec) Mul(m isoMatrix) isoVec {
+func (a isoVec) Mul(m isoMatrix) isoVec {
 	return isoVec{
-		v1: v.v1*m.m11 + v.v2*m.m21,
-		v2: v.v1*m.m12 + v.v2*m.m22,
+		v1: a.v1*m.m11 + a.v2*m.m21,
+		v2: a.v1*m.m12 + a.v2*m.m22,
 	}
 }
 
@@ -80,7 +80,7 @@ func init() {
 }
 
 // Helper function from Scala's `isAsciiUpperOrDigit`
-func isAsciiUpperOrDigit(r rune) bool {
+func isASCIIUpperOrDigit(r rune) bool {
 	return (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
 }
 

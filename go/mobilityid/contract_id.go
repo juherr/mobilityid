@@ -165,6 +165,7 @@ func (cid *ContractID) PartyID() (*PartyID, error) {
 	return NewPartyID(cid.countryCode.Value() + cid.providerID.Value())
 }
 
+// ToDIN converts the current ContractID to DIN format when possible.
 func (cid *ContractID) ToDIN() (*ContractID, error) {
 	switch cid.standard {
 	case ContractIDStandardDIN:
@@ -188,6 +189,7 @@ func (cid *ContractID) ToDIN() (*ContractID, error) {
 	}
 }
 
+// ToEMI3 converts the current ContractID to EMI3 format when possible.
 func (cid *ContractID) ToEMI3() (*ContractID, error) {
 	switch cid.standard {
 	case ContractIDStandardEMI3:
@@ -204,6 +206,7 @@ func (cid *ContractID) ToEMI3() (*ContractID, error) {
 	}
 }
 
+// ToISO converts the current ContractID to ISO format when possible.
 func (cid *ContractID) ToISO() (*ContractID, error) {
 	switch cid.standard {
 	case ContractIDStandardISO:

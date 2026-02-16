@@ -28,7 +28,7 @@ func CalculateISO7064Mod37_2(code string) (string, error) {
 
 	// Check for character validity
 	for _, r := range upperCode {
-		if !isAsciiUpperOrDigit(r) {
+		if !isASCIIUpperOrDigit(r) {
 			return "", fmt.Errorf("invalid character '%c' in code '%s'; must consist of uppercase ASCII letters and digits", r, code)
 		}
 	}
