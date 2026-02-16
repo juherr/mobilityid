@@ -14,7 +14,9 @@
       "matchManagers": [
         "github-actions"
       ],
-      "groupName": "github-actions"
+      "groupName": "github-actions",
+      "automerge": true,
+      "automergeType": "branch"
     },
     {
       "matchManagers": ["sbt"],
@@ -39,11 +41,43 @@
       "groupName": "typescript-npm"
     },
     {
+      "matchManagers": [
+        "npm"
+      ],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "matchManagers": [
+        "gomod"
+      ],
+      "groupName": "go-modules"
+    },
+    {
+      "matchManagers": [
+        "custom.regex"
+      ],
       "matchDepNames": ["java"],
       "extractVersion": "^openjdk-(?<version>\\d+)"
     },
     {
-      "matchFile": "php/composer.json",
+      "matchFileNames": [
+        "php/composer.json"
+      ],
+      "matchDepTypes": [
+        "require-dev"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
       "groupName": "php-dependencies",
       "automerge": true,
       "automergeType": "branch"
