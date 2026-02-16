@@ -11,7 +11,7 @@ identifier strings according to the ISO 15118-1, DIN SPEC 91286 & EMI3 standards
 
 This Scala codebase now lives under `scala/` in the monorepo.
 
-- Build tool: sbt `1.10.2` (`project/build.properties`)
+- Build tool: sbt `1.12.3` (`project/build.properties`)
 - Scala versions: `2.13.18`, `2.12.21`, `3.3.7` and `3.8.1` (`build.sbt`)
 - The archived `sbt-build-seed` plugin has been removed; equivalent build settings are defined directly in `build.sbt`.
 

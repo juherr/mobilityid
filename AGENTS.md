@@ -219,7 +219,7 @@ Before finalizing a change, an agent should:
 ## Notes for Future Agents
 
 - The Scala workspace no longer depends on the archived `sbt-build-seed` plugin; equivalent core settings are defined directly in `scala/build.sbt`.
-- Scala build baseline is `sbt 1.10.2` (`scala/project/build.properties`) with Scala `2.13.18` / `2.12.21` / `3.3.7` / `3.8.1` cross settings in `scala/build.sbt`.
+- Scala build baseline is `sbt 1.12.3` (`scala/project/build.properties`) with Scala `2.13.18` / `2.12.21` / `3.3.7` / `3.8.1` cross settings in `scala/build.sbt`.
 - The `interpolators` module uses version-specific source directories: `scala-2/` (contextual-core macros) and `scala-3/` (inline macros with `scala.quoted`). Shared tests live in `src/test/scala/`.
 - When using `beSome.which(...)` in specs2 tests, provide an explicit type parameter (`beSome[T].which(...)`) for Scala 3 type inference compatibility.
 - Dependency updates are managed by Renovate (`.github/renovate.json`) for GitHub Actions, Gradle, sbt/Scala, and `mise.toml`.
