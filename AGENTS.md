@@ -18,7 +18,7 @@ Guidance for coding agents working in this repository.
   - `scala/core` -> main mobility ID domain logic.
   - `scala/interpolators` -> compile-time checked string interpolators.
   - `scala/` aggregate project.
-- Scala versions in CI: 2.12.20 and 2.13.16 (`.github/workflows/ci.yml`).
+- Scala versions in CI: 2.12.20, 2.13.16 and 3.8.1 (`.github/workflows/ci.yml`).
 - Scala test framework: specs2 (`org.specs2:specs2-core`).
 - Java build tool: Gradle wrapper (`java/gradlew`) with Java 21 toolchain.
 - Java module:
@@ -31,10 +31,12 @@ Guidance for coding agents working in this repository.
   - algorithms: check digit implementations for ISO and DIN.
 - `scala/core/src/test/scala/com/thenewmotion/mobilityid`
   - specs2 test suites (`*Spec.scala`).
-- `scala/interpolators/src/main/scala/com/thenewmotion/mobilityid`
-  - contextual interpolator implementations and exports.
+- `scala/interpolators/src/main/scala-2/com/thenewmotion/mobilityid`
+  - Scala 2 interpolator implementations using `contextual-core` macros.
+- `scala/interpolators/src/main/scala-3/com/thenewmotion/mobilityid`
+  - Scala 3 interpolator implementations using inline macros (`scala.quoted`).
 - `scala/interpolators/src/test/scala/com/thenewmotion/mobilityid`
-  - interpolator behavior specs.
+  - interpolator behavior specs (shared across Scala versions).
 - `java/src/main/java/dev/juherr/mobilityid4j`
   - Java port of domain types and algorithms.
 - `java/src/main/java/dev/juherr/mobilityid4j/interpolators`
@@ -76,6 +78,10 @@ Run from repository root unless noted.
 
 ### Cross-version and dependency checks
 
+- Test against a specific Scala version:
+  - `cd scala && sbt ++2.12.20 test`
+  - `cd scala && sbt ++2.13.16 test`
+  - `cd scala && sbt ++3.8.1 test`
 - Cross-build tests on all configured Scala versions:
   - `cd scala && sbt +test`
 - Update dependency graph and compile check:
@@ -125,7 +131,7 @@ Run from repository root unless noted.
 
 ## Code Style Guidelines
 
-The Scala codebase is idiomatic Scala 2.x with explicit domain modeling and runtime validation.
+The Scala codebase targets Scala 2.12, 2.13 and 3.x. Core code is cross-compatible Scala 2/3. The `interpolators` module uses version-specific source directories (`scala-2/` and `scala-3/`) for macro implementations.
 For Java (`mobilityid4j`), keep APIs idiomatic and prefer local `var` only when the inferred type is obvious at a glance.
 
 ### Formatting and structure
@@ -211,6 +217,8 @@ Before finalizing a change, an agent should:
 ## Notes for Future Agents
 
 - The Scala workspace no longer depends on the archived `sbt-build-seed` plugin; equivalent core settings are defined directly in `scala/build.sbt`.
-- Scala build baseline is `sbt 1.10.2` (`scala/project/build.properties`) with Scala `2.13.16` / `2.12.20` cross settings in `scala/build.sbt`.
+- Scala build baseline is `sbt 1.10.2` (`scala/project/build.properties`) with Scala `2.13.16` / `2.12.20` / `3.8.1` cross settings in `scala/build.sbt`.
+- The `interpolators` module uses version-specific source directories: `scala-2/` (contextual-core macros) and `scala-3/` (inline macros with `scala.quoted`). Shared tests live in `src/test/scala/`.
+- When using `beSome.which(...)` in specs2 tests, provide an explicit type parameter (`beSome[T].which(...)`) for Scala 3 type inference compatibility.
 - Dependency updates are managed by Renovate (`.github/renovate.json`) for GitHub Actions, Gradle, sbt/Scala, and `mise.toml`.
 - For feature parity work, mirror existing behavior from `scala/core` into `java/src/main/java` incrementally.

@@ -1,5 +1,5 @@
 ThisBuild / scalaVersion := "2.13.16"
-ThisBuild / crossScalaVersions := Seq("2.13.16", "2.12.20")
+ThisBuild / crossScalaVersions := Seq("2.13.16", "2.12.20", "3.8.1")
 
 val commonSettings = Seq(
   organization := "com.thenewmotion",
@@ -16,25 +16,24 @@ val commonSettings = Seq(
     "UTF-8",
     "-unchecked",
     "-deprecation",
-    "-feature",
-    "-Xlog-reflective-calls",
-    "-Xlint",
-    "-Ywarn-value-discard"
+    "-feature"
   ) ++ {
     scalaBinaryVersion.value match {
-      case "2.12" => Seq("-Ywarn-unused-import", "-target:jvm-1.8")
-      case "2.13" => Seq("-Ywarn-unused:imports", "-target:jvm-1.8")
-      case _ => Seq.empty
+      case "2.12" => Seq("-Xlog-reflective-calls", "-Xlint", "-Ywarn-value-discard",
+                         "-Ywarn-unused-import", "-target:jvm-1.8")
+      case "2.13" => Seq("-Xlog-reflective-calls", "-Xlint", "-Ywarn-value-discard",
+                         "-Ywarn-unused:imports", "-target:jvm-1.8")
+      case _      => Seq("-Wvalue-discard", "-Wunused:imports")
     }
   },
-  Compile / console / scalacOptions --= Seq("-Ywarn-unused-import", "-Ywarn-unused:imports"),
+  Compile / console / scalacOptions --= Seq("-Ywarn-unused-import", "-Ywarn-unused:imports", "-Wunused:imports"),
   Test / parallelExecution := true,
   Test / fork := true,
   run / fork := true,
   Global / cancelable := true
 )
 
-val specs2 = "org.specs2" %% "specs2-core" % "4.10.5" % "test"
+val specs2 = "org.specs2" %% "specs2-core" % "4.20.9" % "test"
 
 val `core` = project
   .settings(
@@ -51,8 +50,21 @@ val `interpolators` = project
   .settings(
     name := "mobilityid-interpolators",
     commonSettings,
+    Compile / unmanagedSourceDirectories ++= {
+      val base = (Compile / sourceDirectory).value
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, _)) => Seq(base / "scala-2")
+        case Some((3, _)) => Seq(base / "scala-3")
+        case _            => Seq.empty
+      }
+    },
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, _)) => Seq("com.propensive" %% "contextual-core" % "3.0.0")
+        case _            => Seq.empty
+      }
+    },
     libraryDependencies ++= Seq(
-      "com.propensive" %% "contextual-core" % "3.0.0",
       specs2
     )
   )

@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scala-version: [2.12.20, 2.13.16]
+        scala-version: [2.12.20, 2.13.16, 3.8.1]
 
     defaults:
       run:
