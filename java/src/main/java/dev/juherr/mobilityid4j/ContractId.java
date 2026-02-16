@@ -1,8 +1,25 @@
+/*
+ * Copyright (c) 2014 The New Motion team, and respective contributors
+ * Copyright (c) 2026 Julien Herr, and respective contributors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.juherr.mobilityid4j;
 
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Immutable contract identifier with support for ISO, EMI3, and DIN formats.
@@ -105,7 +122,10 @@ public final class ContractId {
      * @param raw contract ID string
      * @return parsed contract ID, or empty when invalid
      */
-    public static Optional<ContractId> parse(ContractIdStandard standard, String raw) {
+    public static Optional<ContractId> parse(@Nullable ContractIdStandard standard, @Nullable String raw) {
+        if (standard == null || raw == null) {
+            return Optional.empty();
+        }
         try {
             return Optional.of(parseStrict(standard, raw));
         } catch (IllegalArgumentException e) {
@@ -154,16 +174,18 @@ public final class ContractId {
 
     private ContractId convertFromDin(ContractIdStandard target) {
         return switch (target) {
-            case EMI3 -> of(
-                    ContractIdStandard.EMI3,
-                    countryCode.toString(),
-                    providerId.toString(),
-                    "C0" + instanceValue + checkDigit);
-            case ISO -> of(
-                    ContractIdStandard.ISO,
-                    countryCode.toString(),
-                    providerId.toString(),
-                    "00" + instanceValue + checkDigit);
+            case EMI3 ->
+                of(
+                        ContractIdStandard.EMI3,
+                        countryCode.toString(),
+                        providerId.toString(),
+                        "C0" + instanceValue + checkDigit);
+            case ISO ->
+                of(
+                        ContractIdStandard.ISO,
+                        countryCode.toString(),
+                        providerId.toString(),
+                        "00" + instanceValue + checkDigit);
             case DIN -> this;
         };
     }
@@ -179,8 +201,8 @@ public final class ContractId {
                 var dinCheck = instanceValue.substring(8, 9).charAt(0);
                 yield of(ContractIdStandard.DIN, countryCode.toString(), providerId.toString(), dinInstance, dinCheck);
             }
-            case ISO -> of(
-                    ContractIdStandard.ISO, countryCode.toString(), providerId.toString(), instanceValue, checkDigit);
+            case ISO ->
+                of(ContractIdStandard.ISO, countryCode.toString(), providerId.toString(), instanceValue, checkDigit);
             case EMI3 -> this;
         };
     }

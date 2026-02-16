@@ -1,8 +1,25 @@
+/*
+ * Copyright (c) 2014 The New Motion team, and respective contributors
+ * Copyright (c) 2026 Julien Herr, and respective contributors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.juherr.mobilityid4j;
 
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 
 /**
  * EVSE identifier in ISO format.
@@ -34,12 +51,13 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
      * @param powerOutletId outlet identifier fragment
      * @return validated ISO EVSE identifier
      */
-    public static EvseIdIso of(String countryCode, String operatorId, String powerOutletId) {
+  public static EvseIdIso of(String countryCode, String operatorId, String powerOutletId) {
         var error = validate(countryCode, operatorId, powerOutletId);
         if (error.isPresent()) {
             throw new IllegalArgumentException(error.orElseThrow().description());
         }
-        return new EvseIdIso(CountryCode.of(countryCode), OperatorIdIso.of(operatorId), normalizePower(powerOutletId));
+        return new EvseIdIso(
+                CountryCode.of(countryCode), OperatorIdIso.of(operatorId), powerOutletId.toUpperCase(Locale.ROOT));
     }
 
     /**
@@ -48,7 +66,10 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
      * @param evseId raw EVSE ID
      * @return parsed ISO EVSE ID, or empty when invalid
      */
-    public static Optional<EvseIdIso> parse(String evseId) {
+    public static Optional<EvseIdIso> parse(@Nullable String evseId) {
+        if (evseId == null) {
+            return Optional.empty();
+        }
         var matcher = FULL.matcher(evseId);
         if (!matcher.matches()) {
             return Optional.empty();
@@ -61,9 +82,12 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
     }
 
     static Optional<EvseValidationError> validate(String countryCode, String operatorId, String powerOutletId) {
+        if (countryCode == null || operatorId == null || powerOutletId == null) {
+            return Optional.of(new EvseValidationError(1, "Invalid countryCode for ISO or DIN format"));
+        }
         var cc = countryCode.toUpperCase(Locale.ROOT);
         var op = operatorId.toUpperCase(Locale.ROOT);
-        var po = normalizePower(powerOutletId);
+        var po = powerOutletId.toUpperCase(Locale.ROOT);
 
         if (CountryCode.parse(cc).isEmpty()) {
             return Optional.of(new EvseValidationError(1, "Invalid countryCode for ISO or DIN format"));
@@ -100,11 +124,4 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
         return countryCode + "*" + operatorId + "*E" + powerOutletId;
     }
 
-    private static String normalizePower(String powerOutletId) {
-        var normalized = powerOutletId.toUpperCase(Locale.ROOT);
-        if (normalized.startsWith("E")) {
-            return normalized.substring(1);
-        }
-        return normalized;
-    }
 }
