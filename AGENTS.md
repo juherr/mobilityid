@@ -330,18 +330,17 @@ The project uses simplified version formats in `mise.toml`:
 - **Java/Node**: major only (`21`, `24`)
 - **sbt/gradle**: major.minor (`1.12`, `8.9`)
 
-This is enforced via `extractVersion` in `.github/renovate.json`:
+This is enforced via `extractVersionTemplate` in the customManager configuration in `.github/renovate.json`:
 
-**Default (sbt, gradle):**
-```json
-"extractVersion": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)"
-```
-
-**Java override (packageRule):**
+**Custom Manager (for mise.toml):**
 ```json
 {
-  "matchDepNames": ["java"],
-  "extractVersion": "^openjdk-(?<version>\\d+)"
+  "customType": "regex",
+  "managerFilePatterns": ["/(^|/)mise\\.toml$/"],
+  "matchStrings": ["(?<depName>[A-Za-z0-9_.-]+)\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
+  "datasourceTemplate": "asdf",
+  "versioningTemplate": "loose",
+  "extractVersionTemplate": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)"
 }
 ```
 
@@ -351,6 +350,7 @@ This is enforced via `extractVersion` in `.github/renovate.json`:
 - Major-only tools (Java/Node) will track major updates in `mise.toml`
 - Build files keep full versions: `scala/project/build.properties` → `sbt.version=1.12.3`
 - mise automatically uses the latest patch version available for the specified x.y
+- The `extractVersionTemplate` regex handles both regular versions and openjdk-prefixed versions
 
 ### Scala LTS Version Policy
 

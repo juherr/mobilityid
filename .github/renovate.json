@@ -61,13 +61,6 @@
       "groupName": "go-modules"
     },
     {
-      "matchManagers": [
-        "custom.regex"
-      ],
-      "matchDepNames": ["java"],
-      "extractVersion": "^openjdk-(?<version>\\d+)"
-    },
-    {
       "matchFileNames": [
         "php/composer.json"
       ],
@@ -94,7 +87,7 @@
       ],
       "datasourceTemplate": "asdf",
       "versioningTemplate": "loose",
-      "extractVersion": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)"
+      "extractVersionTemplate": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)"
     }
   ]
 }
