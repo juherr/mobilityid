@@ -13,7 +13,7 @@ which is a Go port of the `mobilityid` Scala library.
 The module is located under `go/mobilityid` and provides the core domain model,
 validation, and parsing helpers for mobility identifiers.
 
-Module path: `dev.juherr.mobilityid`
+Module path: `mobilityid.juherr.dev/go`
 
 ## API Design Decisions
 

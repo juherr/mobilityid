@@ -1,4 +1,4 @@
-module dev.juherr.mobilityid
+module mobilityid.juherr.dev/go
 
 go 1.25.0
 

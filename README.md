@@ -6,7 +6,7 @@ This repository contains multiple implementations of the same mobility ID domain
 
 - `scala/`: original Scala implementation (sbt + specs2)
 - `java/`: Java 21 port (`mobilityid4j`, Gradle)
-- `go/`: Go port (`dev.juherr.mobilityid`)
+- `go/`: Go port (`mobilityid.juherr.dev/go`)
 - `php/`: PHP port (`juherr/mobilityid`)
 - `ts/`: TypeScript port (`@juherr/mobilityid`, pnpm + Vitest)
 
