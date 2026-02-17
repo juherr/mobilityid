@@ -328,9 +328,9 @@ Before finalizing a change, an agent should:
 
 The project uses simplified version formats in `mise.toml`:
 - **Java/Node**: major only (`21`, `24`)
-- **sbt/gradle**: major.minor (`1.12`, `8.9`)
+- **sbt/gradle/php/go**: major.minor (`1.12`, `8.9`, `8.5`, `1.26`)
 
-This is enforced via `extractVersionTemplate` in the customManager configuration in `.github/renovate.json`:
+This is enforced via `extractVersionTemplate` and `autoReplaceStringTemplate` in the customManager configuration in `.github/renovate.json`:
 
 **Custom Manager (for mise.toml):**
 ```json
@@ -340,17 +340,20 @@ This is enforced via `extractVersionTemplate` in the customManager configuration
   "matchStrings": ["(?<depName>[A-Za-z0-9_.-]+)\\s*=\\s*\"(?<currentValue>[^\"]+)\""],
   "datasourceTemplate": "asdf",
   "versioningTemplate": "loose",
-  "extractVersionTemplate": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)"
+  "extractVersionTemplate": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)",
+  "autoReplaceStringTemplate": "{{depName}} = \"{{#if (equals depName 'java')}}{{newMajor}}{{else if (equals depName 'node')}}{{newMajor}}{{else}}{{newMajor}}.{{newMinor}}{{/if}}\""
 }
 ```
 
 **Consequences:**
 - Patch updates (e.g., 1.12.3 → 1.12.4) will NOT trigger PRs for mise.toml
-- Minor updates (e.g., 1.12 → 1.13) WILL trigger PRs with correct format
+- Minor updates (e.g., 1.12 → 1.13) WILL trigger PRs and write X.Y format (not X.Y.Z)
+- Major updates (e.g., 21 → 25) WILL trigger PRs and write X format for java/node, X.Y for others
 - Major-only tools (Java/Node) will track major updates in `mise.toml`
 - Build files keep full versions: `scala/project/build.properties` → `sbt.version=1.12.3`
-- mise automatically uses the latest patch version available for the specified x.y
+- mise automatically uses the latest patch version available for the specified X.Y
 - The `extractVersionTemplate` regex handles both regular versions and openjdk-prefixed versions
+- The `autoReplaceStringTemplate` controls what format Renovate writes back to the file
 
 ### Scala LTS Version Policy
 

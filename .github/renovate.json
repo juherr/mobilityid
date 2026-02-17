@@ -87,7 +87,8 @@
       ],
       "datasourceTemplate": "asdf",
       "versioningTemplate": "loose",
-      "extractVersionTemplate": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)"
+      "extractVersionTemplate": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)",
+      "autoReplaceStringTemplate": "{{depName}} = \"{{#if (equals depName 'java')}}{{newMajor}}{{else if (equals depName 'node')}}{{newMajor}}{{else}}{{newMajor}}.{{newMinor}}{{/if}}\""
     }
   ]
 }
