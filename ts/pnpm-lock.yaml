@@ -11,6 +11,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.0
         version: 10.0.1(eslint@10.0.0)
+      '@tony.ganchev/eslint-plugin-header':
+        specifier: ^3.2.1
+        version: 3.2.1(eslint@10.0.0)
       '@types/node':
         specifier: ^24.0.0
         version: 24.10.13
@@ -26,9 +29,6 @@ importers:
       eslint-config-prettier:
         specifier: ^10.1.1
         version: 10.1.8(eslint@10.0.0)
-      eslint-plugin-header:
-        specifier: ^3.1.1
-        version: 3.1.1(eslint@10.0.0)
       prettier:
         specifier: ^3.5.3
         version: 3.8.1
@@ -400,6 +400,11 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
+  '@tony.ganchev/eslint-plugin-header@3.2.1':
+    resolution: {integrity: sha512-VeKrzhkWkPtr7QJhG9hFUjaWzLHQ6afCbNCyU6pBT70dOQP5AoynZVnKYCuST/cuDZ/e1ZIbJ8yg98jJ8XPTFg==}
+    peerDependencies:
+      eslint: '>=7.7.0'
+
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
 
@@ -574,11 +579,6 @@ packages:
     hasBin: true
     peerDependencies:
       eslint: '>=7.0.0'
-
-  eslint-plugin-header@3.1.1:
-    resolution: {integrity: sha512-9vlKxuJ4qf793CmeeSrZUvVClw6amtpghq3CuWcB5cUNnWHQhgcqy5eF8oVKFk1G3Y/CbchGfEaw3wiIJaNmVg==}
-    peerDependencies:
-      eslint: '>=7.7.0'
 
   eslint-scope@9.1.0:
     resolution: {integrity: sha512-CkWE42hOJsNj9FJRaoMX9waUFYhqY4jmyLFdAdzZr6VaCg3ynLYx4WnOdkaIifGfH4gsUcBTn4OZbHXkpLD0FQ==}
@@ -1155,6 +1155,10 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
+  '@tony.ganchev/eslint-plugin-header@3.2.1(eslint@10.0.0)':
+    dependencies:
+      eslint: 10.0.0
+
   '@types/chai@5.2.3':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -1379,10 +1383,6 @@ snapshots:
   escape-string-regexp@4.0.0: {}
 
   eslint-config-prettier@10.1.8(eslint@10.0.0):
-    dependencies:
-      eslint: 10.0.0
-
-  eslint-plugin-header@3.1.1(eslint@10.0.0):
     dependencies:
       eslint: 10.0.0
 
