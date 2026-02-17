@@ -51,7 +51,7 @@ val commonSettings = Seq(
   Global / cancelable := true
 )
 
-val specs2Version = "4.14.1-cross"  // Cross-compatible Scala 2.12/2.13/3.x
+val specs2Version = "5.7.0"  // Cross-compatible Scala 2.12/2.13/3.x
 
 val `core` = project
   .settings(
