@@ -5,8 +5,8 @@ plugins {
   `java-library`
   `maven-publish`
   signing
-  id("com.diffplug.spotless") version "8.2.1"
-  id("net.ltgt.errorprone") version "5.0.0"
+  id("com.diffplug.spotless") version "8.3.0"
+  id("net.ltgt.errorprone") version "5.1.0"
   id("org.owasp.dependencycheck") version "12.2.0"
 }
 
@@ -29,7 +29,7 @@ dependencies {
   compileOnly("org.jspecify:jspecify:1.0.0")
   testCompileOnly("org.jspecify:jspecify:1.0.0")
 
-  errorprone("com.google.errorprone:error_prone_core:2.47.0")
+  errorprone("com.google.errorprone:error_prone_core:2.48.0")
   errorprone("com.uber.nullaway:nullaway:0.13.1")
 
   testImplementation(platform("org.junit:junit-bom:6.0.3"))
