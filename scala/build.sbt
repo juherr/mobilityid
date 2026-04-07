@@ -1,6 +1,6 @@
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport._
 
-ThisBuild / scalaVersion := "3.3.7"
+ThisBuild / scalaVersion := "3.8.3"
 ThisBuild / crossScalaVersions := Seq("2.12.21", "2.13.18", "3.3.7", "3.8.1")
 
 val commonSettings = Seq(
@@ -51,7 +51,7 @@ val commonSettings = Seq(
   Global / cancelable := true
 )
 
-val specs2Version = "4.14.1-cross"  // Cross-compatible Scala 2.12/2.13/3.x
+val specs2Version = "4.23.0"  // Cross-compatible Scala 2.12/2.13/3.x
 
 val `core` = project
   .settings(
