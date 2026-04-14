@@ -43,9 +43,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: true
-
-      - name: Install dependencies
-        run: vp install
+          working-directory: ts
 
       - name: Check
         run: vp check

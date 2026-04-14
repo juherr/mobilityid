@@ -95,6 +95,7 @@ jobs:
         with:
           node-version: "24"
           cache: true
+          working-directory: ts
           registry-url: "https://registry.npmjs.org"
 
       - name: Resolve release version from tag
@@ -110,9 +111,6 @@ jobs:
 
       - name: Pre-release checks
         run: test -n "${{ secrets.NPM_TOKEN }}"
-
-      - name: Install dependencies
-        run: vp install
 
       - name: Validate package
         run: |
