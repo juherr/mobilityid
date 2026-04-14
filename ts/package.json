@@ -16,30 +16,27 @@
     "dist",
     "README.md"
   ],
+  "packageManager": "bun@1.3.12",
   "engines": {
-    "node": ">=22"
+    "node": ">=22",
+    "bun": ">=1.3.12"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "license:check": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings 0",
-    "license:apply": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm license:check && pnpm build"
+    "build": "vp pack",
+    "lint": "vp lint",
+    "format": "vp fmt . --write",
+    "format:check": "vp fmt --check",
+    "typecheck": "vp check",
+    "test": "vp test",
+    "license:check": "vp exec eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings 0",
+    "license:apply": "vp exec eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
+    "check": "vp check && vp test && bun run license:check && vp pack"
   },
   "devDependencies": {
-    "@eslint/js": "^9.22.0",
     "@types/node": "^24.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
     "eslint": "^9.22.0",
-    "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-header": "^3.1.1",
-    "prettier": "^3.5.3",
-    "typescript": "^5.8.2",
-    "vitest": "^3.2.4"
+    "vite-plus": "^0.1.16"
   }
 }

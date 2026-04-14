@@ -93,7 +93,9 @@ export class ContractId {
       );
     }
 
-    const computed = parser.computeCheckDigit(`${cc}${provider}${normalizedInstance}`);
+    const computed = parser.computeCheckDigit(
+      `${cc.toString()}${provider.toString()}${normalizedInstance}`,
+    );
     if (checkDigit !== undefined && checkDigit.toUpperCase() !== computed) {
       throw new TypeError(
         `Given check digit '${checkDigit}' is not equal to computed '${computed}'`,
@@ -123,11 +125,11 @@ export class ContractId {
   }
 
   public toCompactString(): string {
-    return `${this.countryCode}${this.providerId}${this.instanceValue}${this.checkDigit}`;
+    return `${this.countryCode.toString()}${this.providerId.toString()}${this.instanceValue}${this.checkDigit}`;
   }
 
   public toCompactStringWithoutCheckDigit(): string {
-    return `${this.countryCode}${this.providerId}${this.instanceValue}`;
+    return `${this.countryCode.toString()}${this.providerId.toString()}${this.instanceValue}`;
   }
 
   public get partyId(): PartyId {
@@ -150,7 +152,7 @@ export class ContractId {
 
     if (this.standard === ContractIdStandards.EMI3 && targetStandard === ContractIdStandards.DIN) {
       if (!this.instanceValue.startsWith("C0")) {
-        throw new TypeError(`${this} cannot be converted to ${parsers.DIN.name} format`);
+        throw new TypeError(`${this.toString()} cannot be converted to ${parsers.DIN.name} format`);
       }
 
       const dinInstance = this.instanceValue.slice(2, 8);
@@ -166,7 +168,7 @@ export class ContractId {
 
     if (this.standard === ContractIdStandards.ISO && targetStandard === ContractIdStandards.DIN) {
       if (!this.instanceValue.startsWith("00")) {
-        throw new TypeError(`${this} cannot be converted to ${parsers.DIN.name} format`);
+        throw new TypeError(`${this.toString()} cannot be converted to ${parsers.DIN.name} format`);
       }
 
       const dinInstance = this.instanceValue.slice(2, 8);
@@ -213,6 +215,6 @@ export class ContractId {
   }
 
   public toString(): string {
-    return `${this.countryCode}-${this.providerId}-${this.instanceValue}-${this.checkDigit}`;
+    return `${this.countryCode.toString()}-${this.providerId.toString()}-${this.instanceValue}-${this.checkDigit}`;
   }
 }

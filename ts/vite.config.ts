@@ -15,9 +15,22 @@
  * limitations under the License.
  */
 
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  fmt: {
+    ignorePatterns: ["dist/**", "bun.lock"],
+    semi: true,
+    singleQuote: false,
+    sortPackageJson: false,
+  },
+  lint: {
+    ignorePatterns: ["dist/**"],
+    options: {
+      typeAware: true,
+      typeCheck: true,
+    },
+  },
   test: {
     environment: "node",
     include: ["test/**/*.test.ts"],
@@ -25,5 +38,17 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov"],
     },
+  },
+  pack: {
+    entry: ["src/index.ts"],
+    dts: true,
+    format: ["esm"],
+    outDir: "dist",
+    outExtensions: () => ({
+      js: ".js",
+      dts: ".d.ts",
+    }),
+    sourcemap: true,
+    clean: true,
   },
 });
