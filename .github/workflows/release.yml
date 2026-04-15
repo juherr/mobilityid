@@ -113,11 +113,7 @@ jobs:
         run: test -n "${{ secrets.NPM_TOKEN }}"
 
       - name: Validate package
-        run: |
-          vp check
-          vp test
-          vp exec eslint "src/**/*.ts" "test/**/*.ts" --max-warnings 0
-          vp pack
+        run: vp exec bun run check
 
       - name: Set release version
         run: vp exec bun pm pkg set version="${RELEASE_VERSION}"

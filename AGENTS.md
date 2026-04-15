@@ -145,14 +145,14 @@ Run from repository root unless noted.
 - Run TypeScript checks:
   - `cd ts && vp check`
   - `cd ts && vp test`
-  - `cd ts && bun run license:check`
+  - `cd ts && bun run lint`
 - Run a single Vitest pattern:
   - `cd ts && vp test ContractId`
 - Build package:
   - `cd ts && vp pack`
 - License headers:
-  - `cd ts && bun run license:check`
-  - `cd ts && bun run license:apply`
+  - `cd ts && bun run lint`
+  - `cd ts && bun run lint:fix`
 
 ### Lint / formatting
 
@@ -165,7 +165,7 @@ Run from repository root unless noted.
 - Java workspace uses palantir-java-format 2.87.0 for code formatting (Java 25 compatible).
 - Go workspace uses `gofmt` and `go vet`; CI runs formatting check, `go vet`, `go test`, and `go build` (`.github/workflows/ci-go.yml`).
 - PHP workspace uses php-cs-fixer (`format`/`format:check`), PHPStan level 10, and PHPUnit; CI runs on PHP 8.3, 8.4, and 8.5 (`.github/workflows/ci-php.yml`).
-- TypeScript workspace uses Vite+ (`vp check`, `vp test`, `vp pack`) with Bun as package manager, plus ESLint only for Apache header enforcement.
+- TypeScript workspace uses Vite+ (`vp check`, `vp test`, `vp pack`) with Bun as package manager, and Oxlint JS plugins for Apache header enforcement.
 - Java publishing metadata/signing is configured for Maven Central Portal workflows in `java/build.gradle.kts`.
 - Global release tags `vX.Y.Z` trigger `.github/workflows/release.yml` for Java and TypeScript publication pipelines.
 - Security scanning runs in CI via dependency review (`.github/workflows/dependency-review.yml`) and OWASP Dependency-Check (`.github/workflows/security.yml`).
@@ -201,11 +201,11 @@ All source files (Scala, Java, Go, PHP) include Apache 2.0 license headers manag
 - Auto-applied on: all `.php` files in `src/` and `tests/`
 - CI validation: `.github/workflows/ci-php.yml` runs `composer check`
 
-**TypeScript** (ESLint `eslint-plugin-header`):
-- Validate headers: `cd ts && bun run license:check`
-- Apply headers: `cd ts && bun run license:apply`
+**TypeScript** (Oxlint JS plugin `@tony.ganchev/eslint-plugin-header`):
+- Validate headers: `cd ts && bun run lint`
+- Apply headers: `cd ts && bun run lint:fix`
 - Auto-applied on: all `.ts` files in `ts/src/**` and `ts/test/**`
-- CI validation: `.github/workflows/ci-ts.yml` runs `vp exec eslint ...`
+- CI validation: `.github/workflows/ci-ts.yml` runs `bun run lint`
 
 **License header format** (consistent across all languages):
 ```

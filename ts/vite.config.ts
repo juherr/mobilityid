@@ -15,7 +15,18 @@
  * limitations under the License.
  */
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { defineConfig } from "vite-plus";
+
+const canonicalHeader = readFileSync(
+  path.resolve(import.meta.dirname, "license-header.txt"),
+  "utf8",
+)
+  .replaceAll("\r\n", "\n")
+  .trimEnd();
+const blockHeaderLines = `\n${canonicalHeader.split("\n").slice(1, -1).join("\n")}\n `;
 
 export default defineConfig({
   fmt: {
@@ -30,6 +41,23 @@ export default defineConfig({
       typeAware: true,
       typeCheck: true,
     },
+    overrides: [
+      {
+        files: ["src/**/*.ts", "test/**/*.ts"],
+        jsPlugins: ["@tony.ganchev/eslint-plugin-header"],
+        rules: {
+          "@tony.ganchev/header/header": [
+            "error",
+            {
+              header: {
+                commentType: "block",
+                lines: [blockHeaderLines],
+              },
+            },
+          ],
+        },
+      },
+    ],
   },
   test: {
     environment: "node",

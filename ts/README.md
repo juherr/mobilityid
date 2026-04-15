@@ -16,7 +16,7 @@ TypeScript port of the Mobility ID domain library.
 - TypeScript checks: `vp check`
 - Tests: `vp test`
 - Library packaging: `vp pack`
-- License headers: ESLint (`eslint-plugin-header`)
+- License headers: Oxlint JS plugin (`@tony.ganchev/eslint-plugin-header`)
 
 ## API design
 
@@ -34,8 +34,8 @@ vp install
 vp check
 vp test
 vp pack
-bun run license:check
-bun run license:apply
+bun run lint
+bun run lint:fix
 ```
 
 `vite.config.ts` is the single source of truth for TypeScript checks, test execution, formatting, and package build settings.
@@ -51,7 +51,7 @@ bun run license:apply
 ## License header policy
 
 All TypeScript source and test files must include the repository Apache-2.0 header.
-Headers are enforced separately from Vite+ by ESLint (`eslint-plugin-header`). Use:
+Headers are enforced by Oxlint via the Vite+ `lint` config using `@tony.ganchev/eslint-plugin-header`. Use:
 
-- `bun run license:check` to validate
-- `bun run license:apply` to auto-fix
+- `bun run lint` to validate
+- `bun run lint:fix` to auto-fix

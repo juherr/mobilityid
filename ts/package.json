@@ -23,20 +23,17 @@
   },
   "scripts": {
     "build": "vp pack",
-    "lint": "vp lint",
+    "lint": "vp lint src test",
+    "lint:fix": "vp lint --fix src test",
     "format": "vp fmt . --write",
     "format:check": "vp fmt --check",
     "typecheck": "vp check",
     "test": "vp test",
-    "license:check": "vp exec eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings 0",
-    "license:apply": "vp exec eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
-    "check": "vp check && vp test && bun run license:check && vp pack"
+    "check": "vp check && vp test && vp pack"
   },
   "devDependencies": {
+    "@tony.ganchev/eslint-plugin-header": "^3.4.3",
     "@types/node": "^24.0.0",
-    "@typescript-eslint/parser": "^8.26.0",
-    "eslint": "^9.22.0",
-    "eslint-plugin-header": "^3.1.1",
     "vite-plus": "^0.1.16"
   }
 }

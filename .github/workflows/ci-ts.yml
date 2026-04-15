@@ -55,7 +55,7 @@ jobs:
         run: vp pack
 
       - name: Check license headers
-        run: vp exec eslint "src/**/*.ts" "test/**/*.ts" --max-warnings 0
+        run: vp exec bun run lint
 
       - name: Package dry-run
         run: vp exec bun pm pack --dry-run
