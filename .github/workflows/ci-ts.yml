@@ -38,38 +38,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-        with:
-          version: 10
-
-      - name: Setup Node ${{ matrix.node-version }}
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      - name: Setup Vite+ and Node ${{ matrix.node-version }}
+        uses: voidzero-dev/setup-vp@237a7eda494c3466dcb53e9f067142b9218d64a1 # v1
         with:
           node-version: ${{ matrix.node-version }}
-          cache: pnpm
-          cache-dependency-path: ts/pnpm-lock.yaml
+          cache: true
+          working-directory: ts
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Check
+        run: vp check
 
       - name: Test
-        run: pnpm test
-
-      - name: Check license headers
-        run: pnpm license:check
+        run: vp test
 
       - name: Build
-        run: pnpm build
+        run: vp pack
 
-      - name: Publish dry-run
-        run: pnpm publish --dry-run --no-git-checks --tag next
+      - name: Check license headers
+        run: vp exec bun run lint
+
+      - name: Package dry-run
+        run: vp exec bun pm pack --dry-run

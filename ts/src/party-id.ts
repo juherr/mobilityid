@@ -73,10 +73,10 @@ export class PartyId {
   }
 
   public toCompactString(): string {
-    return `${this.countryCode}${this.partyCode}`;
+    return `${this.countryCode.toString()}${this.partyCode}`;
   }
 
   public toString(): string {
-    return `${this.countryCode}-${this.partyCode}`;
+    return `${this.countryCode.toString()}-${this.partyCode}`;
   }
 }

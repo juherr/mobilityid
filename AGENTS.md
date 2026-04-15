@@ -14,7 +14,7 @@ Guidance for coding agents working in this repository.
   - `scala/` -> legacy/primary Scala implementation (sbt, specs2).
   - `java/` -> Java 21 port (`mobilityid4j`) using Gradle.
   - `go/` -> Go port (`mobilityid.juherr.dev/go`) using Go toolchain.
-  - `ts/` -> TypeScript port (`@juherr/mobilityid`) using pnpm + Vitest.
+  - `ts/` -> TypeScript port (`@juherr/mobilityid`) using Bun + Vite+ instead of pnpm + Vitest.
 - Scala build tool: sbt (`scala/build.sbt`, `scala/project/build.properties`).
 - Scala modules:
   - `scala/core` -> main mobility ID domain logic.
@@ -28,6 +28,7 @@ Guidance for coding agents working in this repository.
 - TypeScript module:
   - `ts/src` -> domain types, algorithms, parser helper APIs.
   - `ts/test` -> Vitest parity suites.
+  - `ts/vite.config.ts` -> Vite+ config for check/test/pack workflows.
   - `ts/license-header.txt` -> canonical Apache-2.0 header template for ESLint.
 
 ## Repository Layout
@@ -140,19 +141,18 @@ Run from repository root unless noted.
 ### TypeScript build and test (`@juherr/mobilityid`)
 
 - Install dependencies:
-  - `cd ts && pnpm install`
+  - `cd ts && vp install`
 - Run TypeScript checks:
-  - `cd ts && pnpm lint`
-  - `cd ts && pnpm format:check`
-  - `cd ts && pnpm typecheck`
-  - `cd ts && pnpm test`
+  - `cd ts && vp check`
+  - `cd ts && vp test`
+  - `cd ts && bun run lint`
 - Run a single Vitest pattern:
-  - `cd ts && pnpm test -- ContractId`
+  - `cd ts && vp test ContractId`
 - Build package:
-  - `cd ts && pnpm build`
+  - `cd ts && vp pack`
 - License headers:
-  - `cd ts && pnpm license:check`
-  - `cd ts && pnpm license:apply`
+  - `cd ts && bun run lint`
+  - `cd ts && bun run lint:fix`
 
 ### Lint / formatting
 
@@ -165,7 +165,7 @@ Run from repository root unless noted.
 - Java workspace uses palantir-java-format 2.87.0 for code formatting (Java 25 compatible).
 - Go workspace uses `gofmt` and `go vet`; CI runs formatting check, `go vet`, `go test`, and `go build` (`.github/workflows/ci-go.yml`).
 - PHP workspace uses php-cs-fixer (`format`/`format:check`), PHPStan level 10, and PHPUnit; CI runs on PHP 8.3, 8.4, and 8.5 (`.github/workflows/ci-php.yml`).
-- TypeScript workspace uses ESLint + Prettier + `tsc --noEmit` + Vitest.
+- TypeScript workspace uses Vite+ (`vp check`, `vp test`, `vp pack`) with Bun as package manager, and Oxlint JS plugins for Apache header enforcement.
 - Java publishing metadata/signing is configured for Maven Central Portal workflows in `java/build.gradle.kts`.
 - Global release tags `vX.Y.Z` trigger `.github/workflows/release.yml` for Java and TypeScript publication pipelines.
 - Security scanning runs in CI via dependency review (`.github/workflows/dependency-review.yml`) and OWASP Dependency-Check (`.github/workflows/security.yml`).
@@ -201,11 +201,11 @@ All source files (Scala, Java, Go, PHP) include Apache 2.0 license headers manag
 - Auto-applied on: all `.php` files in `src/` and `tests/`
 - CI validation: `.github/workflows/ci-php.yml` runs `composer check`
 
-**TypeScript** (ESLint `eslint-plugin-header`):
-- Validate headers: `cd ts && pnpm license:check`
-- Apply headers: `cd ts && pnpm license:apply`
+**TypeScript** (Oxlint JS plugin `@tony.ganchev/eslint-plugin-header`):
+- Validate headers: `cd ts && bun run lint`
+- Apply headers: `cd ts && bun run lint:fix`
 - Auto-applied on: all `.ts` files in `ts/src/**` and `ts/test/**`
-- CI validation: `.github/workflows/ci-ts.yml` runs `pnpm license:check`
+- CI validation: `.github/workflows/ci-ts.yml` runs `bun run lint`
 
 **License header format** (consistent across all languages):
 ```

@@ -11,11 +11,12 @@ TypeScript port of the Mobility ID domain library.
 ## Tooling
 
 - Node.js: 24 LTS primary target (CI also checks 22 and 25)
-- Package manager: `pnpm`
-- TypeScript: strict mode
-- Tests: Vitest
-- Lint: ESLint (`@typescript-eslint` strict)
-- Formatting: Prettier
+- Package manager: Bun, via `vp install`
+- Unified toolchain: Vite+ (`vp`)
+- TypeScript checks: `vp check`
+- Tests: `vp test`
+- Library packaging: `vp pack`
+- License headers: Oxlint JS plugin (`@tony.ganchev/eslint-plugin-header`)
 
 ## API design
 
@@ -29,16 +30,15 @@ TypeScript port of the Mobility ID domain library.
 Run from `ts/`:
 
 ```bash
-pnpm install
-pnpm lint
-pnpm format:check
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm license:check
-pnpm license:apply
-pnpm check
+vp install
+vp check
+vp test
+vp pack
+bun run lint
+bun run lint:fix
 ```
+
+`vite.config.ts` is the single source of truth for TypeScript checks, test execution, formatting, and package build settings.
 
 ## Current scope
 
@@ -51,7 +51,7 @@ pnpm check
 ## License header policy
 
 All TypeScript source and test files must include the repository Apache-2.0 header.
-Headers are enforced by ESLint (`eslint-plugin-header`). Use:
+Headers are enforced by Oxlint via the Vite+ `lint` config using `@tony.ganchev/eslint-plugin-header`. Use:
 
-- `pnpm license:check` to validate
-- `pnpm license:apply` to auto-fix
+- `bun run lint` to validate
+- `bun run lint:fix` to auto-fix
