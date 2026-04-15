@@ -45,7 +45,7 @@ cd java
 ```bash
 cd ts
 vp install
-bun run check
+vp check
 ```
 
 Run a single TypeScript test pattern:

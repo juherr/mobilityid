@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Vite+ and Node ${{ matrix.node-version }}
-        uses: voidzero-dev/setup-vp@v1
+        uses: voidzero-dev/setup-vp@237a7eda494c3466dcb53e9f067142b9218d64a1 # v1
         with:
           node-version: ${{ matrix.node-version }}
           cache: true
@@ -58,4 +58,4 @@ jobs:
         run: vp exec eslint "src/**/*.ts" "test/**/*.ts" --max-warnings 0
 
       - name: Package dry-run
-        run: bun pm pack --dry-run
+        run: vp exec bun pm pack --dry-run

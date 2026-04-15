@@ -36,7 +36,6 @@ vp test
 vp pack
 bun run license:check
 bun run license:apply
-bun run check
 ```
 
 `vite.config.ts` is the single source of truth for TypeScript checks, test execution, formatting, and package build settings.

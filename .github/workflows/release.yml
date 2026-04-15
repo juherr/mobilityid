@@ -91,7 +91,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Vite+ and Node 24
-        uses: voidzero-dev/setup-vp@v1
+        uses: voidzero-dev/setup-vp@237a7eda494c3466dcb53e9f067142b9218d64a1 # v1
         with:
           node-version: "24"
           cache: true
@@ -120,7 +120,7 @@ jobs:
           vp pack
 
       - name: Set release version
-        run: bun pm pkg set version="${RELEASE_VERSION}"
+        run: vp exec bun pm pkg set version="${RELEASE_VERSION}"
 
       - name: Publish release
         shell: bash
@@ -130,6 +130,6 @@ jobs:
           else
             NPM_TAG="latest"
           fi
-          bun publish --access public --tag "${NPM_TAG}"
+          vp exec bun publish --access public --tag "${NPM_TAG}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

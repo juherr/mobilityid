@@ -14,7 +14,7 @@ Guidance for coding agents working in this repository.
   - `scala/` -> legacy/primary Scala implementation (sbt, specs2).
   - `java/` -> Java 21 port (`mobilityid4j`) using Gradle.
   - `go/` -> Go port (`mobilityid.juherr.dev/go`) using Go toolchain.
-  - `ts/` -> TypeScript port (`@juherr/mobilityid`) using pnpm + Vitest.
+  - `ts/` -> TypeScript port (`@juherr/mobilityid`) using Bun + Vite+ instead of pnpm + Vitest.
 - Scala build tool: sbt (`scala/build.sbt`, `scala/project/build.properties`).
 - Scala modules:
   - `scala/core` -> main mobility ID domain logic.
