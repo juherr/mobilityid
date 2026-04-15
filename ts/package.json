@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@tony.ganchev/eslint-plugin-header": "^3.4.3",
-    "@types/node": "^24.0.0",
+    "@types/node": "^25.0.0",
     "vite-plus": "^0.1.16"
   }
 }
