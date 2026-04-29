@@ -2,7 +2,7 @@
 java = "21"
 node = "24"
 sbt = "1.12"
-gradle = "8.9"
+gradle = "8.14.4"
 php = "8.3"
 go = "1.26"
 golangci-lint = "2.9"
