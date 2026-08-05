@@ -7,7 +7,7 @@ plugins {
   signing
   id("com.diffplug.spotless") version "8.4.0"
   id("net.ltgt.errorprone") version "5.1.0"
-  id("org.owasp.dependencycheck") version "12.2.0"
+  id("org.owasp.dependencycheck") version "13.0.0"
 }
 
 group = "dev.juherr.mobilityid"
