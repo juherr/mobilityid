@@ -1,7 +1,7 @@
 [tools]
 java = "21"
 node = "24"
-sbt = "1.12"
+sbt = "2.0.8"
 gradle = "8.9"
 php = "8.3"
 go = "1.26"
