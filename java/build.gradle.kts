@@ -7,7 +7,7 @@ plugins {
   signing
   id("com.diffplug.spotless") version "8.4.0"
   id("net.ltgt.errorprone") version "5.1.0"
-  id("org.owasp.dependencycheck") version "12.2.0"
+  id("org.owasp.dependencycheck") version "12.2.1"
 }
 
 group = "dev.juherr.mobilityid"
@@ -29,8 +29,8 @@ dependencies {
   compileOnly("org.jspecify:jspecify:1.0.0")
   testCompileOnly("org.jspecify:jspecify:1.0.0")
 
-  errorprone("com.google.errorprone:error_prone_core:2.48.0")
-  errorprone("com.uber.nullaway:nullaway:0.13.1")
+  errorprone("com.google.errorprone:error_prone_core:2.49.0")
+  errorprone("com.uber.nullaway:nullaway:0.13.3")
 
   testImplementation(platform("org.junit:junit-bom:6.0.3"))
   testImplementation("org.junit.jupiter:junit-jupiter")
