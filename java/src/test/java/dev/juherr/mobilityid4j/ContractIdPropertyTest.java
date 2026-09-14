@@ -79,7 +79,7 @@ class ContractIdPropertyTest {
 
     @Property
     void forgivingParseAgreesWithStrictParse(@ForAll("contractIds") ContractId id) {
-        assertThat(ContractId.parse(id.standard(), id.toString())).contains(id);
+        assertThat(ContractId.parse(id.standard(), id.toString())).isEqualTo(id);
     }
 
     @Property

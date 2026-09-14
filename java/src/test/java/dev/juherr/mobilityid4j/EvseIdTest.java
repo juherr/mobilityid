@@ -24,31 +24,32 @@ import org.junit.jupiter.api.Test;
 class EvseIdTest {
     @Test
     void parsesIsoWithAndWithoutSeparators() {
-        assertThat(EvseId.parse("DE*AB7*E840*6487")).isPresent();
-        assertThat(EvseId.parse("DEAB7E8406487")).isPresent();
+        assertThat(EvseId.parse("DE*AB7*E840*6487")).isNotNull();
+        assertThat(EvseId.parse("DEAB7E8406487")).isNotNull();
     }
 
     @Test
     void parsesIsoBoundaryAndSpecialCases() {
-        assertThat(EvseId.parse("DEAB7E1")).isPresent();
-        assertThat(EvseId.parse("DE*AB7*E1234567890ABCDEFGHIJ1234567890")).isPresent();
-        assertThat(EvseId.parse("DE*DES*E*BMW*0113*2")).isPresent();
-        assertThat(EvseId.parse("DE*TNM*ETWL*HEDWIGLAUDIENRING*LS12001*0")).isPresent();
+        assertThat(EvseId.parse("DEAB7E1")).isNotNull();
+        assertThat(EvseId.parse("DE*AB7*E1234567890ABCDEFGHIJ1234567890")).isNotNull();
+        assertThat(EvseId.parse("DE*DES*E*BMW*0113*2")).isNotNull();
+        assertThat(EvseId.parse("DE*TNM*ETWL*HEDWIGLAUDIENRING*LS12001*0")).isNotNull();
     }
 
     @Test
     void rejectsInvalidIsoStrings() {
         String tooLongOutletId = "77777777777777777777777777777777";
-        assertThat(EvseId.parse("DE*AB7*E" + tooLongOutletId)).isEmpty();
-        assertThat(EvseId.parse("NL*TNM*840*6487")).isEmpty();
-        assertThat(EvseIdIso.parse("+49*810*000*438")).isEmpty();
-        assertThat(EvseIdIso.parse("ZZ*TNM*840*64878")).isEmpty();
+        assertThat(EvseId.parse("DE*AB7*E" + tooLongOutletId)).isNull();
+        assertThat(EvseId.parse("NL*TNM*840*6487")).isNull();
+        assertThat(EvseIdIso.parse("+49*810*000*438")).isNull();
+        assertThat(EvseIdIso.parse("ZZ*TNM*840*64878")).isNull();
     }
 
     @Test
     void parsesDinFormat() {
-        EvseIdDin evse = EvseIdDin.parse("+49*810*000*438").orElseThrow();
-        assertThat(EvseId.parse("+49*810*000*438")).isPresent();
+        EvseIdDin evse = EvseIdDin.of("+49", "810", "000*438");
+        assertThat(EvseIdDin.parse("+49*810*000*438")).isEqualTo(evse);
+        assertThat(EvseId.parse("+49*810*000*438")).isNotNull();
         assertThat(evse.countryCode()).isEqualTo(PhoneCountryCode.of("+49"));
         assertThat(evse.operatorId()).isEqualTo(OperatorIdDin.of("810"));
         assertThat(evse.powerOutletId()).isEqualTo("000*438");
@@ -56,14 +57,14 @@ class EvseIdTest {
 
     @Test
     void parsesDinBoundaryAndValidationCases() {
-        assertThat(EvseId.parse("+49*810*1")).isPresent();
-        assertThat(EvseId.parse("+49*810*12345678901234567890123456789012")).isPresent();
-        assertThat(EvseId.parse("+49*810*123456789012345678901234567890123")).isEmpty();
-        assertThat(EvseId.parse("+49*AB7*840*6487")).isEmpty();
-        assertThat(EvseId.parse("+49*645*E840*6487")).isEmpty();
-        assertThat(EvseIdDin.parse("DE*AB7*E840*6487")).isEmpty();
-        assertThat(EvseIdIso.parse("+4A*810*000*438")).isEmpty();
-        assertThat(EvseId.parse("+49*810548*1234567890")).isPresent();
+        assertThat(EvseId.parse("+49*810*1")).isNotNull();
+        assertThat(EvseId.parse("+49*810*12345678901234567890123456789012")).isNotNull();
+        assertThat(EvseId.parse("+49*810*123456789012345678901234567890123")).isNull();
+        assertThat(EvseId.parse("+49*AB7*840*6487")).isNull();
+        assertThat(EvseId.parse("+49*645*E840*6487")).isNull();
+        assertThat(EvseIdDin.parse("DE*AB7*E840*6487")).isNull();
+        assertThat(EvseIdIso.parse("+4A*810*000*438")).isNull();
+        assertThat(EvseId.parse("+49*810548*1234567890")).isNotNull();
 
         assertThat(EvseId.parse("+49*810*000*438")).isEqualTo(EvseId.parse("49*810*000*438"));
     }
@@ -95,10 +96,10 @@ class EvseIdTest {
     }
 
     @Test
-    void parseReturnsEmptyForNullInput() {
-        assertThat(EvseId.parse(null)).isEmpty();
-        assertThat(EvseIdIso.parse(null)).isEmpty();
-        assertThat(EvseIdDin.parse(null)).isEmpty();
+    void parseReturnsNullForNullInput() {
+        assertThat(EvseId.parse(null)).isNull();
+        assertThat(EvseIdIso.parse(null)).isNull();
+        assertThat(EvseIdDin.parse(null)).isNull();
     }
 
     @Test
@@ -128,7 +129,7 @@ class EvseIdTest {
         assertThat(iso.toString()).isEqualTo("NL*TNM*E840*6487");
         assertThat(iso.toCompactString()).isEqualTo("NLTNME8406487");
         assertThat(EvseId.of("+31", "745", "840*6487").toString()).isEqualTo("+31*745*840*6487");
-        assertThat(EvseId.parse("+31*745*840*6487").orElseThrow().toString()).isEqualTo("+31*745*840*6487");
+        assertThat(EvseId.parse("+31*745*840*6487")).hasToString("+31*745*840*6487");
     }
 
     @Test
@@ -138,7 +139,6 @@ class EvseIdTest {
 
     @Test
     void exposesOperatorPartyId() {
-        assertThat(EvseIdIso.of("NL", "TNM", "000122045").partyId())
-                .isEqualTo(PartyId.parse("NLTNM").orElseThrow());
+        assertThat(EvseIdIso.of("NL", "TNM", "000122045").partyId()).isEqualTo(PartyId.parse("NLTNM"));
     }
 }

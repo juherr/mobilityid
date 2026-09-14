@@ -24,33 +24,39 @@ class PartyIdTest {
     @Test
     void parsesAllAcceptedRepresentations() {
         assertThat(PartyId.parse("NL-TNM"))
-                .hasValueSatisfying(id -> assertThat(id.toCompactString()).isEqualTo("NLTNM"));
+                .isNotNull()
+                .extracting(PartyId::toCompactString)
+                .isEqualTo("NLTNM");
         assertThat(PartyId.parse("NL*TNM"))
-                .hasValueSatisfying(id -> assertThat(id.toCompactString()).isEqualTo("NLTNM"));
+                .isNotNull()
+                .extracting(PartyId::toCompactString)
+                .isEqualTo("NLTNM");
         assertThat(PartyId.parse("NLTNM"))
-                .hasValueSatisfying(id -> assertThat(id.toCompactString()).isEqualTo("NLTNM"));
+                .isNotNull()
+                .extracting(PartyId::toCompactString)
+                .isEqualTo("NLTNM");
     }
 
     @Test
     void rendersWithDashSeparator() {
-        assertThat(PartyId.parse("NL*TNM").orElseThrow().toString()).isEqualTo("NL-TNM");
+        assertThat(PartyId.parse("NL*TNM")).hasToString("NL-TNM");
     }
 
     @Test
     void rejectsNonsense() {
-        assertThat(PartyId.parse("NLTNMA")).isEmpty();
-        assertThat(PartyId.parse("XYTNM")).isEmpty();
-        assertThat(PartyId.parse("NL%(@$")).isEmpty();
-        assertThat(PartyId.parse(" NLTNM")).isEmpty();
-        assertThat(PartyId.parse("\nLTNM")).isEmpty();
-        assertThat(PartyId.parse("")).isEmpty();
-        assertThat(PartyId.parse("XY-TNMaargh")).isEmpty();
-        assertThat(PartyId.parse("\u041D\u041B-TNM")).isEmpty();
-        assertThat(PartyId.parse("NLT-NM")).isEmpty();
+        assertThat(PartyId.parse("NLTNMA")).isNull();
+        assertThat(PartyId.parse("XYTNM")).isNull();
+        assertThat(PartyId.parse("NL%(@$")).isNull();
+        assertThat(PartyId.parse(" NLTNM")).isNull();
+        assertThat(PartyId.parse("\nLTNM")).isNull();
+        assertThat(PartyId.parse("")).isNull();
+        assertThat(PartyId.parse("XY-TNMaargh")).isNull();
+        assertThat(PartyId.parse("\u041D\u041B-TNM")).isNull();
+        assertThat(PartyId.parse("NLT-NM")).isNull();
     }
 
     @Test
-    void parseReturnsEmptyForNullInput() {
-        assertThat(PartyId.parse(null)).isEmpty();
+    void parseReturnsNullForNullInput() {
+        assertThat(PartyId.parse(null)).isNull();
     }
 }

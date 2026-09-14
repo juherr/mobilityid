@@ -146,12 +146,12 @@ class ContractIdTest {
     void exposesPartyId() {
         assertThat(ContractId.of(ContractIdStandard.ISO, "NL", "TNM", "000722345")
                         .partyId())
-                .isEqualTo(PartyId.parse("NLTNM").orElseThrow());
+                .isEqualTo(PartyId.parse("NLTNM"));
     }
 
     @Test
-    void parseReturnsEmptyForNullInput() {
-        assertThat(ContractId.parse(ContractIdStandard.ISO, null)).isEmpty();
-        assertThat(ContractId.parse(null, "NL-TNM-000722345-X")).isEmpty();
+    void parseReturnsNullForNullInput() {
+        assertThat(ContractId.parse(ContractIdStandard.ISO, null)).isNull();
+        assertThat(ContractId.parse(null, "NL-TNM-000722345-X")).isNull();
     }
 }

@@ -35,7 +35,7 @@ examples are in `README.md`. Run every command below from `java/`.
 
 - Keep APIs idiomatic Java; prefer local `var` only when the inferred type is obvious at a glance.
 - Mirror the Scala shape: strict factories throw `IllegalArgumentException`, forgiving parsers
-  return `Optional`/`null` as documented in `README.md`, immutable value types, canonical `toString()`.
+  return `@Nullable T` (never `Optional`, for Kotlin interop), immutable value types, canonical `toString()`.
 - Formatting is not negotiable: run `spotlessApply` before finishing; NullAway errors are build failures.
 - Any new task or plugin must stay configuration-cache compatible (`dependencyCheckAnalyze` is the only opt-out).
 - Add a jqwik property when a behavior holds for a whole input class (round trips, algorithm invariants), an example test for known vectors.

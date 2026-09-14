@@ -120,16 +120,16 @@ public final class ContractId {
      *
      * @param standard identifier standard
      * @param raw contract ID string
-     * @return parsed contract ID, or empty when invalid
+     * @return parsed contract ID, or {@code null} when invalid
      */
-    public static Optional<ContractId> parse(@Nullable ContractIdStandard standard, @Nullable String raw) {
+    public static @Nullable ContractId parse(@Nullable ContractIdStandard standard, @Nullable String raw) {
         if (standard == null || raw == null) {
-            return Optional.empty();
+            return null;
         }
         try {
-            return Optional.of(parseStrict(standard, raw));
+            return parseStrict(standard, raw);
         } catch (IllegalArgumentException e) {
-            return Optional.empty();
+            return null;
         }
     }
 
