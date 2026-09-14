@@ -72,7 +72,8 @@ for single-suite and lint invocations. Full gates per workspace:
 ### CI and release
 
 - One CI workflow per workspace (`.github/workflows/ci-{scala,java,go,php,ts}.yml`); only touch the workflow of the workspace you changed.
-- Global tags `vX.Y.Z` trigger `.github/workflows/release.yml` (Java to Maven Central Portal, TypeScript to npm). Go uses separate `go/vX.Y.Z` tags (`release-go.yml`).
+- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, runs the Java and TypeScript preflights, and only when both pass publishes Java (Maven Central Portal via nmcp) and TypeScript (npm via Trusted Publishing/OIDC, no token) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`). Full procedure in `CONTRIBUTING.md`.
+- `CI Workflows` (`ci-workflows.yml`) lints every workflow with actionlint and zizmor; every checkout uses `persist-credentials: false` and publishing workflows disable caches.
 - Security gates: dependency review (`dependency-review.yml`) and OWASP Dependency-Check (`security.yml`).
 
 ### License headers
@@ -110,6 +111,7 @@ limitations under the License.
   - Update the workspace `AGENTS.md` whenever its commands, toolchain, or quality gates evolve; update this file only for cross-workspace changes (layout, domain, release).
   - Update the root `README.md` and the workspace `README.md` incrementally as features, API choices, or tooling decisions change.
   - Record practical lessons learned (pitfalls, conventions, migration notes) in the relevant README/guide instead of leaving them only in PR/chat context.
+  - Add a line to `CHANGELOG.md` under `Unreleased` for any user-visible change (Common Changelog, grouped by impact, breaking changes marked).
 
 ## Code Style (shared)
 
@@ -144,7 +146,7 @@ Before finalizing a change, an agent should:
 
 The project uses simplified version formats in `mise.toml`:
 - **Java/Node**: major only (`21`, `24`)
-- **sbt/gradle/php/go**: major.minor (`1.12`, `8.9`, `8.5`, `1.26`)
+- **sbt/gradle/php/go**: major.minor (`1.12`, `9.7`, `8.3`, `1.26`)
 
 This is enforced via `extractVersionTemplate` and `autoReplaceStringTemplate` in the customManager configuration in `.github/renovate.json`:
 

@@ -37,6 +37,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Setup Vite+ and Node ${{ matrix.node-version }}
         uses: voidzero-dev/setup-vp@237a7eda494c3466dcb53e9f067142b9218d64a1 # v1
@@ -56,6 +58,10 @@ jobs:
 
       - name: Check license headers
         run: vp exec bun run lint
+
+      - name: Verify the npm package (pack, content, publint, throw-away consumer)
+        if: matrix.node-version == '24'
+        run: scripts/verify-package.sh
 
       - name: Package dry-run
         run: vp exec bun pm pack --dry-run

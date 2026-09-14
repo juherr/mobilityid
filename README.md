@@ -1,6 +1,11 @@
 ## mobilityid monorepo
 
-[![CI](https://github.com/juherr/mobilityid/actions/workflows/ci.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci.yml)
+[![CI Java](https://github.com/juherr/mobilityid/actions/workflows/ci-java.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-java.yml)
+[![CI Scala](https://github.com/juherr/mobilityid/actions/workflows/ci-scala.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-scala.yml)
+[![CI Go](https://github.com/juherr/mobilityid/actions/workflows/ci-go.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-go.yml)
+[![CI PHP](https://github.com/juherr/mobilityid/actions/workflows/ci-php.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-php.yml)
+[![CI TypeScript](https://github.com/juherr/mobilityid/actions/workflows/ci-ts.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-ts.yml)
+[![codecov](https://codecov.io/gh/juherr/mobilityid/graph/badge.svg)](https://codecov.io/gh/juherr/mobilityid)
 
 This repository contains multiple implementations of the same mobility ID domain:
 
@@ -66,10 +71,10 @@ vp test ContractId
 ## Dependency updates
 
 - Renovate manages GitHub Actions, Gradle, npm, sbt/Scala, and `mise.toml` tool versions (`.github/renovate.json`).
-- `mise.toml` uses simplified version formats: major.minor for sbt/gradle (e.g., `1.12`, `8.9`), major only for Java/Node (e.g., `21`, `24`). See `AGENTS.md` for configuration details.
+- `mise.toml` uses simplified version formats: major.minor for sbt/gradle (e.g., `1.12`, `9.7`), major only for Java/Node (e.g., `21`, `24`). See `AGENTS.md` for configuration details.
 - CI validates Gradle Wrapper integrity on every run (`gradle/actions/wrapper-validation`).
 - Gradle distribution integrity is pinned with `distributionSha256Sum` in `java/gradle/wrapper/gradle-wrapper.properties`.
-- Pull requests run a dependency review gate (`actions/dependency-review-action`) via `.github/workflows/ci.yml`.
+- Pull requests run a dependency review gate (`actions/dependency-review-action`) via `.github/workflows/dependency-review.yml`.
 - OWASP dependency scanning runs in `.github/workflows/security.yml`.
 
 ## Java release checks
@@ -82,13 +87,13 @@ Run from `java/`:
 ./gradlew publishToMavenLocal
 ```
 
-`mobilityid4j` publishing metadata/signing is configured for Maven Central Portal workflows.
+`mobilityid4j` is published to the Maven Central Portal through the nmcp Gradle plugin; details in `java/README.md`.
 
-## Global release tags
+## Releases
 
-- Global tags `vX.Y.Z` trigger the release pipeline (`.github/workflows/release.yml`).
-- The Java publication uses the tag version and publishes `mobilityid4j` to Maven Central Portal.
-- The TypeScript publication uses the same tag version and publishes `@juherr/mobilityid` to npm.
+- Java and TypeScript are released together by the manually dispatched `Release` workflow (`.github/workflows/release.yml`): it validates `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, publishes `mobilityid4j` to Maven Central and `@juherr/mobilityid` to npm, then creates the signed `vX.Y.Z` tag and the GitHub Release.
+- Go is released from `go/vX.Y.Z` tags (`.github/workflows/release-go.yml`).
+- Procedure and required secrets: `CONTRIBUTING.md`.
 
 ## License
 

@@ -18,7 +18,6 @@ package dev.juherr.mobilityid4j;
 
 import java.util.Arrays;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -67,16 +66,16 @@ public record CountryCode(String value) {
      * Parses a country code.
      *
      * @param value candidate country code
-     * @return validated country code, or empty when invalid
+     * @return validated country code, or {@code null} when invalid
      */
-    public static Optional<CountryCode> parse(@Nullable String value) {
+    public static @Nullable CountryCode parse(@Nullable String value) {
         if (value == null) {
-            return Optional.empty();
+            return null;
         }
         try {
-            return Optional.of(of(value));
+            return of(value);
         } catch (IllegalArgumentException e) {
-            return Optional.empty();
+            return null;
         }
     }
 

@@ -30,7 +30,8 @@ const blockHeaderLines = `\n${canonicalHeader.split("\n").slice(1, -1).join("\n"
 
 export default defineConfig({
   fmt: {
-    ignorePatterns: ["dist/**", "bun.lock"],
+    // Markdown is left to editors: the macOS and Linux oxfmt binaries disagree on the final newline.
+    ignorePatterns: ["dist/**", "bun.lock", "**/*.md"],
     semi: true,
     singleQuote: false,
     sortPackageJson: false,

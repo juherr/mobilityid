@@ -5,9 +5,11 @@ plugins {
   `java-library`
   `maven-publish`
   signing
-  id("com.diffplug.spotless") version "8.4.0"
-  id("net.ltgt.errorprone") version "5.1.0"
-  id("org.owasp.dependencycheck") version "12.2.0"
+  alias(libs.plugins.spotless)
+  alias(libs.plugins.errorprone)
+  alias(libs.plugins.dependencycheck)
+  alias(libs.plugins.japicmp)
+  jacoco
 }
 
 group = "dev.juherr.mobilityid"
@@ -26,26 +28,98 @@ repositories {
 }
 
 dependencies {
-  compileOnly("org.jspecify:jspecify:1.0.0")
-  testCompileOnly("org.jspecify:jspecify:1.0.0")
+  // JSpecify annotations are part of the public API (runtime retention, read by Kotlin and
+  // static analyzers on the consumer side), hence `api` as recommended by JSpecify.
+  api(libs.jspecify)
 
-  errorprone("com.google.errorprone:error_prone_core:2.48.0")
-  errorprone("com.uber.nullaway:nullaway:0.13.1")
+  errorprone(libs.errorprone.core)
+  errorprone(libs.nullaway)
 
-  testImplementation(platform("org.junit:junit-bom:6.0.3"))
-  testImplementation("org.junit.jupiter:junit-jupiter")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-  testImplementation("org.assertj:assertj-core:3.27.7")
+  testImplementation(platform(libs.junit.bom))
+  testImplementation(libs.junit.jupiter)
+  testImplementation(libs.assertj.core)
+  testImplementation(libs.jqwik)
+  testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.withType<Test>().configureEach {
   useJUnitPlatform()
+  finalizedBy(tasks.jacocoTestReport)
+}
+
+jacoco {
+  toolVersion = libs.versions.jacoco.get()
+}
+
+tasks.jacocoTestReport {
+  dependsOn(tasks.test)
+  reports {
+    xml.required.set(true)
+    html.required.set(true)
+  }
+}
+
+// Coverage floor: raise it as coverage grows, never lower it silently.
+tasks.jacocoTestCoverageVerification {
+  dependsOn(tasks.test)
+  violationRules {
+    rule {
+      limit {
+        counter = "LINE"
+        minimum = "0.90".toBigDecimal()
+      }
+      limit {
+        counter = "BRANCH"
+        minimum = "0.80".toBigDecimal()
+      }
+    }
+  }
+}
+
+// Binary/source compatibility against the last release published on Maven Central.
+// Pin the baseline with -PapiBaselineVersion=X.Y.Z; `latest.release` otherwise.
+val apiBaseline = configurations.create("apiBaseline") {
+  isCanBeConsumed = false
+  isTransitive = false
+}
+
+dependencies {
+  apiBaseline(
+    "dev.juherr.mobilityid:mobilityid4j:" +
+      providers.gradleProperty("apiBaselineVersion").getOrElse("latest.release")
+  )
+}
+
+val apiBaselineJars = apiBaseline.incoming.artifactView { lenient(true) }.files
+
+val japicmp = tasks.register<me.champeau.gradle.japicmp.JapicmpTask>("japicmp") {
+  description = "Checks binary and source compatibility against the last published release."
+  group = "verification"
+  val baselineJars = apiBaselineJars
+  onlyIf("a published baseline is resolvable") {
+    val resolvable = !baselineJars.isEmpty
+    if (!resolvable) {
+      logger.warn("japicmp: no published baseline for dev.juherr.mobilityid:mobilityid4j, skipping the API compatibility check")
+    }
+    resolvable
+  }
+  oldClasspath.from(baselineJars)
+  newClasspath.from(tasks.jar)
+  onlyModified.set(true)
+  failOnSourceIncompatibility.set(true)
+  ignoreMissingClasses.set(true)
+  txtOutputFile.set(layout.buildDirectory.file("reports/japicmp/japicmp.txt"))
+  htmlOutputFile.set(layout.buildDirectory.file("reports/japicmp/japicmp.html"))
+}
+
+tasks.check {
+  dependsOn(tasks.jacocoTestCoverageVerification, japicmp)
 }
 
 tasks.withType<JavaCompile>().configureEach {
   options.release.set(21)
   options.encoding = "UTF-8"
+  options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror"))
 
   options.errorprone {
     check("EqualsGetClass", CheckSeverity.ERROR)
@@ -59,35 +133,37 @@ tasks.withType<JavaCompile>().configureEach {
   }
 }
 
-val verifyRelease by tasks.registering {
+tasks.withType<Javadoc>().configureEach {
+  (options as StandardJavadocDocletOptions).apply {
+    addBooleanOption("Xdoclint:all", true)
+    addBooleanOption("Werror", true)
+  }
+}
+
+tasks.withType<AbstractArchiveTask>().configureEach {
+  isPreserveFileTimestamps = false
+  isReproducibleFileOrder = true
+}
+
+// Release safety: refuse to sign/upload a SNAPSHOT and require signing inputs.
+val verifyRelease = tasks.register("verifyRelease") {
+  val projectVersion = version.toString()
+  val signingConfigured = providers.gradleProperty("signingKey")
+    .orElse(providers.environmentVariable("SIGNING_KEY")).isPresent &&
+    providers.gradleProperty("signingPassword")
+      .orElse(providers.environmentVariable("SIGNING_PASSWORD")).isPresent
   doLast {
-    if (version.toString().endsWith("-SNAPSHOT")) {
+    if (projectVersion.endsWith("-SNAPSHOT")) {
       throw GradleException("Release publishing requires a non-SNAPSHOT version")
     }
-
-    val required = listOf(
-      "mavenCentralPortalUrl" to "MAVEN_CENTRAL_PORTAL_URL",
-      "mavenCentralUsername" to "MAVEN_CENTRAL_USERNAME",
-      "mavenCentralPassword" to "MAVEN_CENTRAL_PASSWORD",
-      "signingKey" to "SIGNING_KEY",
-      "signingPassword" to "SIGNING_PASSWORD"
-    )
-
-    val missing = required.filter { (propertyName, envName) ->
-      !providers.gradleProperty(propertyName).isPresent &&
-        !providers.environmentVariable(envName).isPresent
-    }
-
-    if (missing.isNotEmpty()) {
-      val missingKeys = missing.joinToString(", ") { (propertyName, envName) ->
-        "$propertyName/$envName"
-      }
-      throw GradleException("Release publishing requires credentials/signing inputs: $missingKeys")
+    if (!signingConfigured) {
+      throw GradleException("Release publishing requires signingKey/SIGNING_KEY and signingPassword/SIGNING_PASSWORD")
     }
   }
 }
 
-tasks.withType<PublishToMavenRepository>().configureEach {
+// Guard the upload itself, not only the lifecycle task that wraps it.
+tasks.matching { it.name.startsWith("nmcpPublish") && it.name.contains("CentralPortal") }.configureEach {
   dependsOn(verifyRelease)
 }
 
@@ -141,29 +217,10 @@ publishing {
   }
 
   repositories {
-    val centralPortalUrl =
-      providers.gradleProperty("mavenCentralPortalUrl").orElse(
-        providers.environmentVariable("MAVEN_CENTRAL_PORTAL_URL")
-      )
-    val centralPortalUsername =
-      providers.gradleProperty("mavenCentralUsername").orElse(
-        providers.environmentVariable("MAVEN_CENTRAL_USERNAME")
-      )
-    val centralPortalPassword =
-      providers.gradleProperty("mavenCentralPassword").orElse(
-        providers.environmentVariable("MAVEN_CENTRAL_PASSWORD")
-      )
-
-    if (centralPortalUrl.isPresent && centralPortalUsername.isPresent && centralPortalPassword.isPresent) {
-      maven {
-        name = "mavenCentralPortal"
-        url = uri(centralPortalUrl.get())
-
-        credentials {
-          username = centralPortalUsername.get()
-          password = centralPortalPassword.get()
-        }
-      }
+    // Isolated repository consumed by consumer-smoke (scripts/verify-consumer.sh).
+    maven {
+      name = "smoke"
+      url = uri(layout.buildDirectory.dir("smoke-repo"))
     }
   }
 }
@@ -199,8 +256,8 @@ spotless {
  * limitations under the License.
  */
 """)
-    palantirJavaFormat("2.87.0")
-    target("src/*/java/**/*.java")
+    palantirJavaFormat(libs.versions.palantir.java.format.get())
+    target("src/*/java/**/*.java", "consumer-smoke/src/**/*.java")
     formatAnnotations()
     removeUnusedImports()
     trimTrailingWhitespace()
