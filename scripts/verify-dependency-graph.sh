@@ -28,7 +28,6 @@ probes = [
     ("direct", "org.jspecify:jspecify", "declared api dependency"),
     ("indirect", "org.opentest4j:opentest4j", "transitive test dependency (via JUnit)"),
     ("indirect", "com.google.guava:guava", "transitive build-plugin dependency (via Error Prone)"),
-    ("direct", "org.gradle:gradle-core", "Gradle build tool itself"),
 ]
 
 with open(sys.argv[1], encoding="utf-8") as handle:

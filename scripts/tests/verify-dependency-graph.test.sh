@@ -37,13 +37,13 @@ expect() {
 }
 
 full=(org.jspecify:jspecify:1.0.1=direct org.opentest4j:opentest4j:1.3.0=indirect
-  com.google.guava:guava:33.6.0-jre=indirect org.gradle:gradle-core:9.7.1=direct)
+  com.google.guava:guava:33.6.0-jre=indirect)
 declared_only=(org.jspecify:jspecify:1.0.1=direct org.junit.jupiter:junit-jupiter:6.1.3=direct
-  org.gradle:gradle-core:9.7.1=direct)
+ )
 
 expect 0 "resolved graph with transitive dependencies" "$(make_snapshot ok java/settings.gradle.kts "${full[@]}")"
 expect 1 "declared coordinates only (no transitive dependencies)" "$(make_snapshot declared java/settings.gradle.kts "${declared_only[@]}")"
-expect 1 "transitive dependency reported as direct" "$(make_snapshot wrongrel java/settings.gradle.kts org.jspecify:jspecify:1.0.1=direct org.opentest4j:opentest4j:1.3.0=direct com.google.guava:guava:33.6.0-jre=direct org.gradle:gradle-core:9.7.1=direct)"
+expect 1 "transitive dependency reported as direct" "$(make_snapshot wrongrel java/settings.gradle.kts org.jspecify:jspecify:1.0.1=direct org.opentest4j:opentest4j:1.3.0=direct com.google.guava:guava:33.6.0-jre=direct)"
 expect 1 "graph generated for another workspace" "$(make_snapshot other ts/package.json "${full[@]}")"
 expect 1 "snapshot does not exist" "${work}/missing.json"
 
