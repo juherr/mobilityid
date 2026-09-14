@@ -52,14 +52,15 @@
     "format": "vp fmt . --write",
     "format:check": "vp fmt --check",
     "typecheck": "vp check",
-    "test": "vp test",
-    "check": "vp check && vp test && vp pack && publint --strict && attw --pack . --profile esm-only",
+    "test": "vp test --coverage",
+    "check": "vp check && vp test --coverage && vp pack && publint --strict && attw --pack . --profile esm-only",
     "check:package": "scripts/verify-package.sh"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@tony.ganchev/eslint-plugin-header": "3.4.4",
     "@types/node": "^24.13.4",
+    "@vitest/coverage-v8": "4.1.11",
     "fast-check": "^4.10.0",
     "publint": "^0.3.24",
     "typescript": "^6.0.3",

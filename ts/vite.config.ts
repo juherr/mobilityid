@@ -68,6 +68,15 @@ const config: UserConfig = defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
+      include: ["src/**/*.ts"],
+      // Enforced by `vp test --coverage` (bun run test, bun run check, CI); a filtered run
+      // (`vp test ContractId`) skips coverage on purpose.
+      thresholds: {
+        statements: 90,
+        branches: 85,
+        functions: 90,
+        lines: 90,
+      },
     },
   },
   pack: {

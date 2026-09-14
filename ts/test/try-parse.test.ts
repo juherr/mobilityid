@@ -31,6 +31,7 @@ import {
   ProviderId,
   type ParseResult,
 } from "../src/index.js";
+import { attempt } from "../src/parse-result.js";
 
 // A failed result must not carry a value, a successful one must not carry an error: the union is
 // what lets callers narrow on `ok` without a cast.
@@ -115,6 +116,14 @@ describe("tryParse", () => {
     expect(expectFailure(EvseId.tryParse("NL*TNM*840*6487"))).toBe(
       "Invalid EVSE ID: NL*TNM*840*6487 (ISO: Invalid ISO EVSE ID: NL*TNM*840*6487; DIN: Invalid DIN EVSE ID: NL*TNM*840*6487)",
     );
+  });
+
+  it("only captures TypeError: anything else is a bug and keeps propagating", () => {
+    expect(() =>
+      attempt(() => {
+        throw new RangeError("not an invalid input");
+      }),
+    ).toThrow(RangeError);
   });
 
   it("is frozen, like the domain objects", () => {
