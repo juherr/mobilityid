@@ -1,0 +1,26 @@
+[versions]
+assertj = "3.27.7"
+dependencycheck = "13.0.0"
+errorprone = "2.50.0"
+errorprone-plugin = "5.1.1"
+jqwik = "1.10.1"
+jspecify = "1.0.1"
+junit = "6.1.3"
+nullaway = "0.14.1"
+palantir-java-format = "2.98.0"
+spotless = "8.10.2"
+
+[libraries]
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+jqwik = { module = "net.jqwik:jqwik", version.ref = "jqwik" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
+
+[plugins]
+dependencycheck = { id = "org.owasp.dependencycheck", version.ref = "dependencycheck" }
+errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

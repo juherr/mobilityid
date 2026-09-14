@@ -49,33 +49,30 @@ jobs:
 
       - name: Pre-release checks
         run: |
-          test -n "${{ secrets.MAVEN_CENTRAL_PORTAL_URL }}"
           test -n "${{ secrets.MAVEN_CENTRAL_USERNAME }}"
           test -n "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
           test -n "${{ secrets.SIGNING_KEY }}"
           test -n "${{ secrets.SIGNING_PASSWORD }}"
 
       - name: Verify release build
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: |
           ./gradlew \
             -PreleaseVersion="${RELEASE_VERSION}" \
-            -PmavenCentralPortalUrl="${{ secrets.MAVEN_CENTRAL_PORTAL_URL }}" \
-            -PmavenCentralUsername="${{ secrets.MAVEN_CENTRAL_USERNAME }}" \
-            -PmavenCentralPassword="${{ secrets.MAVEN_CENTRAL_PASSWORD }}" \
-            -PsigningKey="${{ secrets.SIGNING_KEY }}" \
-            -PsigningPassword="${{ secrets.SIGNING_PASSWORD }}" \
             clean check javadocJar sourcesJar publishToMavenLocal
 
-      - name: Publish release
+      - name: Publish release to Maven Central
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: |
           ./gradlew \
             -PreleaseVersion="${RELEASE_VERSION}" \
-            -PmavenCentralPortalUrl="${{ secrets.MAVEN_CENTRAL_PORTAL_URL }}" \
-            -PmavenCentralUsername="${{ secrets.MAVEN_CENTRAL_USERNAME }}" \
-            -PmavenCentralPassword="${{ secrets.MAVEN_CENTRAL_PASSWORD }}" \
-            -PsigningKey="${{ secrets.SIGNING_KEY }}" \
-            -PsigningPassword="${{ secrets.SIGNING_PASSWORD }}" \
-            publish
+            publishAggregationToCentralPortal
 
   release-ts:
     name: Release TypeScript to npm
