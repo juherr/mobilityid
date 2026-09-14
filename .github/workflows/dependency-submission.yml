@@ -67,17 +67,17 @@ jobs:
 
   dependency-review:
     name: Dependency review
-    # Pull request gate: rejects newly introduced high/critical vulnerabilities in every
-    # ecosystem. Manifest-based ecosystems (npm, Composer, Go, Actions) are parsed by GitHub; the
-    # Java graph is the snapshot submitted by the job above, hence `needs`: the review never runs
-    # before the submission has completed (when both sides lack a snapshot GitHub raises no
-    # warning, so `retry-on-snapshot-warnings` alone cannot close that race). Fork and Dependabot
-    # pull requests have the submission skipped and are reviewed on the manifest ecosystems only.
+    # Pull request security gate: green means "the Java graph was submitted successfully when it
+    # applied, and Dependency Review found no newly introduced high/critical vulnerability".
+    # Manifest-based ecosystems (npm, Composer, Go, Actions) are parsed by GitHub; the Java graph
+    # is the snapshot submitted by the job above, hence `needs`: the review never runs before the
+    # submission has completed (when both sides lack a snapshot GitHub raises no warning, so
+    # `retry-on-snapshot-warnings` alone cannot close that race). The job runs even when the
+    # submission failed and fails itself, because a skipped job satisfies a required status
+    # check. Fork and Dependabot pull requests have the submission skipped and are reviewed on
+    # the manifest ecosystems only.
     needs: java-graph
-    if: >-
-      github.event_name == 'pull_request'
-      && !cancelled()
-      && (needs.java-graph.result == 'success' || needs.java-graph.result == 'skipped')
+    if: github.event_name == 'pull_request' && !cancelled()
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -85,6 +85,16 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Require the Java dependency graph
+        if: needs.java-graph.result != 'skipped'
+        env:
+          RESULT: ${{ needs.java-graph.result }}
+        run: |
+          if [[ "$RESULT" != "success" ]]; then
+            echo "::error::Java dependency graph job ended with '$RESULT'; the review cannot vouch for Java"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
