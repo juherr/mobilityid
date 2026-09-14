@@ -6,7 +6,12 @@ Java 21 port of the mobility ID domain model and validation logic.
 
 - single-module Gradle project, JPMS module `dev.juherr.mobilityid4j` (`src/main/java/module-info.java`)
 - sources in `src/main/java`, tests in `src/test/java` (white-box tests patched into the module by Gradle)
-- dependency and plugin versions in `gradle/libs.versions.toml` (Gradle version catalog)
+- dependency and plugin versions in `gradle/libs.versions.toml` (Gradle version catalog); the two
+  settings plugins that bootstrap the build (foojay toolchain resolver, nmcp) keep their version
+  inline in `settings.gradle.kts` because the catalog is not available there
+- `consumer-smoke/`: a separate Gradle build (Java + Kotlin) that consumes the published artifact
+  from an isolated repository on the module path (`scripts/verify-consumer.sh`)
+- `scripts/verify.sh`: single verification entry point (gates, release guard wiring, consumer smoke)
 - Gradle runs with the configuration cache and build cache enabled (`gradle.properties`)
 
 ## Build and test
@@ -34,9 +39,12 @@ The project is configured with:
 - Spotless + `palantir-java-format`
 - Error Prone
 - NullAway (strict, JSpecify mode)
-- JSpecify (`@NullMarked` packages, `requires static org.jspecify` in the module descriptor)
-- `javac -Xlint:all -Werror` (the `exports` lint is disabled: it flags JSpecify annotations in
-  public signatures even though `requires static` is the recommended way to depend on them)
+- JSpecify as an `api` dependency (annotations are part of the public API and have runtime
+  retention), `@NullMarked` module and packages, `requires static transitive org.jspecify`
+- JaCoCo with coverage gates (90 % lines, 80 % branches) in `check`
+- japicmp against the last release on Maven Central (`-PapiBaselineVersion=X.Y.Z` to pin; skipped
+  with an explicit warning while nothing is published)
+- `javac -Xlint:all -Werror`
 - `javadoc -Xdoclint:all -Werror`
 - reproducible jars (no timestamps, stable entry order)
 
@@ -49,7 +57,9 @@ Useful commands:
 
 ## Tests
 
-- JUnit Jupiter + AssertJ for example-based suites (`*Test`).
+- JUnit Jupiter + AssertJ for example-based suites (`*Test`); `ParseInvalidInputTest` and
+  `MobilityIdParsersInvalidInputTest` pin the strict/tolerant contract for every parser family
+  (invalid input: strict throws, tolerant returns `null`).
 - jqwik for property-based suites (`*PropertyTest`): check-digit invariants (alphabet, case
   insensitivity, single-substitution detection for ISO) and contract-id round trips/conversions
   over generated inputs. jqwik runs on the JUnit Platform, no extra wiring.
@@ -57,8 +67,9 @@ Useful commands:
 ## API choices
 
 - idiomatic Java API (not a 1:1 Scala mirror)
-- tolerant parsing methods return `@Nullable T` (JSpecify), never `Optional`
-- strict factory methods throw `IllegalArgumentException`
+- two entry points per identifier: strict factories/parsers (`of`, `parseStrict`) throw
+  `IllegalArgumentException` on invalid input; tolerant parsers (`parse`, `MobilityIdParsers.*`)
+  return `@Nullable T` (JSpecify) and never throw, never `Optional`
 - immutable domain types
 - local `var` is preferred when the inferred type is obvious at a glance; otherwise explicit types are kept for readability
 
@@ -111,7 +122,10 @@ The library is annotated for Kotlin interop out of the box:
   is exhaustive without an `else` branch.
 - Domain types are Java records: components are accessed as functions (`countryCode.value()`),
   not as properties.
-- No checked exceptions; invalid input throws `IllegalArgumentException`.
+- No checked exceptions: strict factories throw `IllegalArgumentException`, tolerant parsers
+  return `null`.
+- `consumer-smoke/src/main/kotlin` is compiled with `-Xjspecify-annotations=strict` and
+  `-Werror` in CI, so a wrong nullability contract fails the build.
 
 ## Publishing (Maven Central Portal)
 
@@ -127,8 +141,10 @@ Configured publication coordinates:
 Inputs are read from Gradle properties or environment variables:
 
 - `mavenCentralUsername` / `MAVEN_CENTRAL_USERNAME` and `mavenCentralPassword` /
-  `MAVEN_CENTRAL_PASSWORD`: a Central Portal user token
-- `signingKey` / `SIGNING_KEY` and `signingPassword` / `SIGNING_PASSWORD`: in-memory PGP key
+  `MAVEN_CENTRAL_PASSWORD`: a Central Portal user token (CI maps them from the `CENTRAL_USERNAME`
+  and `CENTRAL_TOKEN` secrets)
+- `signingKey` / `SIGNING_KEY` and `signingPassword` / `SIGNING_PASSWORD`: armored in-memory PGP
+  key and passphrase (CI maps them from `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE`)
 - `releaseVersion`: the version to publish (`0.1.0-SNAPSHOT` when absent)
 
 Commands:
@@ -140,10 +156,9 @@ Commands:
 
 `verifyRelease` runs before any upload and refuses a `-SNAPSHOT` version or missing signing inputs.
 
-Global release tags:
-
-- A global repository tag `vX.Y.Z` triggers `.github/workflows/release.yml`.
-- The Java release job derives `X.Y.Z` from the tag and publishes `mobilityid4j` with that version.
+Release procedure (dispatched `Release` workflow, environment `maven-central`): `CONTRIBUTING.md`.
+`scripts/verify-release-wiring.sh` checks the guard without publishing: SNAPSHOT rejected,
+signing inputs required, `verifyRelease` scheduled before the nmcp upload task.
 
 ## Security scanning
 

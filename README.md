@@ -84,11 +84,11 @@ Run from `java/`:
 
 `mobilityid4j` is published to the Maven Central Portal through the nmcp Gradle plugin; details in `java/README.md`.
 
-## Global release tags
+## Releases
 
-- Global tags `vX.Y.Z` trigger the release pipeline (`.github/workflows/release.yml`).
-- The Java publication uses the tag version and publishes `mobilityid4j` to Maven Central Portal.
-- The TypeScript publication uses the same tag version and publishes `@juherr/mobilityid` to npm.
+- Java and TypeScript are released together by the manually dispatched `Release` workflow (`.github/workflows/release.yml`): it validates `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, publishes `mobilityid4j` to Maven Central and `@juherr/mobilityid` to npm, then creates the signed `vX.Y.Z` tag and the GitHub Release.
+- Go is released from `go/vX.Y.Z` tags (`.github/workflows/release-go.yml`).
+- Procedure and required secrets: `CONTRIBUTING.md`.
 
 ## License
 

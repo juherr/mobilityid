@@ -2,8 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Shared, tool-agnostic guidance (layout, domain architecture, build/test commands, code style,
-quality gates) lives in `AGENTS.md` and is imported below. Each workspace (`scala/`, `java/`,
+`CONTRIBUTING.md` is the source of truth for the change workflow, commit conventions, changelog
+and release process. Shared, tool-agnostic guidance (layout, domain architecture, build/test
+commands, code style, quality gates) lives in `AGENTS.md` and is imported below. Each workspace (`scala/`, `java/`,
 `go/`, `php/`, `ts/`) has its own `AGENTS.md` + `CLAUDE.md` pair, loaded automatically when you
 work on files there. Keep the `AGENTS.md` files as the single source of truth for anything other
 coding agents also need; only Claude Code specifics belong in `CLAUDE.md` files.
