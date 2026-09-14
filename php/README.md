@@ -123,13 +123,12 @@ composer infection      # mutation testing (needs pcov or xdebug)
 
 ### Local PHP 8.4 with pcov
 
-`mise.toml` pins PHP 8.4. Infection needs a coverage driver; with Homebrew PHP, `pecl install
-pcov` may fail to find `pcre2.h`, in which case build it with the pcre2 include path:
+`mise.toml` pins PHP 8.4 (Homebrew `shivammathur/php` behind the mise plugin; run
+`brew trust shivammathur/php` once if mise cannot list versions). Infection needs a coverage
+driver; `pecl install pcov` fails to find `pcre2.h` with Homebrew PHP, pass the include path:
 
 ```bash
-pecl download pcov && tar xzf pcov-*.tgz && cd pcov-*/
-phpize && CPPFLAGS="-I$(brew --prefix pcre2)/include" ./configure && make
-# then load modules/pcov.so through an extra ini file (extension=... / pcov.enabled=1)
+CPPFLAGS="-I$(brew --prefix pcre2)/include" pecl install pcov
 ```
 
 ## Publishing
