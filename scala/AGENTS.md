@@ -64,8 +64,10 @@ Core code must compile on Scala 2.12, 2.13 and 3.x; keep it cross-compatible.
 
 ## Scala LTS Version Policy
 
-`scalaVersion` stays on the current LTS branch (3.3.x as of 2026); `crossScalaVersions` carries
-both LTS and latest (3.8+). Enforced in `.github/renovate.json`:
+`scalaVersion` follows the Scala LTS line and `crossScalaVersions` carries LTS plus the latest
+branch. Scala 3.9 is the current LTS (announced 2026); the build still sits on the previous LTS
+3.3.7, and the migration is tracked in the Scala state-of-the-art issue. Enforced in
+`.github/renovate.json`:
 
 ```json
 {
@@ -75,8 +77,8 @@ both LTS and latest (3.8+). Enforced in `.github/renovate.json`:
 }
 ```
 
-Allowed: 2.x, 3.3.x, 3.8+. Blocked: 3.4–3.7 (non-LTS). When the next LTS is announced:
-add its branch to the pattern, migrate `scalaVersion` in `build.sbt`, then optionally drop 3.3.
+Allowed: 2.x, 3.3.x, 3.8+. Blocked: 3.4–3.7 (non-LTS). To move to a new LTS: make sure its
+branch matches the pattern, migrate `scalaVersion` in `build.sbt`, then optionally drop the old LTS.
 
 ## Notes
 
