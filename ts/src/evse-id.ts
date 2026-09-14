@@ -16,6 +16,7 @@
 
 import { CountryCode } from "./country-code.js";
 import { OperatorIdDin, OperatorIdIso, type OperatorId } from "./operator-id.js";
+import { attempt, failure, type ParseResult } from "./parse-result.js";
 import { PartyId } from "./party-id.js";
 import { PhoneCountryCode } from "./phone-country-code.js";
 
@@ -64,26 +65,22 @@ export class EvseIdIso extends EvseIdBase {
     );
   }
 
-  public static parse(raw: string): EvseIdIso | null {
-    const match = ISO_EVSE_REGEX.exec(raw);
-    if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
-      return null;
-    }
+  public static tryParse(raw: string): ParseResult<EvseIdIso> {
+    return attempt(() => EvseIdIso.parseStrict(raw));
+  }
 
-    try {
-      return createIso(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
-    } catch {
-      return null;
-    }
+  public static parse(raw: string): EvseIdIso | null {
+    const result = EvseIdIso.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public static parseStrict(raw: string): EvseIdIso {
-    const parsed = EvseIdIso.parse(raw);
-    if (parsed === null) {
+    const match = ISO_EVSE_REGEX.exec(raw);
+    if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
       throw new TypeError(`Invalid ISO EVSE ID: ${raw}`);
     }
 
-    return parsed;
+    return createIso(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
   }
 
   public get partyId(): PartyId {
@@ -128,26 +125,22 @@ export class EvseIdDin extends EvseIdBase {
     );
   }
 
-  public static parse(raw: string): EvseIdDin | null {
-    const match = DIN_EVSE_REGEX.exec(raw);
-    if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
-      return null;
-    }
+  public static tryParse(raw: string): ParseResult<EvseIdDin> {
+    return attempt(() => EvseIdDin.parseStrict(raw));
+  }
 
-    try {
-      return createDin(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
-    } catch {
-      return null;
-    }
+  public static parse(raw: string): EvseIdDin | null {
+    const result = EvseIdDin.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public static parseStrict(raw: string): EvseIdDin {
-    const parsed = EvseIdDin.parse(raw);
-    if (parsed === null) {
+    const match = DIN_EVSE_REGEX.exec(raw);
+    if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
       throw new TypeError(`Invalid DIN EVSE ID: ${raw}`);
     }
 
-    return parsed;
+    return createDin(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
   }
 
   public toString(): string {
@@ -232,21 +225,32 @@ export const EvseId = {
     throw new TypeError(dinError.description);
   },
 
-  parse(raw: string): EvseId | null {
-    const iso = EvseIdIso.parse(raw);
-    if (iso !== null) {
+  // ISO is tried first, then DIN; a failure carries both reasons since neither format is implied.
+  tryParse(raw: string): ParseResult<EvseId> {
+    const iso = EvseIdIso.tryParse(raw);
+    if (iso.ok) {
       return iso;
     }
 
-    return EvseIdDin.parse(raw);
+    const din = EvseIdDin.tryParse(raw);
+    if (din.ok) {
+      return din;
+    }
+
+    return failure(`Invalid EVSE ID: ${raw} (ISO: ${iso.error}; DIN: ${din.error})`);
+  },
+
+  parse(raw: string): EvseId | null {
+    const result = EvseId.tryParse(raw);
+    return result.ok ? result.value : null;
   },
 
   parseStrict(raw: string): EvseId {
-    const parsed = this.parse(raw);
-    if (parsed === null) {
-      throw new TypeError(`Invalid EVSE ID: ${raw}`);
+    const result = EvseId.tryParse(raw);
+    if (!result.ok) {
+      throw new TypeError(result.error);
     }
 
-    return parsed;
+    return result.value;
   },
 };

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { attempt, type ParseResult } from "./parse-result.js";
+
 const PHONE_COUNTRY_CODE_REGEX = /^\+?[0-9]{1,3}$/;
 
 export class PhoneCountryCode {
@@ -38,12 +40,13 @@ export class PhoneCountryCode {
     return new PhoneCountryCode(raw);
   }
 
+  public static tryParse(raw: string): ParseResult<PhoneCountryCode> {
+    return attempt(() => PhoneCountryCode.from(raw));
+  }
+
   public static parse(raw: string): PhoneCountryCode | null {
-    try {
-      return PhoneCountryCode.from(raw);
-    } catch {
-      return null;
-    }
+    const result = PhoneCountryCode.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {

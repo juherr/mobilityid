@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { attempt, type ParseResult } from "./parse-result.js";
+
 const COUNTRY_CODE_REGEX = /^[A-Za-z]{2}$/;
 
 const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
@@ -44,12 +46,13 @@ export class CountryCode {
     return new CountryCode(raw.toUpperCase());
   }
 
+  public static tryParse(raw: string): ParseResult<CountryCode> {
+    return attempt(() => CountryCode.from(raw));
+  }
+
   public static parse(raw: string): CountryCode | null {
-    try {
-      return CountryCode.from(raw);
-    } catch {
-      return null;
-    }
+    const result = CountryCode.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {

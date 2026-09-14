@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { attempt, type ParseResult } from "./parse-result.js";
+
 const PARTY_CODE_REGEX = /^[A-Za-z0-9]{3}$/;
 
 export function isValidPartyCode(value: string): boolean {
@@ -40,12 +42,13 @@ export class ProviderId {
     return new ProviderId(raw.toUpperCase());
   }
 
+  public static tryParse(raw: string): ParseResult<ProviderId> {
+    return attempt(() => ProviderId.from(raw));
+  }
+
   public static parse(raw: string): ProviderId | null {
-    try {
-      return ProviderId.from(raw);
-    } catch {
-      return null;
-    }
+    const result = ProviderId.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { attempt, type ParseResult } from "./parse-result.js";
 import { isValidPartyCode } from "./provider-id.js";
 
 const OPERATOR_DIN_REGEX = /^[0-9]{3,6}$/;
@@ -38,12 +39,13 @@ export class OperatorIdIso {
     return new OperatorIdIso(raw.toUpperCase());
   }
 
+  public static tryParse(raw: string): ParseResult<OperatorIdIso> {
+    return attempt(() => OperatorIdIso.from(raw));
+  }
+
   public static parse(raw: string): OperatorIdIso | null {
-    try {
-      return OperatorIdIso.from(raw);
-    } catch {
-      return null;
-    }
+    const result = OperatorIdIso.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {
@@ -71,12 +73,13 @@ export class OperatorIdDin {
     return new OperatorIdDin(raw.toUpperCase());
   }
 
+  public static tryParse(raw: string): ParseResult<OperatorIdDin> {
+    return attempt(() => OperatorIdDin.from(raw));
+  }
+
   public static parse(raw: string): OperatorIdDin | null {
-    try {
-      return OperatorIdDin.from(raw);
-    } catch {
-      return null;
-    }
+    const result = OperatorIdDin.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {

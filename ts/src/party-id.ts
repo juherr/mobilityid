@@ -16,6 +16,7 @@
 
 import { CountryCode } from "./country-code.js";
 import type { OperatorIdIso } from "./operator-id.js";
+import { attempt, type ParseResult } from "./parse-result.js";
 import { ProviderId } from "./provider-id.js";
 
 const PARTY_ID_REGEX = /^([A-Za-z]{2})[-*]?([A-Za-z0-9]{3})$/;
@@ -30,34 +31,26 @@ export class PartyId {
     Object.freeze(this);
   }
 
+  public static tryParse(raw: string): ParseResult<PartyId> {
+    return attempt(() => PartyId.parseStrict(raw));
+  }
+
   public static parse(raw: string): PartyId | null {
-    const match = PARTY_ID_REGEX.exec(raw);
-    if (!match) {
-      return null;
-    }
-
-    try {
-      const country = match[1];
-      const party = match[2];
-      if (country === undefined || party === undefined) {
-        return null;
-      }
-
-      const countryCode = CountryCode.from(country);
-      const partyCode = ProviderId.from(party).value;
-      return new PartyId(countryCode, partyCode);
-    } catch {
-      return null;
-    }
+    const result = PartyId.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public static parseStrict(raw: string): PartyId {
-    const parsed = PartyId.parse(raw);
-    if (parsed === null) {
+    const match = PARTY_ID_REGEX.exec(raw);
+    const country = match?.[1];
+    const party = match?.[2];
+    if (country === undefined || party === undefined) {
       throw new TypeError(`Invalid party ID: ${raw}`);
     }
 
-    return parsed;
+    const countryCode = CountryCode.from(country);
+    const partyCode = ProviderId.from(party).value;
+    return new PartyId(countryCode, partyCode);
   }
 
   public static fromCountryAndProvider(countryCode: CountryCode, providerId: ProviderId): PartyId {

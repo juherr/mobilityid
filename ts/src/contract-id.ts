@@ -18,6 +18,7 @@ import { checkDigitDin } from "./check-digit-din.js";
 import { checkDigitIso } from "./check-digit-iso.js";
 import { ContractIdStandards, type ContractIdStandard } from "./contract-id-standard.js";
 import { CountryCode } from "./country-code.js";
+import { attempt, type ParseResult } from "./parse-result.js";
 import { PartyId } from "./party-id.js";
 import { ProviderId } from "./provider-id.js";
 
@@ -104,12 +105,13 @@ export class ContractId {
     return new ContractId(standard, cc, provider, normalizedInstance, computed);
   }
 
+  public static tryParse(standard: ContractIdStandard, raw: string): ParseResult<ContractId> {
+    return attempt(() => ContractId.parseStrict(standard, raw));
+  }
+
   public static parse(standard: ContractIdStandard, raw: string): ContractId | null {
-    try {
-      return ContractId.parseStrict(standard, raw);
-    } catch {
-      return null;
-    }
+    const result = ContractId.tryParse(standard, raw);
+    return result.ok ? result.value : null;
   }
 
   public static parseStrict(standard: ContractIdStandard, raw: string): ContractId {

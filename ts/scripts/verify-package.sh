@@ -53,16 +53,25 @@ console.log("@juherr/mobilityid consumer smoke (node): OK", String(strict), Stri
 JS
 node "${consumer}/smoke.mjs"
 
-# Type declarations must resolve through `exports` under NodeNext; the tolerant contract is `T | null`.
+# Type declarations must resolve through `exports` under NodeNext; the tolerant contract is `T | null`
+# and `tryParse` is a discriminated union.
 cat > "${consumer}/smoke.ts" <<'TS'
-import { ContractId, ContractIdStandards, type ContractIdStandard } from "@juherr/mobilityid";
+import {
+  ContractId,
+  ContractIdStandards,
+  type ContractIdStandard,
+  type ParseResult,
+} from "@juherr/mobilityid";
 
 const standard: ContractIdStandard = ContractIdStandards.ISO;
 const strict: ContractId = ContractId.parseStrict(standard, "NL-TNM-000122045-U");
 const tolerant: ContractId | null = ContractId.parse(standard, "NL-TNM-000122045-X");
 // @ts-expect-error tolerant parsers are nullable
 const notNull: ContractId = ContractId.parse(standard, "NL-TNM-000122045-X");
-export { strict, tolerant, notNull };
+// The result union narrows on `ok` without a cast.
+const result: ParseResult<ContractId> = ContractId.tryParse(standard, "NL-TNM-000122045-X");
+const outcome: string = result.ok ? result.value.toString() : result.error;
+export { strict, tolerant, notNull, outcome };
 TS
 cat > "${consumer}/tsconfig.json" <<'JSON'
 { "compilerOptions": { "module": "NodeNext", "moduleResolution": "NodeNext", "strict": true, "noEmit": true, "skipLibCheck": false, "types": [] }, "files": ["smoke.ts"] }
