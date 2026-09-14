@@ -26,7 +26,6 @@
     },
     "require": {
         "php": "^8.4.1",
-        "ext-intl": "*",
         "league/iso3166": "^4.4"
     },
     "require-dev": {

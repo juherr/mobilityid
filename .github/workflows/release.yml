@@ -172,7 +172,6 @@ jobs:
         uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
         with:
           php-version: "8.4"
-          extensions: intl
           tools: composer
           # Infection (part of `composer check`) needs a coverage driver.
           coverage: pcov

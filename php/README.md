@@ -17,7 +17,8 @@ fixtures, written for PHP 8.4+.
   "Publishing").
 - Namespace `Juherr\MobilityId` (`src/`), tests in `Juherr\MobilityId\Tests` (`tests/`), PSR-4.
 - Domain model + validation + check-digit algorithms + parsing helpers, no framework dependency.
-  `league/iso3166` provides the ISO 3166-1 alpha-2 table; `ext-intl` is required.
+  `league/iso3166` provides the ISO 3166-1 alpha-2 table (it needs `ext-mbstring`); no other
+  PHP extension is required.
 
 ## Tooling Decisions
 

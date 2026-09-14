@@ -44,7 +44,6 @@ jobs:
         uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: intl
           tools: composer
           # Infection (mutation testing, part of `composer check`) needs a coverage driver.
           coverage: pcov

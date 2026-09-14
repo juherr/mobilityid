@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8246952609245efcaa8a43067146a402",
+    "content-hash": "e0125a21fd950784364a3f4dfce656b9",
     "packages": [
         {
             "name": "league/iso3166",
@@ -6804,8 +6804,7 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.4.1",
-        "ext-intl": "*"
+        "php": "^8.4.1"
     },
     "platform-dev": {},
     "platform-overrides": {
