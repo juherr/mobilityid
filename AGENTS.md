@@ -1,12 +1,13 @@
 # AGENTS.md
 
-Guidance for coding agents working in this repository.
+Guidance for coding agents working in this repository. `CLAUDE.md` imports this file and adds Claude Code specifics.
 
 ## Readme map
 
 - Monorepo overview and quick commands: `README.md`.
 - Scala/original library documentation and usage examples: `scala/README.md`.
 - Java (`mobilityid4j`) documentation and API/tooling choices: `java/README.md`.
+- Go, PHP and TypeScript design choices: `go/README.md`, `php/README.md`, `ts/README.md`.
 
 ## Project Snapshot
 
@@ -14,200 +15,73 @@ Guidance for coding agents working in this repository.
   - `scala/` -> legacy/primary Scala implementation (sbt, specs2).
   - `java/` -> Java 21 port (`mobilityid4j`) using Gradle.
   - `go/` -> Go port (`mobilityid.juherr.dev/go`) using Go toolchain.
+  - `php/` -> PHP port (Composer package `juherr/mobility-id`, PHP 8.3+).
   - `ts/` -> TypeScript port (`@juherr/mobilityid`) using Bun + Vite+ instead of pnpm + Vitest.
-- Scala build tool: sbt (`scala/build.sbt`, `scala/project/build.properties`).
-- Scala modules:
-  - `scala/core` -> main mobility ID domain logic.
-  - `scala/interpolators` -> compile-time checked string interpolators.
-  - `scala/` aggregate project.
-- Scala versions in CI: 2.12.21, 2.13.18, 3.3.7 and 3.8.1 (`.github/workflows/ci-scala.yml`).
-- Scala test framework: specs2 4.14.1-cross (cross-compatible Scala 2.12/2.13/3.x version).
-- Java build tool: Gradle wrapper (`java/gradlew`) with Java 21 toolchain.
-- Java module:
-  - `java` -> domain types, algorithms, and parser helper APIs.
-- TypeScript module:
-  - `ts/src` -> domain types, algorithms, parser helper APIs.
-  - `ts/test` -> Vitest parity suites.
-  - `ts/vite.config.ts` -> Vite+ config for check/test/pack workflows.
-  - `ts/license-header.txt` -> canonical Apache-2.0 header template for ESLint.
+- Tool versions are pinned in `mise.toml` (Java, Node, sbt, Gradle, PHP, Go, golangci-lint).
+- Each workspace has its own `AGENTS.md` (commands, toolchain, style) and `README.md` (API design choices). Read the workspace `AGENTS.md` before working in it; this file only holds what is shared.
 
 ## Repository Layout
 
-- `scala/core/src/main/scala/com/thenewmotion/mobilityid`
-  - domain types: `ContractId`, `EvseId`, `PartyId`, operator/provider/country IDs.
-  - algorithms: check digit implementations for ISO and DIN.
-- `scala/core/src/test/scala/com/thenewmotion/mobilityid`
-  - specs2 test suites (`*Spec.scala`).
-- `scala/interpolators/src/main/scala-2/com/thenewmotion/mobilityid`
-  - Scala 2 interpolator implementations using `contextual-core` macros.
-- `scala/interpolators/src/main/scala-3/com/thenewmotion/mobilityid`
-  - Scala 3 interpolator implementations using inline macros (`scala.quoted`).
-- `scala/interpolators/src/test/scala/com/thenewmotion/mobilityid`
-  - interpolator behavior specs (shared across Scala versions).
-- `java/src/main/java/dev/juherr/mobilityid4j`
-  - Java port of domain types and algorithms.
-- `java/src/main/java/dev/juherr/mobilityid4j/interpolators`
-  - Java parser helper APIs.
-- `go/mobilityid`
-  - Go port of domain types, check-digit algorithms, and parser helpers.
+- `scala/core` (domain reference) and `scala/interpolators` (compile-time interpolators, `scala-2/` and `scala-3/` sources) -> `scala/AGENTS.md`.
+- `java/src/main/java/dev/juherr/mobilityid4j` (+ `interpolators/MobilityIdParsers`) -> `java/AGENTS.md`.
+- `go/mobilityid` -> `go/AGENTS.md`.
+- `php/src`, `php/tests` (namespace `Juherr\MobilityId`) -> `php/AGENTS.md`.
+- `ts/src` (`index.ts` barrel, `parsers.ts`), `ts/test` -> `ts/AGENTS.md`.
+- `docs/` -> GitHub Pages site for the Go vanity import path (`mobilityid.juherr.dev`, `go-import` meta tag). Do not add docs there.
+
+## Domain Architecture
+
+All workspaces implement the same model; Scala (`scala/core`) is the behavior reference and the ports
+mirror its test fixtures. Read `ContractId.scala`, `EvseId.scala`, `basicIdentifiers.scala` and
+`checkDigit.scala` to understand the whole model before touching any port.
+
+- Basic identifiers: `CountryCode` (ISO alpha-2), `PhoneCountryCode` (`+49` style, used by DIN),
+  `ProviderId`/`PartyCode` (3 alphanumeric chars), `PartyId` (country + party code), `OperatorIdIso`
+  and `OperatorIdDin`. All are `sealed trait` + private case class, constructed via companion `apply`
+  that normalizes to uppercase and throws `IllegalArgumentException` on invalid input.
+- `ContractId[T <: ContractIdStandard]` has three standards: `ISO` (ISO 15118), `EMI3` and `DIN`
+  (DIN SPEC 91286). Each standard has a `ContractIdParser` (regex + check-digit validation) and
+  conversions are expressed as `ContractIdConverter[From, To]` type-class instances
+  (`DIN<->EMI3`, `EMI3->ISO`; `ISO<->DIN` are deprecated). Ports model this as one class per
+  standard (`ContractIdIso`, `ContractIdEmi3`, `ContractIdDin`) plus explicit conversion methods.
+- `EvseId` has two formats, `EvseIdIso` (country code + operator + power outlet, optional `*`
+  separators) and `EvseIdDin` (phone country code + DIN operator). `EvseId(string)` tries ISO then DIN.
+- Check digits: `CheckDigitIso` is the ISO 15118 / EMI3 matrix-based algorithm (over a 14-char
+  payload), `CheckDigitDin` is the DIN algorithm. They are pure functions shared by contract
+  parsers; never change them without cross-language parity tests.
+- Parsing entry points are the same shape in every language: strict `apply`/constructor that throws,
+  a forgiving `opt`-style helper returning `Option`/`null`/`undefined`, and "interpolator"/parser
+  helpers (Scala compile-time interpolators, `MobilityIdParsers` in Java/TS, `*Parser` classes in
+  PHP, `parser.go` in Go).
+- When adding behavior, add it to Scala first (or confirm it exists there), then port it with the
+  same test cases to every workspace so parity stays verifiable.
 
 ## Build, Lint, and Test Commands
 
-Run from repository root unless noted.
+Every workspace is self-contained; run its commands from its own directory and see its `AGENTS.md`
+for single-suite and lint invocations. Full gates per workspace:
 
-### Core build and test
+| Workspace | Full gate (what CI runs) | Single suite |
+|---|---|---|
+| `scala/` | `sbt headerCheck test` (cross: `sbt +test`) | `sbt "core/testOnly *ContractIdSpec"` |
+| `java/` | `./gradlew check` | `./gradlew test --tests "*ContractIdTest"` |
+| `go/` | `golangci-lint run && go vet ./... && go test ./...` | `go test ./... -run TestContractID` |
+| `php/` | `composer check` | `./vendor/bin/phpunit --filter ContractIdIsoTest` |
+| `ts/` | `bun run lint && bun run check` | `vp test ContractId` |
 
-- Compile all Scala modules:
-  - `cd scala && sbt compile`
-- Run all Scala tests:
-  - `cd scala && sbt test`
-- Clean and run all Scala tests (CI-like baseline):
-  - `cd scala && sbt clean test`
-- Compile and test a specific Scala module:
-  - `cd scala && sbt core/test`
-  - `cd scala && sbt interpolators/test`
+### CI and release
 
-### Run a single test suite (important)
-
-- Single suite in `core`:
-  - `cd scala && sbt "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec"`
-- Single suite in `interpolators`:
-  - `cd scala && sbt "interpolators/testOnly com.thenewmotion.mobilityid.InterpolatorsSpec"`
-- Pattern form:
-  - `cd scala && sbt "core/testOnly *EvseIdSpec"`
-
-### Run a single test example (specs2)
-
-- Target one example by text fragment:
-  - `cd scala && sbt "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec -- -ex 'render a contract id in the normalized form with dashes and check digit'"`
-- Use `--` to forward args to specs2.
-- Common useful specs2 args:
-  - `-ex <example text>` include matching examples.
-  - `-x <example text>` exclude matching examples.
-
-### Cross-version and dependency checks
-
-- Test against a specific Scala version:
-  - `cd scala && sbt ++2.12.21 test`
-  - `cd scala && sbt ++2.13.18 test`
-  - `cd scala && sbt ++3.3.7 test`
-  - `cd scala && sbt ++3.8.1 test`
-- Cross-build tests on all configured Scala versions:
-  - `cd scala && sbt +test`
-- Update dependency graph and compile check:
-  - `cd scala && sbt update compile`
-
-### Java build and test (mobilityid4j)
-
-- Build all Java modules:
-  - `cd java && ./gradlew build`
-- Run Java tests:
-  - `cd java && ./gradlew test`
-- Run a single Java suite:
-  - `cd java && ./gradlew test --tests "*ContractIdTest"`
-- Format and lint checks:
-  - `cd java && ./gradlew spotlessApply`
-  - `cd java && ./gradlew spotlessCheck`
-- Release readiness checks:
-  - `cd java && ./gradlew check`
-  - `cd java && ./gradlew javadocJar sourcesJar`
-  - `cd java && ./gradlew publishToMavenLocal`
-
-### Go build and test (mobilityid-go)
-
-- Build all Go packages:
-  - `cd go && go build ./...`
-- Run Go tests:
-  - `cd go && go test ./...`
-- Run a single Go test (by name filter):
-  - `cd go && go test ./... -run TestContractID`
-- Format and lint checks:
-  - `cd go && gofmt -w .`
-  - `cd go && go vet ./...`
-  - `cd go && golangci-lint run`
-
-### PHP build and test (`juherr/mobility-id`)
-
-- Install dependencies:
-  - `cd php && composer install`
-- Run PHP checks:
-  - `cd php && composer format:check`
-  - `cd php && composer analyse`
-  - `cd php && composer test`
-  - `cd php && composer check`
-- Apply formatting:
-  - `cd php && composer format`
-
-### TypeScript build and test (`@juherr/mobilityid`)
-
-- Install dependencies:
-  - `cd ts && vp install`
-- Run TypeScript checks:
-  - `cd ts && vp check`
-  - `cd ts && vp test`
-  - `cd ts && bun run lint`
-- Run a single Vitest pattern:
-  - `cd ts && vp test ContractId`
-- Build package:
-  - `cd ts && vp pack`
-- License headers:
-  - `cd ts && bun run lint`
-  - `cd ts && bun run lint:fix`
-
-### Lint / formatting
-
-- Scala workspace has no repository-local Scalafmt/Scalafix config checked in.
-- Scala workspace has no standalone linter config (Scalastyle/Scapegoat) checked in.
-- Treat these as guaranteed checks:
-  - `cd scala && sbt compile`
-  - `cd scala && sbt test`
-- Java workspace uses Spotless + Error Prone + NullAway + JSpecify.
-- Java workspace uses palantir-java-format 2.87.0 for code formatting (Java 25 compatible).
-- Go workspace uses `gofmt` and `go vet`; CI runs formatting check, `go vet`, `go test`, and `go build` (`.github/workflows/ci-go.yml`).
-- PHP workspace uses php-cs-fixer (`format`/`format:check`), PHPStan level 10, and PHPUnit; CI runs on PHP 8.3, 8.4, and 8.5 (`.github/workflows/ci-php.yml`).
-- TypeScript workspace uses Vite+ (`vp check`, `vp test`, `vp pack`) with Bun as package manager, and Oxlint JS plugins for Apache header enforcement.
-- Java publishing metadata/signing is configured for Maven Central Portal workflows in `java/build.gradle.kts`.
-- Global release tags `vX.Y.Z` trigger `.github/workflows/release.yml` for Java and TypeScript publication pipelines.
-- Security scanning runs in CI via dependency review (`.github/workflows/dependency-review.yml`) and OWASP Dependency-Check (`.github/workflows/security.yml`).
-- Java CI tests against JDK 21 and JDK 25 (`.github/workflows/ci-java.yml`).
-- If your environment exposes additional tasks via plugins, discover first:
-  - `cd scala && sbt tasks`
+- One CI workflow per workspace (`.github/workflows/ci-{scala,java,go,php,ts}.yml`); only touch the workflow of the workspace you changed.
+- Global tags `vX.Y.Z` trigger `.github/workflows/release.yml` (Java to Maven Central Portal, TypeScript to npm). Go uses separate `go/vX.Y.Z` tags (`release-go.yml`).
+- Security gates: dependency review (`dependency-review.yml`) and OWASP Dependency-Check (`security.yml`).
 
 ### License headers
 
-All source files (Scala, Java, Go, PHP) include Apache 2.0 license headers managed by automated tooling:
+All source files carry the same Apache 2.0 header, enforced per workspace (sbt-header, Spotless,
+golangci-lint `goheader`, php-cs-fixer, Oxlint header plugin). Each workspace `AGENTS.md` gives the
+validate/apply commands; CI fails on a missing header.
 
-**Scala** (sbt-header plugin 5.10.0):
-- Validate headers: `cd scala && sbt headerCheck`
-- Apply headers: `cd scala && sbt headerCreate`
-- Auto-applied on: core and interpolators modules
-- CI validation: `.github/workflows/ci-scala.yml` runs `headerCheck` before tests
-
-**Java** (Spotless with licenseHeader):
-- Validate headers: `cd java && ./gradlew spotlessCheck`
-- Apply headers: `cd java && ./gradlew spotlessApply`
-- Auto-applied on: all `.java` files in `src/*/java/**`
-- CI validation: `.github/workflows/ci-java.yml` runs `spotlessCheck` as part of `check` task
-
-**Go** (golangci-lint `goheader`):
-- Validate headers locally: `cd go && golangci-lint run`
-- Apply headers: add the Apache 2.0 block comment at file start (before `package`)
-- Auto-applied on: all `.go` files in `go/mobilityid/**`
-- CI validation: `.github/workflows/ci-go.yml` runs `golangci-lint` (including `goheader`) before vet/test/build
-
-**PHP** (php-cs-fixer HeaderCommentFixer):
-- Validate headers: `cd php && composer check` (includes header validation)
-- Apply headers: `cd php && composer format`
-- Auto-applied on: all `.php` files in `src/` and `tests/`
-- CI validation: `.github/workflows/ci-php.yml` runs `composer check`
-
-**TypeScript** (Oxlint JS plugin `@tony.ganchev/eslint-plugin-header`):
-- Validate headers: `cd ts && bun run lint`
-- Apply headers: `cd ts && bun run lint:fix`
-- Auto-applied on: all `.ts` files in `ts/src/**` and `ts/test/**`
-- CI validation: `.github/workflows/ci-ts.yml` runs `bun run lint`
-
-**License header format** (consistent across all languages):
+**License header format** (identical in every language):
 ```
 Copyright (c) 2014 The New Motion team, and respective contributors
 Copyright (c) 2026 Julien Herr, and respective contributors
@@ -228,91 +102,33 @@ limitations under the License.
 ## Agent Workflow Expectations
 
 - Make the smallest safe change that solves the request.
-- Keep changes workspace-scoped and module-scoped when possible (`scala/core`, `scala/interpolators`, `java`, `go/mobilityid`).
+- Keep changes workspace-scoped when possible; a domain change is the exception and must land in every workspace (see Domain Architecture).
 - Run targeted tests first, then broaden to module/all tests as needed.
 - Do not refactor broadly unless requested.
 - Preserve public API compatibility unless the task explicitly allows breaking changes.
 - Keep documentation current while implementing changes:
-  - Update `AGENTS.md` whenever workflow, commands, repo layout, or quality gates evolve.
-  - Update `README.md`, `scala/README.md`, and `java/README.md` incrementally as features, API choices, or tooling decisions change.
+  - Update the workspace `AGENTS.md` whenever its commands, toolchain, or quality gates evolve; update this file only for cross-workspace changes (layout, domain, release).
+  - Update the root `README.md` and the workspace `README.md` incrementally as features, API choices, or tooling decisions change.
   - Record practical lessons learned (pitfalls, conventions, migration notes) in the relevant README/guide instead of leaving them only in PR/chat context.
 
-## Code Style Guidelines
+## Code Style (shared)
 
-The Scala codebase targets Scala 2.12, 2.13 and 3.x. Core code is cross-compatible Scala 2/3. The `interpolators` module uses version-specific source directories (`scala-2/` and `scala-3/`) for macro implementations.
-For Java (`mobilityid4j`), keep APIs idiomatic and prefer local `var` only when the inferred type is obvious at a glance.
+Language-specific rules live in each workspace `AGENTS.md`. Across all ports:
 
-### Formatting and structure
-
-- Use 2-space indentation.
-- Keep line length moderate and readable; avoid dense one-liners.
-- Prefer small methods and explicit helper names over clever chaining.
-- Keep related domain types and their companion objects close together.
-- Use braces for multi-line blocks and control structures.
-
-### Imports
-
-- Prefer explicit imports over wildcard imports.
-- Group imports by origin:
-  1. Scala/JDK imports.
-  2. third-party imports.
-  3. project-local imports.
-- Keep stable ordering and remove unused imports.
-- Alias only when collision or readability needs it.
-
-### Naming conventions
-
-- Types and traits: `PascalCase` (`ContractIdParser`, `OperatorIdDin`).
-- Objects/vals/defs: `camelCase`.
-- Constants with semantic weight may use `val` in `PascalCase` only when matching existing style (for parser regex fields like `FullRegex`).
-- Test suites end with `Spec`.
-- Prefer descriptive names over abbreviations except established domain abbreviations (ISO, DIN, EMI3, EVSE).
-
-### Types and APIs
-
-- Prefer algebraic modeling with `sealed trait` + private case class implementations.
-- Keep constructors/validation centralized in companion `apply` methods.
-- Use explicit return types for public methods and important internal methods.
-- Use `Option` for parse-or-not cases when absence is expected (`EvseId(string): Option[...]`).
-- Throw `IllegalArgumentException` for invalid caller input in strict constructors.
-- Use `Try(...).toOption` when providing forgiving parse helpers (`opt` style APIs).
-
-### Validation and normalization
-
-- Normalize external identifiers to uppercase where domain requires it.
-- Validate input by regex + semantic checks (country code, lengths, check digits).
-- Keep error messages actionable and specific to the failed field.
-- Preserve existing behavior of check-digit algorithms unless explicitly changing spec behavior.
-
-### Error handling
-
-- Prefer domain-safe return types (`Option`, `Either`) at parsing boundaries.
-- Reserve exceptions for constructor-level invariant violations.
-- Do not swallow exceptions silently unless intentionally converting to `Option`/`Either`.
-- When combining candidate parsers, keep deterministic error precedence.
-
-### Testing guidelines (specs2)
-
-- Follow existing mutable specs2 style (`class XSpec extends Specification`).
-- Describe behavior with nested blocks (`"Subject" should { ... }`).
-- Include both positive and negative cases for parsing/validation.
-- Verify normalization and rendering (`toString`, compact forms) explicitly.
-- Assert thrown exception types/messages where behavior depends on them.
-- Add conversion round-trip tests for format conversions when touched.
-
-### Documentation and comments
-
-- Add comments only when intent is non-obvious (algorithmic details, standards mapping).
-- Keep public-facing ScalaDoc concise and domain-oriented.
-- Do not restate code in comments.
+- Model identifiers as immutable value types with validation centralized in one factory/constructor.
+- Two entry points per identifier: a strict one that throws on invalid input and a forgiving one that returns the language's "absent" value.
+- Normalize to uppercase where the domain requires it; validate by regex + semantic checks (country code, lengths, check digits); error messages name the failed field.
+- Keep deterministic precedence when several parsers are tried (ISO before DIN for EVSE IDs).
+- Preserve check-digit behavior exactly; every port ships the same positive and negative fixtures.
+- Comments only for non-obvious intent (algorithm details, standards mapping).
 
 ## Change Safety Checklist
 
 Before finalizing a change, an agent should:
 
 1. Run targeted tests for touched suites.
-2. Run module tests (`scala/core/test`, `scala/interpolators/test`, `java/test`) when practical.
-3. Ensure full workspace tests pass for broad-impact changes (`cd scala && sbt test`, `cd java && ./gradlew test`).
+2. Run the workspace full gate (table above) before finishing.
+3. For domain changes, run the full gate of every workspace you touched and check the ports stay in parity.
 4. Confirm no accidental API/signature changes.
 5. Keep thrown error behavior backward compatible unless requested.
 
@@ -355,40 +171,9 @@ This is enforced via `extractVersionTemplate` and `autoReplaceStringTemplate` in
 - The `extractVersionTemplate` regex handles both regular versions and openjdk-prefixed versions
 - The `autoReplaceStringTemplate` controls what format Renovate writes back to the file
 
-### Scala LTS Version Policy
-
-The project follows Scala's LTS (Long-Term Support) strategy:
-- **scalaVersion** stays on the current LTS branch (3.3.x as of 2026)
-- **crossScalaVersions** includes both LTS (3.3.x) and latest (3.8+)
-
-This is enforced via `allowedVersions` in `.github/renovate.json`:
-
-```json
-{
-  "matchManagers": ["sbt"],
-  "matchPackageNames": ["scala"],
-  "allowedVersions": "/^(2\\.|3\\.3\\.|3\\.([89]|[1-9][0-9])\\.)/"
-}
-```
-
-**Allowed versions:**
-- 2.x (Scala 2.12, 2.13)
-- 3.3.x (current LTS)
-- 3.8, 3.9, 3.10+ (latest branches)
-
-**Blocked versions:**
-- 3.4, 3.5, 3.6, 3.7 (non-LTS intermediate releases)
-
-**When the next LTS is announced** (e.g., 3.6.x):
-1. Update the pattern to include the new LTS branch: `3\\.6\\.`
-2. Migrate `scalaVersion` in `build.sbt` to the new LTS
-3. Optionally remove the old LTS (3.3) from the pattern after migration
+Scala version policy (LTS + latest) is documented in `scala/AGENTS.md`.
 
 ## Notes for Future Agents
 
-- The Scala workspace no longer depends on the archived `sbt-build-seed` plugin; equivalent core settings are defined directly in `scala/build.sbt`.
-- Scala build baseline is `sbt 1.12.3` (`scala/project/build.properties`) with Scala `2.13.18` / `2.12.21` / `3.3.7` / `3.8.1` cross settings in `scala/build.sbt`.
-- The `interpolators` module uses version-specific source directories: `scala-2/` (contextual-core macros) and `scala-3/` (inline macros with `scala.quoted`). Shared tests live in `src/test/scala/`.
-- When using `beSome.which(...)` in specs2 tests, provide an explicit type parameter (`beSome[T].which(...)`) for Scala 3 type inference compatibility.
 - Dependency updates are managed by Renovate (`.github/renovate.json`) for GitHub Actions, Gradle, sbt/Scala, and `mise.toml`.
-- For feature parity work, mirror existing behavior from `scala/core` into `java/src/main/java` incrementally.
+- For feature parity work, mirror existing behavior from `scala/core` into each port incrementally, test cases first.

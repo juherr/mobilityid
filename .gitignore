@@ -43,3 +43,9 @@ vendor/
 ts/node_modules/
 ts/dist/
 ts/coverage/
+
+# IDE output (Eclipse / VS Code Java extension)
+java/bin/
+
+# Serena agent workspace
+.serena/
