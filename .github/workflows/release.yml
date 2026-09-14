@@ -1,8 +1,9 @@
 name: Release
 
-# Manually dispatched from main with the version as input. Publishes Java (Maven Central) and
-# TypeScript (npm), then creates the signed `vX.Y.Z` tag and the GitHub Release only once every
-# registry has accepted the artifacts. Re-run a failed run (`gh run rerun <id> --failed`) instead
+# Manually dispatched from main with the version as input. Every non-destructive check (version,
+# changelog, Java and TypeScript verification) runs before either registry is touched, then Java
+# (Maven Central) and TypeScript (npm) are published idempotently, and the signed `vX.Y.Z` tag and
+# the GitHub Release are created only once every registry has accepted the artifacts. Re-run a failed run (`gh run rerun <id> --failed`) instead
 # of dispatching again: every job is idempotent and keeps the original commit.
 # Go is released separately from `go/vX.Y.Z` tags (release-go.yml).
 
@@ -61,9 +62,66 @@ jobs:
             exit 1
           fi
 
+  preflight-java:
+    name: Preflight Java
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: java
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
+        with:
+          cache-disabled: true
+
+      - name: Verify project (gates, release guard wiring, consumer smoke)
+        run: scripts/verify.sh
+
+  preflight-ts:
+    name: Preflight TypeScript
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Vite+ and Node 24
+        uses: voidzero-dev/setup-vp@237a7eda494c3466dcb53e9f067142b9218d64a1 # v1
+        with:
+          node-version: "24"
+          cache: false
+          working-directory: ts
+
+      - name: Validate package
+        run: vp exec bun run check
+
   release-java:
     name: Release Java to Maven Central
-    needs: validate
+    # Both preflights must pass so that no registry receives the version while the other
+    # workspace would fail its own verification; the publish itself stays idempotent.
+    needs: [preflight-java, preflight-ts]
     runs-on: ubuntu-latest
     timeout-minutes: 40
     environment: maven-central
@@ -105,9 +163,6 @@ jobs:
           test -n "${SIGNING_KEY}"
           test -n "${SIGNING_PASSWORD}"
 
-      - name: Verify project
-        run: scripts/verify.sh
-
       - name: Publish to Maven Central
         shell: bash
         run: |
@@ -142,7 +197,7 @@ jobs:
 
   release-ts:
     name: Release TypeScript to npm
-    needs: validate
+    needs: [preflight-java, preflight-ts]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: npm
@@ -169,9 +224,6 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: test -n "${NPM_TOKEN}"
-
-      - name: Validate package
-        run: vp exec bun run check
 
       - name: Publish to npm
         shell: bash
