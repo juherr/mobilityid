@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,15 +22,17 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId;
 
-use InvalidArgumentException;
-
-final class OperatorIdIso
+final readonly class OperatorIdIso implements \Stringable
 {
-    private const REGEX = '/^([A-Za-z0-9]{3})$/';
+    private const string REGEX = '/^([A-Za-z0-9]{3})$/';
 
     private function __construct(
         public string $id
-    ) {
+    ) {}
+
+    public function __toString(): string
+    {
+        return $this->id;
     }
 
     public static function isValid(string $id): bool
@@ -45,13 +46,8 @@ final class OperatorIdIso
             return new self(strtoupper($id)); // Ensure uppercase as per Scala's PartyCodeImpl
         }
 
-        throw new InvalidArgumentException(
-            "Operator ID (ISO) must have a length of 3 and be ASCII letters or digits. (Was: $id)"
+        throw new \InvalidArgumentException(
+            "Operator ID (ISO) must have a length of 3 and be ASCII letters or digits. (Was: {$id})"
         );
-    }
-
-    public function __toString(): string
-    {
-        return $this->id;
     }
 }

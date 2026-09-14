@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,22 +22,21 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId\Tests;
 
-use InvalidArgumentException;
 use Juherr\MobilityId\OperatorIdIso;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class OperatorIdIsoTest extends TestCase
+final class OperatorIdIsoTest extends TestCase
 {
-    #[DataProvider('provideValidOperatorIdsIso')]
+    #[DataProvider('provideValidOperatorIdsIsoCases')]
     public function testValidOperatorIdsIso(string $id, string $expectedId): void
     {
         $operatorIdIso = OperatorIdIso::of($id);
-        $this->assertSame($expectedId, (string) $operatorIdIso);
-        $this->assertTrue(OperatorIdIso::isValid($id));
+        self::assertSame($expectedId, (string) $operatorIdIso);
+        self::assertTrue(OperatorIdIso::isValid($id));
     }
 
-    public static function provideValidOperatorIdsIso(): array
+    public static function provideValidOperatorIdsIsoCases(): iterable
     {
         return [
             ['TNM', 'TNM'],
@@ -48,16 +46,16 @@ class OperatorIdIsoTest extends TestCase
         ];
     }
 
-    #[DataProvider('provideInvalidOperatorIdsIso')]
+    #[DataProvider('provideInvalidOperatorIdsIsoCases')]
     public function testInvalidOperatorIdsIso(string $id): void
     {
-        $this->assertFalse(OperatorIdIso::isValid($id));
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches("/Operator ID \(ISO\) must have a length of 3 and be ASCII letters or digits\. \(Was: .*\)/");
+        self::assertFalse(OperatorIdIso::isValid($id));
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/Operator ID \(ISO\) must have a length of 3 and be ASCII letters or digits\. \(Was: .*\)/');
         OperatorIdIso::of($id);
     }
 
-    public static function provideInvalidOperatorIdsIso(): array
+    public static function provideInvalidOperatorIdsIsoCases(): iterable
     {
         return [
             ['AB'],      // Less than 3 digits/chars

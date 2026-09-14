@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,43 +22,41 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId\Tests;
 
-use InvalidArgumentException;
-use Juherr\MobilityId\ContractIdDin;
 use Juherr\MobilityId\ContractIdEmi3;
-use Juherr\MobilityId\ContractIdIso;
 use Juherr\MobilityId\CountryCode;
 use Juherr\MobilityId\PartyId;
 use Juherr\MobilityId\ProviderId;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class ContractIdEmi3Test extends TestCase
+final class ContractIdEmi3Test extends TestCase
 {
     // Test cases for construction from string
-    #[DataProvider('provideValidEmi3ContractIdStrings')]
+    #[DataProvider('provideOfValidEmi3ContractIdStringsCases')]
     public function testOfValidEmi3ContractIdStrings(string $contractIdString, string $expectedCountryCode, string $expectedProviderId, string $expectedInstanceValue, string $expectedCheckDigit): void
     {
         $contractId = ContractIdEmi3::of($contractIdString);
-        $this->assertSame($expectedCountryCode, (string) $contractId->countryCode);
-        $this->assertSame($expectedProviderId, (string) $contractId->providerId);
-        $this->assertSame($expectedInstanceValue, $contractId->instanceValue);
-        $this->assertSame($expectedCheckDigit, $contractId->checkDigit);
+        self::assertSame($expectedCountryCode, (string) $contractId->countryCode);
+        self::assertSame($expectedProviderId, (string) $contractId->providerId);
+        self::assertSame($expectedInstanceValue, $contractId->instanceValue);
+        self::assertSame($expectedCheckDigit, $contractId->checkDigit);
     }
 
-    public static function provideValidEmi3ContractIdStrings(): array
+    public static function provideOfValidEmi3ContractIdStringsCases(): iterable
     {
         return [
             ['NL-TNM-C00122045-K', 'NL', 'TNM', 'C00122045', 'K'],
             ['NL-TNM-C00122045-K', 'NL', 'TNM', 'C00122045', 'K'], // Duplicate
             ['Nl-TnM-c00122045-K', 'NL', 'TNM', 'C00122045', 'K'], // Case insensitive
             ['nl-TNm-C00122045-k', 'NL', 'TNM', 'C00122045', 'K'], // Case insensitive
+            ['nl-tnm-c0012a045-1', 'NL', 'TNM', 'C0012A045', '1'], // Lowercase letter inside the instance value
             ['NLTNMC00122045', 'NL', 'TNM', 'C00122045', 'K'],     // No dashes, no check digit provided
             ['NL-TNM-C10122045-J', 'NL', 'TNM', 'C10122045', 'J'], // Valid EMI3 not convertible to DIN
         ];
     }
 
     // Test cases for construction from parts
-    #[DataProvider('provideValidEmi3ContractIdParts')]
+    #[DataProvider('provideOfPartsValidEmi3ContractIdCases')]
     public function testOfPartsValidEmi3ContractId(
         string $countryCode,
         string $providerId,
@@ -71,43 +68,44 @@ class ContractIdEmi3Test extends TestCase
         $pi = ProviderId::of($providerId);
         $contractId = ContractIdEmi3::ofParts($cc, $pi, $instanceValue, $checkDigit);
 
-        $this->assertSame(strtoupper($countryCode), (string) $contractId->countryCode);
-        $this->assertSame(strtoupper($providerId), (string) $contractId->providerId);
-        $this->assertSame(strtoupper($instanceValue), $contractId->instanceValue);
-        $this->assertSame($expectedCheckDigit, $contractId->checkDigit);
+        self::assertSame(strtoupper($countryCode), (string) $contractId->countryCode);
+        self::assertSame(strtoupper($providerId), (string) $contractId->providerId);
+        self::assertSame(strtoupper($instanceValue), $contractId->instanceValue);
+        self::assertSame($expectedCheckDigit, $contractId->checkDigit);
     }
 
-    public static function provideValidEmi3ContractIdParts(): array
+    public static function provideOfPartsValidEmi3ContractIdCases(): iterable
     {
         return [
             ['NL', 'TNM', 'C00122045', 'K', 'K'],
             ['nl', 'tnm', 'c00122045', 'k', 'K'], // Case insensitive
+            ['nl', 'tnm', 'c0012a045', '1', '1'], // Lowercase letter inside the instance value
             ['NL', 'TNM', 'C00122045', null, 'K'], // No check digit given, should compute
             ['NL', 'TNM', 'C10122045', null, 'J'],
         ];
     }
 
     // Test cases for invalid input
-    #[DataProvider('provideInvalidEmi3ContractIdStrings')]
+    #[DataProvider('provideOfInvalidEmi3ContractIdStringsCases')]
     public function testOfInvalidEmi3ContractIdStrings(string $contractIdString, string $expectedMessageRegex): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches($expectedMessageRegex);
         ContractIdEmi3::of($contractIdString);
     }
 
-    public static function provideInvalidEmi3ContractIdStrings(): array
+    public static function provideOfInvalidEmi3ContractIdStringsCases(): iterable
     {
         return [
-            ['NL-TNM-C00122045-X', "/Given check digit '.*' is not equal to computed '.*'/"], /* Wrong check digit */
-            ['NLTNM076', "/'.*?' is not a valid Contract Id for EMI3/"],                        /* Wrong length for instance value */
-            ['X-aargh-131331234', "/'.*?' is not a valid Contract Id for EMI3/"],               /* Wrong length of fields */
-            [' \u0000t24\u2396a	', "/'.*?' is not a valid Contract Id for EMI3/"],               /* Nonsense */
-            ['NL-T|M-C00122045-K', "/'.*?' is not a valid Contract Id for EMI3/"],               /* Illegal char in provider ID */
-            ['A-TNM-C00122045-K', "/'.*?' is not a valid Contract Id for EMI3/"],                     /* Invalid country code (too short) */
-            ['NLD-TNM-C00122045-K', "/'.*?' is not a valid Contract Id for EMI3/"],                   /* Invalid country code (too long) */
-            ['NL-TNMNN-C00122045-K', "/'.*?' is not a valid Contract Id for EMI3/"],                 /* Invalid provider ID (too long) */
-            ['NLTNM012345678', "/'.*?' is not a valid Contract Id for EMI3/"],                  /* Instance value without 'C0' prefix */
+            ['NL-TNM-C00122045-X', "/Given check digit '.*' is not equal to computed '.*'/"], // Wrong check digit
+            ['NLTNM076', "/'.*?' is not a valid Contract Id for EMI3/"],                        // Wrong length for instance value
+            ['X-aargh-131331234', "/'.*?' is not a valid Contract Id for EMI3/"],               // Wrong length of fields
+            [' \u0000t24\u2396a	', "/'.*?' is not a valid Contract Id for EMI3/"],               // Nonsense
+            ['NL-T|M-C00122045-K', "/'.*?' is not a valid Contract Id for EMI3/"],               // Illegal char in provider ID
+            ['A-TNM-C00122045-K', "/'.*?' is not a valid Contract Id for EMI3/"],                     // Invalid country code (too short)
+            ['NLD-TNM-C00122045-K', "/'.*?' is not a valid Contract Id for EMI3/"],                   // Invalid country code (too long)
+            ['NL-TNMNN-C00122045-K', "/'.*?' is not a valid Contract Id for EMI3/"],                 // Invalid provider ID (too long)
+            ['NLTNM012345678', "/'.*?' is not a valid Contract Id for EMI3/"],                  // Instance value without 'C0' prefix
             ['NLTNMZ12345678', "/'.*?' is not a valid Contract Id for EMI3/"],
         ];
     }
@@ -116,9 +114,9 @@ class ContractIdEmi3Test extends TestCase
     public function testRendering(): void
     {
         $contractId = ContractIdEmi3::ofParts(CountryCode::of('NL'), ProviderId::of('TNM'), 'C00122045');
-        $this->assertSame('NL-TNM-C00122045-K', (string) $contractId);
-        $this->assertSame('NLTNMC00122045K', $contractId->toCompactString());
-        $this->assertSame('NLTNMC00122045', $contractId->toCompactStringWithoutCheckDigit());
+        self::assertSame('NL-TNM-C00122045-K', (string) $contractId);
+        self::assertSame('NLTNMC00122045K', $contractId->toCompactString());
+        self::assertSame('NLTNMC00122045', $contractId->toCompactStringWithoutCheckDigit());
     }
 
     // Test for partyId
@@ -126,8 +124,7 @@ class ContractIdEmi3Test extends TestCase
     {
         $contractId = ContractIdEmi3::ofParts(CountryCode::of('NL'), ProviderId::of('TNM'), 'C00122045');
         $partyId = $contractId->partyId();
-        $this->assertInstanceOf(PartyId::class, $partyId);
-        $this->assertSame('NL-TNM', (string) $partyId);
+        self::assertSame('NL-TNM', (string) $partyId);
     }
 
     // New tests for opt() and convertTo() methods
@@ -135,34 +132,32 @@ class ContractIdEmi3Test extends TestCase
     {
         $contractIdString = 'NL-TNM-C00122045-K';
         $contractId = ContractIdEmi3::opt($contractIdString);
-        $this->assertNotNull($contractId);
-        $this->assertSame('NL', (string) $contractId->countryCode);
-        $this->assertSame('TNM', (string) $contractId->providerId);
-        $this->assertSame('C00122045', $contractId->instanceValue);
-        $this->assertSame('K', $contractId->checkDigit);
+        self::assertInstanceOf(ContractIdEmi3::class, $contractId);
+        self::assertSame('NL', (string) $contractId->countryCode);
+        self::assertSame('TNM', (string) $contractId->providerId);
+        self::assertSame('C00122045', $contractId->instanceValue);
+        self::assertSame('K', $contractId->checkDigit);
     }
 
     public function testOptInvalidContractIdString(): void
     {
         $contractIdString = 'NL-TNM-INVALID-X';
         $contractId = ContractIdEmi3::opt($contractIdString);
-        $this->assertNull($contractId);
+        self::assertNull($contractId);
     }
 
     public function testConvertToDinFromEmi3(): void
     {
         $emi3ContractId = ContractIdEmi3::ofParts(CountryCode::of('NL'), ProviderId::of('TNM'), 'C00122045', 'K');
         $dinContractId = $emi3ContractId->convertToDin();
-        $this->assertInstanceOf(ContractIdDin::class, $dinContractId);
         // Computed check digit for NL-TNM-012204-5 should be '5' (based on Scala tests)
-        $this->assertSame('NL-TNM-012204-5', (string) $dinContractId);
+        self::assertSame('NL-TNM-012204-5', (string) $dinContractId);
     }
 
     public function testConvertToIsoFromEmi3(): void
     {
         $emi3ContractId = ContractIdEmi3::ofParts(CountryCode::of('NL'), ProviderId::of('TNM'), 'C00122045', 'K');
         $isoContractId = $emi3ContractId->convertToIso();
-        $this->assertInstanceOf(ContractIdIso::class, $isoContractId);
-        $this->assertSame('NL-TNM-C00122045-K', (string) $isoContractId);
+        self::assertSame('NL-TNM-C00122045-K', (string) $isoContractId);
     }
 }

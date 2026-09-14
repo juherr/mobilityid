@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,12 +22,12 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId;
 
-use InvalidArgumentException;
 use Juherr\MobilityId\EvseIdStandard\Iso;
-use LogicException;
 
-final class EvseIdIso extends AbstractEvseId implements Iso
+final readonly class EvseIdIso extends AbstractEvseId implements Iso
 {
+    private const string ID_TYPE = 'E'; // From Scala EvseIdIso.IdType
+
     private function __construct(
         CountryCode $countryCode,
         OperatorIdIso $operatorId,
@@ -40,7 +39,7 @@ final class EvseIdIso extends AbstractEvseId implements Iso
     public static function of(string $evseIdString): self
     {
         $regex = EvseIdParser::getIsoEvseIdRegex();
-        if (preg_match($regex, $evseIdString, $matches)) {
+        if (preg_match($regex, $evseIdString, $matches) === 1) {
             $countryCode = CountryCode::of($matches[1]);
             $operatorId = OperatorIdIso::of($matches[2]);
             $powerOutletId = strtoupper($matches[3]);
@@ -48,8 +47,8 @@ final class EvseIdIso extends AbstractEvseId implements Iso
             return new self($countryCode, $operatorId, $powerOutletId);
         }
 
-        throw new InvalidArgumentException(
-            "'$evseIdString' is not a valid ISO EVSE ID"
+        throw new \InvalidArgumentException(
+            "'{$evseIdString}' is not a valid ISO EVSE ID"
         );
     }
 
@@ -66,8 +65,8 @@ final class EvseIdIso extends AbstractEvseId implements Iso
         $fullPowerOutletId = self::ID_TYPE . $normalizedPowerOutletId;
         $regex = '/^' . EvseIdParser::getIsoPowerOutletIdRegex() . '$/'; // Need to validate the powerOutletId separately
 
-        if (! preg_match($regex, $fullPowerOutletId)) {
-            throw new InvalidArgumentException(
+        if (preg_match($regex, $fullPowerOutletId) !== 1) {
+            throw new \InvalidArgumentException(
                 "'{$fullPowerOutletId}' is not a valid ISO Power Outlet ID"
             );
         }
@@ -75,24 +74,18 @@ final class EvseIdIso extends AbstractEvseId implements Iso
         return new self($countryCode, $operatorId, $normalizedPowerOutletId);
     }
 
-    private const ID_TYPE = 'E'; // From Scala EvseIdIso.IdType
-
     public function toString(): string
     {
-        return $this->countryCode->cc . $this->separator . $this->operatorId->id . $this->separator . self::ID_TYPE . $this->powerOutletId;
+        return $this->countryCode->cc . self::SEPARATOR . $this->operatorId->id . self::SEPARATOR . self::ID_TYPE . $this->powerOutletId;
     }
 
     public function toCompactString(): string
     {
-        return $this->countryCode->cc . $this->operatorId->id . self::ID_TYPE . str_replace($this->separator, '', $this->powerOutletId);
+        return $this->countryCode->cc . $this->operatorId->id . self::ID_TYPE . str_replace(self::SEPARATOR, '', $this->powerOutletId);
     }
 
     public function partyId(): PartyId
     {
-        if (! $this->countryCode instanceof CountryCode || ! $this->operatorId instanceof OperatorIdIso) {
-            throw new LogicException('EvseIdIso must contain ISO country and operator identifiers');
-        }
-
         return PartyId::of($this->countryCode, $this->operatorId);
     }
 
@@ -100,7 +93,7 @@ final class EvseIdIso extends AbstractEvseId implements Iso
     {
         try {
             return self::of($evseIdString);
-        } catch (InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException) {
             return null;
         }
     }

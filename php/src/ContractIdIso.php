@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,10 +22,9 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId;
 
-use InvalidArgumentException;
 use Juherr\MobilityId\ContractIdStandard\Iso;
 
-final class ContractIdIso extends AbstractContractId implements Iso
+final readonly class ContractIdIso extends AbstractContractId implements Iso
 {
     private function __construct(
         CountryCode $countryCode,
@@ -40,26 +38,12 @@ final class ContractIdIso extends AbstractContractId implements Iso
     public static function of(string $contractIdString): self
     {
         $regex = ContractIdParser::getIsoFullRegex();
-        if (preg_match($regex, $contractIdString, $matches)) {
-            $countryCode = CountryCode::of($matches[1]);
-            $providerId = ProviderId::of($matches[2]);
-            $instanceValue = strtoupper($matches[3]);
-            $checkDigitGiven = $matches[4] ?? null;
-
-            $inputForCheckDigit = $countryCode->cc . $providerId->id . $instanceValue;
-            $computedCheckDigit = ContractIdParser::computeIsoCheckDigit($inputForCheckDigit);
-
-            if ($checkDigitGiven !== null && strtoupper($checkDigitGiven) !== $computedCheckDigit) {
-                throw new InvalidArgumentException(
-                    "Given check digit '{$checkDigitGiven}' is not equal to computed '{$computedCheckDigit}'"
-                );
-            }
-
-            return new self($countryCode, $providerId, $instanceValue, $computedCheckDigit);
+        if (preg_match($regex, $contractIdString, $matches) === 1) {
+            return self::ofParts(CountryCode::of($matches[1]), ProviderId::of($matches[2]), $matches[3], $matches[4] ?? null);
         }
 
-        throw new InvalidArgumentException(
-            "'$contractIdString' is not a valid Contract Id for ISO 15118-1"
+        throw new \InvalidArgumentException(
+            "'{$contractIdString}' is not a valid Contract Id for ISO 15118-1"
         );
     }
 
@@ -69,23 +53,23 @@ final class ContractIdIso extends AbstractContractId implements Iso
         string $instanceValue,
         ?string $checkDigit = null
     ): self {
-        $inputForCheckDigit = $countryCode->cc . $providerId->id . strtoupper($instanceValue);
-        $computedCheckDigit = ContractIdParser::computeIsoCheckDigit($inputForCheckDigit);
+        $instanceValue = strtoupper($instanceValue);
+        $computedCheckDigit = ContractIdParser::computeIsoCheckDigit($countryCode->cc . $providerId->id . $instanceValue);
 
         if ($checkDigit !== null && strtoupper($checkDigit) !== $computedCheckDigit) {
-            throw new InvalidArgumentException(
+            throw new \InvalidArgumentException(
                 "Given check digit '{$checkDigit}' is not equal to computed '{$computedCheckDigit}'"
             );
         }
 
-        return new self($countryCode, $providerId, strtoupper($instanceValue), $computedCheckDigit);
+        return new self($countryCode, $providerId, $instanceValue, $computedCheckDigit);
     }
 
     public static function opt(string $contractIdString): ?self
     {
         try {
             return self::of($contractIdString);
-        } catch (InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException) {
             return null;
         }
     }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,15 +22,17 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId;
 
-use InvalidArgumentException;
-
-final class OperatorIdDin
+final readonly class OperatorIdDin implements \Stringable
 {
-    private const REGEX = '([0-9]{3,6})'; // Removed anchors
+    private const string REGEX = '([0-9]{3,6})'; // Removed anchors
 
     private function __construct(
         public string $id
-    ) {
+    ) {}
+
+    public function __toString(): string
+    {
+        return $this->id;
     }
 
     public static function isValid(string $id): bool
@@ -45,14 +46,9 @@ final class OperatorIdDin
             return new self($id); // DIN IDs are numeric, no case conversion needed
         }
 
-        throw new InvalidArgumentException(
-            "Operator ID (DIN) must be a numeric string between 3 and 6 digits. (Was: $id)"
+        throw new \InvalidArgumentException(
+            "Operator ID (DIN) must be a numeric string between 3 and 6 digits. (Was: {$id})"
         );
-    }
-
-    public function __toString(): string
-    {
-        return $this->id;
     }
 
     public static function getRegex(): string

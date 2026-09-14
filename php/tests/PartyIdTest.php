@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,24 +23,25 @@ declare(strict_types=1);
 namespace Juherr\MobilityId\Tests;
 
 use Juherr\MobilityId\CountryCode;
+use Juherr\MobilityId\OperatorIdDin;
 use Juherr\MobilityId\OperatorIdIso;
 use Juherr\MobilityId\PartyId;
 use Juherr\MobilityId\ProviderId;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class PartyIdTest extends TestCase
+final class PartyIdTest extends TestCase
 {
-    #[DataProvider('provideValidPartyIdStrings')]
+    #[DataProvider('provideParseValidPartyIdStringsCases')]
     public function testParseValidPartyIdStrings(string $partyIdString, string $expectedCompactString, string $expectedToString): void
     {
         $partyId = PartyId::parse($partyIdString);
-        $this->assertNotNull($partyId);
-        $this->assertSame($expectedCompactString, $partyId->toCompactString());
-        $this->assertSame($expectedToString, (string) $partyId);
+        self::assertInstanceOf(PartyId::class, $partyId);
+        self::assertSame($expectedCompactString, $partyId->toCompactString());
+        self::assertSame($expectedToString, (string) $partyId);
     }
 
-    public static function provideValidPartyIdStrings(): array
+    public static function provideParseValidPartyIdStringsCases(): iterable
     {
         return [
             ['NL-TNM', 'NLTNM', 'NL-TNM'],
@@ -50,17 +50,18 @@ class PartyIdTest extends TestCase
             ['DE-AW8', 'DEAW8', 'DE-AW8'],
             ['US-ABC', 'USABC', 'US-ABC'],
             ['FR*123', 'FR123', 'FR-123'],
+            ['nl-tnm', 'NLTNM', 'NL-TNM'],
         ];
     }
 
-    #[DataProvider('provideInvalidPartyIdStrings')]
+    #[DataProvider('provideParseInvalidPartyIdStringsCases')]
     public function testParseInvalidPartyIdStrings(string $partyIdString): void
     {
         $partyId = PartyId::parse($partyIdString);
-        $this->assertNull($partyId);
+        self::assertNull($partyId);
     }
 
-    public static function provideInvalidPartyIdStrings(): array
+    public static function provideParseInvalidPartyIdStringsCases(): iterable
     {
         return [
             ['NLTNMA'],      // Too long party code
@@ -83,10 +84,10 @@ class PartyIdTest extends TestCase
         $countryCode = CountryCode::of('NL');
         $providerId = ProviderId::of('TNM');
         $partyId = PartyId::of($countryCode, $providerId);
-        $this->assertSame('NLTNM', $partyId->toCompactString());
-        $this->assertSame('NL-TNM', (string) $partyId);
-        $this->assertSame('NL', $partyId->countryCode->cc);
-        $this->assertSame('TNM', $partyId->partyCode);
+        self::assertSame('NLTNM', $partyId->toCompactString());
+        self::assertSame('NL-TNM', (string) $partyId);
+        self::assertSame('NL', $partyId->countryCode->cc);
+        self::assertSame('TNM', $partyId->partyCode);
     }
 
     public function testOfWithOperatorIdIso(): void
@@ -94,26 +95,17 @@ class PartyIdTest extends TestCase
         $countryCode = CountryCode::of('DE');
         $operatorIdIso = OperatorIdIso::of('AW8');
         $partyId = PartyId::of($countryCode, $operatorIdIso);
-        $this->assertSame('DEAW8', $partyId->toCompactString());
-        $this->assertSame('DE-AW8', (string) $partyId);
-        $this->assertSame('DE', $partyId->countryCode->cc);
-        $this->assertSame('AW8', $partyId->partyCode);
+        self::assertSame('DEAW8', $partyId->toCompactString());
+        self::assertSame('DE-AW8', (string) $partyId);
+        self::assertSame('DE', $partyId->countryCode->cc);
+        self::assertSame('AW8', $partyId->partyCode);
     }
 
     public function testOfWithInvalidPartyCodeFromIdentifier(): void
     {
-        // This scenario should not happen if ProviderId/OperatorIdIso are properly validated on creation.
-        // However, if we were to bypass their 'of' method and create an invalid one,
-        // PartyId::of should still validate and throw an exception.
-        // For testing, we can simulate an invalid ID from a mock or directly create an instance
-        // with an invalid 'id' property if the class allows. Since they are final, we can't mock.
-        // The current implementation of PartyId::of relies on ProviderId/OperatorIdIso already being valid.
-        // The throw is mostly a safeguard.
-
-        // Given the design of ProviderId and OperatorIdIso, this case is hard to test without
-        // breaking encapsulation or making a valid ProviderId with an invalid internal string.
-        // The check inside PartyId::of for PARTY_CODE_REGEX is a safeguard.
-        // We'll rely on ProviderId and OperatorIdIso to always provide valid IDs.
-        $this->assertTrue(true); // Placeholder, as this case is hard to trigger meaningfully
+        // A DIN operator id may carry up to six digits, which is not a three-character party code.
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid party code derived from identifier. (Was: 1234)');
+        PartyId::of(CountryCode::of('DE'), OperatorIdDin::of('1234'));
     }
 }

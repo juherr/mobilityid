@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,14 +22,18 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId;
 
-abstract class AbstractContractId
+abstract readonly class AbstractContractId implements \Stringable
 {
     protected function __construct(
-        public readonly CountryCode $countryCode,
-        public readonly ProviderId $providerId,
-        public readonly string $instanceValue,
-        public readonly string $checkDigit
-    ) {
+        public CountryCode $countryCode,
+        public ProviderId $providerId,
+        public string $instanceValue,
+        public string $checkDigit
+    ) {}
+
+    public function __toString(): string
+    {
+        return $this->toString();
     }
 
     public function toString(): string
@@ -53,16 +56,11 @@ abstract class AbstractContractId
         return PartyId::of($this->countryCode, $this->providerId);
     }
 
-    public function __toString(): string
-    {
-        return $this->toString();
-    }
-
     // Conversion methods
 
     /**
      * Converts to ContractIdDin. Only applicable if the current ContractId is EMI3 or ISO and follows specific formats.
-     * @return ContractIdDin
+     *
      * @throws \InvalidArgumentException
      */
     public function convertToDin(): ContractIdDin
@@ -74,57 +72,59 @@ abstract class AbstractContractId
                 );
             }
             $dinInstance = substr($this->instanceValue, 2, 6);
-            $dinCheck = substr($this->instanceValue, 8, 1);
+            $dinCheck = $this->instanceValue[8];
 
             return ContractIdDin::ofParts($this->countryCode, $this->providerId, $dinInstance, $dinCheck);
-        } elseif ($this instanceof ContractIdIso) {
+        }
+        if ($this instanceof ContractIdIso) {
             if (! str_starts_with($this->instanceValue, '00')) {
                 throw new \InvalidArgumentException(
                     "{$this->toString()} cannot be converted to DIN SPEC 91286 format"
                 );
             }
             $dinInstance = substr($this->instanceValue, 2, 6);
-            $dinCheck = substr($this->instanceValue, 8, 1);
+            $dinCheck = $this->instanceValue[8];
 
             return ContractIdDin::ofParts($this->countryCode, $this->providerId, $dinInstance, $dinCheck);
         }
 
         throw new \InvalidArgumentException(
-            "Conversion from " . get_class($this) . " to ContractIdDin is not supported."
+            'Conversion from ' . static::class . ' to ContractIdDin is not supported.'
         );
     }
 
     /**
      * Converts to ContractIdEmi3. Only applicable if the current ContractId is DIN.
-     * @return ContractIdEmi3
+     *
      * @throws \InvalidArgumentException
      */
     public function convertToEmi3(): ContractIdEmi3
     {
         if ($this instanceof ContractIdDin) {
-            return ContractIdEmi3::ofParts($this->countryCode, $this->providerId, "C0" . $this->instanceValue . $this->checkDigit);
+            return ContractIdEmi3::ofParts($this->countryCode, $this->providerId, 'C0' . $this->instanceValue . $this->checkDigit);
         }
 
         throw new \InvalidArgumentException(
-            "Conversion from " . get_class($this) . " to ContractIdEmi3 is not supported."
+            'Conversion from ' . static::class . ' to ContractIdEmi3 is not supported.'
         );
     }
 
     /**
      * Converts to ContractIdIso. Only applicable if the current ContractId is DIN or EMI3.
-     * @return ContractIdIso
+     *
      * @throws \InvalidArgumentException
      */
     public function convertToIso(): ContractIdIso
     {
         if ($this instanceof ContractIdDin) {
-            return ContractIdIso::ofParts($this->countryCode, $this->providerId, "00" . $this->instanceValue . $this->checkDigit);
-        } elseif ($this instanceof ContractIdEmi3) {
+            return ContractIdIso::ofParts($this->countryCode, $this->providerId, '00' . $this->instanceValue . $this->checkDigit);
+        }
+        if ($this instanceof ContractIdEmi3) {
             return ContractIdIso::ofParts($this->countryCode, $this->providerId, $this->instanceValue, $this->checkDigit);
         }
 
         throw new \InvalidArgumentException(
-            "Conversion from " . get_class($this) . " to ContractIdIso is not supported."
+            'Conversion from ' . static::class . ' to ContractIdIso is not supported.'
         );
     }
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,22 +22,21 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId\Tests;
 
-use InvalidArgumentException;
 use Juherr\MobilityId\ProviderId;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class ProviderIdTest extends TestCase
+final class ProviderIdTest extends TestCase
 {
-    #[DataProvider('provideValidProviderIds')]
+    #[DataProvider('provideValidProviderIdsCases')]
     public function testValidProviderIds(string $id, string $expectedId): void
     {
         $providerId = ProviderId::of($id);
-        $this->assertSame($expectedId, (string) $providerId);
-        $this->assertTrue(ProviderId::isValid($id));
+        self::assertSame($expectedId, (string) $providerId);
+        self::assertTrue(ProviderId::isValid($id));
     }
 
-    public static function provideValidProviderIds(): array
+    public static function provideValidProviderIdsCases(): iterable
     {
         return [
             ['TNM', 'TNM'],
@@ -48,16 +46,16 @@ class ProviderIdTest extends TestCase
         ];
     }
 
-    #[DataProvider('provideInvalidProviderIds')]
+    #[DataProvider('provideInvalidProviderIdsCases')]
     public function testInvalidProviderIds(string $id): void
     {
-        $this->assertFalse(ProviderId::isValid($id));
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches("/Provider ID must have a length of 3 and be ASCII letters or digits\. \(Was: .*\)/");
+        self::assertFalse(ProviderId::isValid($id));
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/Provider ID must have a length of 3 and be ASCII letters or digits\. \(Was: .*\)/');
         ProviderId::of($id);
     }
 
-    public static function provideInvalidProviderIds(): array
+    public static function provideInvalidProviderIdsCases(): iterable
     {
         return [
             ['TNM1'],    // Too long

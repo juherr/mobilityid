@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,49 +24,47 @@ namespace Juherr\MobilityId;
 
 final class ContractIdParser
 {
-    private const CHECK_DIGIT_REGEX = '([A-Za-z0-9])';
+    private const string CHECK_DIGIT_REGEX = '([A-Za-z0-9])';
 
-    private function __construct()
-    {
-    } // Prevent instantiation
+    private function __construct() {} // Prevent instantiation
 
     public static function getIsoFullRegex(): string
     {
-        return '/^' .
-               CountryCode::getRegex() .
-               '(?:-?)' .
-               ProviderId::getRegex() . // ProviderId contains the PartyCode regex
-               '(?:-?)' .
-               '([A-Za-z0-9]{9})' . // InstanceRegex for ISO
-               '(?:(?:-?)' .
-               self::CHECK_DIGIT_REGEX .
-               ')?$/';
+        return '/^'
+               . CountryCode::getRegex()
+               . '(?:-?)'
+               . ProviderId::getRegex() // ProviderId contains the PartyCode regex
+               . '(?:-?)'
+               . '([A-Za-z0-9]{9})' // InstanceRegex for ISO
+               . '(?:(?:-?)'
+               . self::CHECK_DIGIT_REGEX
+               . ')?$/';
     }
 
     public static function getEmi3FullRegex(): string
     {
-        return '/^' .
-               CountryCode::getRegex() .
-               '(?:-?)' .
-               ProviderId::getRegex() . // ProviderId contains the PartyCode regex
-               '(?:-?)' .
-               '([Cc][A-Za-z0-9]{8})' . // InstanceRegex for EMI3
-               '(?:(?:-?)' .
-               self::CHECK_DIGIT_REGEX .
-               ')?$/';
+        return '/^'
+               . CountryCode::getRegex()
+               . '(?:-?)'
+               . ProviderId::getRegex() // ProviderId contains the PartyCode regex
+               . '(?:-?)'
+               . '([Cc][A-Za-z0-9]{8})' // InstanceRegex for EMI3
+               . '(?:(?:-?)'
+               . self::CHECK_DIGIT_REGEX
+               . ')?$/';
     }
 
     public static function getDinFullRegex(): string
     {
-        return '/^' .
-               CountryCode::getRegex() .
-               '(?:[*-]?)' .
-               ProviderId::getRegex() . // ProviderId contains the PartyCode regex
-               '(?:[*-]?)' .
-               '([A-Za-z0-9]{6})' . // InstanceRegex for DIN
-               '(?:(?:[*-]?)' .
-               self::CHECK_DIGIT_REGEX .
-               ')?$/';
+        return '/^'
+               . CountryCode::getRegex()
+               . '(?:[*-]?)'
+               . ProviderId::getRegex() // ProviderId contains the PartyCode regex
+               . '(?:[*-]?)'
+               . '([A-Za-z0-9]{6})' // InstanceRegex for DIN
+               . '(?:(?:[*-]?)'
+               . self::CHECK_DIGIT_REGEX
+               . ')?$/';
     }
 
     public static function computeIsoCheckDigit(string $input): string

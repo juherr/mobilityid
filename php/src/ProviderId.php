@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,20 +22,17 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId;
 
-use InvalidArgumentException;
-
-final class ProviderId
+final readonly class ProviderId implements \Stringable
 {
-    private const PARTY_CODE_REGEX = '([A-Za-z0-9]{3})';
+    private const string PARTY_CODE_REGEX = '([A-Za-z0-9]{3})';
 
     private function __construct(
         public string $id
-    ) {
-    }
+    ) {}
 
-    private static function isValidPartyCode(string $partyCode): bool
+    public function __toString(): string
     {
-        return preg_match('/^' . self::PARTY_CODE_REGEX . '$/', $partyCode) === 1;
+        return $this->id;
     }
 
     public static function isValid(string $id): bool
@@ -50,18 +46,18 @@ final class ProviderId
             return new self(strtoupper($id)); // Ensure uppercase as per Scala's PartyCodeImpl
         }
 
-        throw new InvalidArgumentException(
-            "Provider ID must have a length of 3 and be ASCII letters or digits. (Was: $id)"
+        throw new \InvalidArgumentException(
+            "Provider ID must have a length of 3 and be ASCII letters or digits. (Was: {$id})"
         );
-    }
-
-    public function __toString(): string
-    {
-        return $this->id;
     }
 
     public static function getRegex(): string
     {
         return self::PARTY_CODE_REGEX;
+    }
+
+    private static function isValidPartyCode(string $partyCode): bool
+    {
+        return preg_match('/^' . self::PARTY_CODE_REGEX . '$/', $partyCode) === 1;
     }
 }
