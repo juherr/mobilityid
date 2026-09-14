@@ -49,3 +49,6 @@ java/bin/
 
 # Serena agent workspace
 .serena/
+
+# jqwik failure database (java/ workspace)
+java/.jqwik-database
