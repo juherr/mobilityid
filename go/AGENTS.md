@@ -14,7 +14,7 @@ and status are in `README.md`. Run every command below from `go/`.
 
 - Go 1.26 (`mise.toml`), `gofmt`, `go vet`, golangci-lint 2.9 with `goheader` (`.golangci.yml`).
 - CI (`.github/workflows/ci-go.yml`): golangci-lint, gofmt check, `go vet`, `go test`, `go build`.
-- Releases use `go/vX.Y.Z` tags (`.github/workflows/release-go.yml`), separate from the global `vX.Y.Z` tags.
+- Releases use `go/vX.Y.Z` tags (`.github/workflows/release-go.yml`), separate from the dispatched `Release` workflow that tags `vX.Y.Z`.
 
 ## Commands
 

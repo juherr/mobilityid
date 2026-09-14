@@ -18,7 +18,7 @@ command below from `ts/`.
 - Bun (package manager) + Vite+ (`vp`), Node 24 (`mise.toml`). Not pnpm, not bare Vitest.
 - Oxlint with `@tony.ganchev/eslint-plugin-header` enforces the Apache header on `src/**` and `test/**`.
 - CI (`.github/workflows/ci-ts.yml`): `bun run lint`, `vp check`, `vp test`, `vp pack`.
-- Published to npm by the global `vX.Y.Z` release tag; `package.json` version stays `0.0.0-development`.
+- Published to npm by the dispatched `Release` workflow (`CONTRIBUTING.md`); `package.json` version stays `0.0.0-development`.
 
 ## Commands
 

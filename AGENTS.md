@@ -72,7 +72,8 @@ for single-suite and lint invocations. Full gates per workspace:
 ### CI and release
 
 - One CI workflow per workspace (`.github/workflows/ci-{scala,java,go,php,ts}.yml`); only touch the workflow of the workspace you changed.
-- Global tags `vX.Y.Z` trigger `.github/workflows/release.yml` (Java to Maven Central Portal, TypeScript to npm). Go uses separate `go/vX.Y.Z` tags (`release-go.yml`).
+- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, publishes Java (Maven Central Portal) and TypeScript (npm) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`). Full procedure in `CONTRIBUTING.md`.
+- `CI Workflows` (`ci-workflows.yml`) lints every workflow with actionlint and zizmor; every checkout uses `persist-credentials: false` and publishing workflows disable caches.
 - Security gates: dependency review (`dependency-review.yml`) and OWASP Dependency-Check (`security.yml`).
 
 ### License headers
@@ -110,6 +111,7 @@ limitations under the License.
   - Update the workspace `AGENTS.md` whenever its commands, toolchain, or quality gates evolve; update this file only for cross-workspace changes (layout, domain, release).
   - Update the root `README.md` and the workspace `README.md` incrementally as features, API choices, or tooling decisions change.
   - Record practical lessons learned (pitfalls, conventions, migration notes) in the relevant README/guide instead of leaving them only in PR/chat context.
+  - Add a line to `CHANGELOG.md` under `Unreleased` for any user-visible change (Common Changelog, grouped by impact, breaking changes marked).
 
 ## Code Style (shared)
 
