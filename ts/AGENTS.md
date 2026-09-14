@@ -18,7 +18,8 @@ command below from `ts/`.
 - Bun (package manager) + Vite+ (`vp`), Node 24 (`mise.toml`). Not pnpm, not bare Vitest.
 - Oxlint with `@tony.ganchev/eslint-plugin-header` enforces the Apache header on `src/**` and `test/**`.
 - CI (`.github/workflows/ci-ts.yml`): `bun run lint`, `vp check`, `vp test`, `vp pack`.
-- Published to npm by the dispatched `Release` workflow through npm Trusted Publishing (OIDC, no token; `README.md` "Publishing to npm"); `package.json` version stays `0.0.0-development`. Only `dist/`, `README.md`, `LICENSE` ship (`files`).
+- Published to npm by the dispatched `Release` workflow through npm Trusted Publishing (OIDC, no token; `README.md` "Publishing to npm"); `package.json` version stays `0.0.0-development`. Only `dist/`, `README.md`, `LICENSE` (full Apache 2.0 text), `NOTICE` ship (`files`).
+- Header: `license-header.txt`, Julien Herr only (root `AGENTS.md` "Provenance"); `bun run check:headers` proves the gate.
 
 ## Commands
 

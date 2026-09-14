@@ -1,6 +1,8 @@
 # @juherr/mobilityid
 
-TypeScript port of the Mobility ID domain library.
+TypeScript port of the Mobility ID domain library, inspired by the original Scala library
+(`scala/` in this repository, created by The New Motion): same domain model, same identifiers,
+same test fixtures, written for TypeScript.
 
 ## Goals
 
@@ -50,17 +52,24 @@ bun run lint:fix
 
 ## License header policy
 
-All TypeScript source and test files must include the repository Apache-2.0 header.
-Headers are enforced by Oxlint via the Vite+ `lint` config using `@tony.ganchev/eslint-plugin-header`. Use:
+All TypeScript source and test files carry the Apache-2.0 header from `license-header.txt`
+(copyright Julien Herr and contributors). It is enforced by Oxlint via the Vite+ `lint` config
+using `@tony.ganchev/eslint-plugin-header`; `scripts/tests/header-policy.test.sh`
+(`bun run check:headers`, also run in CI) proves the gate rejects a missing or an extra copyright
+line. Use:
 
 - `bun run lint` to validate
 - `bun run lint:fix` to auto-fix
 
+The package ships `LICENSE` (the full Apache 2.0 text) and `NOTICE` (the copyright line); the
+release package check (`../scripts/verify-npm-package.sh`) fails when either is missing or when
+`LICENSE` is only the short header instead of the full license.
+
 ## Publishing to npm
 
 The package is `@juherr/mobilityid` (public, scoped). `package.json` keeps `0.0.0-development`;
-the release version is stamped at release time. Only `dist/`, `README.md`, `LICENSE` and
-`package.json` ship (`files` field).
+the release version is stamped at release time. Only `dist/`, `README.md`, `LICENSE`, `NOTICE`
+and `package.json` ship (`files` field).
 
 ### Validate the package locally
 
@@ -70,7 +79,8 @@ scripts/verify-package.sh            # or: scripts/verify-package.sh 1.2.3
 ```
 
 It runs `bun run check` (typecheck, tests, build), `npm pack`, asserts the tarball content
-(`../scripts/verify-npm-package.sh`, allowlist: `package.json`, `README.md`, `LICENSE`, `dist/**`), runs the pinned `publint`, then installs the tarball in a throw-away
+(`../scripts/verify-npm-package.sh`, allowlist: `package.json`, `README.md`, `LICENSE`, `NOTICE`,
+`dist/**`; full Apache 2.0 text and copyright notice asserted), runs the pinned `publint`, then installs the tarball in a throw-away
 project and uses it from Node (ESM) and TypeScript (declarations resolve through `exports`,
 tolerant parsers are `T | null`). `package.json` is restored afterwards. The same script runs in
 `ci-ts.yml` (Node 24) and in the `Release` preflight.

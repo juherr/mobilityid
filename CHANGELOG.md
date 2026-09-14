@@ -10,9 +10,12 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
-- **TypeScript:** the packaged `LICENSE` names the package and its origin (a translation of the
-  New Motion Scala implementation) and keeps both copyright notices; the release package check
-  now fails when the tarball's `LICENSE` lacks the Apache 2.0 grant or either notice.
+- **TypeScript:** source headers, `NOTICE` and the header gate credit Julien Herr only; the
+  `README.md` states the port is inspired by the Scala library. The package now ships the full
+  Apache 2.0 text as `LICENSE` plus a `NOTICE` file, and the release package check fails when
+  `LICENSE` is only the short header or `NOTICE` lacks the copyright line.
+- **Repository:** root `LICENSE` is the full Apache 2.0 text; the workspace list and which
+  copyright notice applies to each move to `NOTICE`.
 - **CI:** OWASP Dependency-Check no longer runs on pull requests; it scans `main` weekly and on
   demand with a cached NVD database and fails on CVSS >= 7.0, aligned with the pull request
   dependency review gate.

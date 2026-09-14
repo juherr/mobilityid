@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Asserts that an npm tarball of @juherr/mobilityid is publishable: right name and version,
-# built JS entry and type declarations present, LICENSE with the Apache grant and both copyright
-# notices, and nothing outside the allowlist (package.json, README.md, LICENSE, dist/**). Exit 0 when valid, 1 otherwise.
+# built JS entry and type declarations present, LICENSE with the full Apache 2.0 text, NOTICE with
+# the copyright notice, and nothing outside the allowlist (package.json, README.md, LICENSE,
+# NOTICE, dist/**). Exit 0 when valid, 1 otherwise.
 # Usage: verify-npm-package.sh <tarball.tgz> <version>
 set -euo pipefail
 
@@ -32,23 +33,33 @@ require dist/index.js
 require dist/index.d.ts
 require README.md
 require LICENSE
+require NOTICE
 
-# The packaged LICENSE must carry the Apache 2.0 grant and both copyright lines: the port is a
-# derivative of the New Motion Scala code (AGENTS.md, "Provenance"), so its notice is required.
+# LICENSE must be the full Apache 2.0 text (recipients must receive a copy of the license, not
+# the short header with a URL): its title, terms and closing markers are all required.
 license=$(tar -xzOf "${tarball}" package/LICENSE)
-for notice in \
-  "Copyright (c) 2014 The New Motion team, and respective contributors" \
-  "Copyright (c) 2026 Julien Herr, and respective contributors" \
-  "Apache License, Version 2.0"; do
-  if ! grep -Fq "${notice}" <<<"${license}"; then
-    echo "LICENSE in the package lacks the notice: ${notice}" >&2
+for marker in \
+  "Apache License" \
+  "Version 2.0, January 2004" \
+  "TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION" \
+  "END OF TERMS AND CONDITIONS"; do
+  if ! grep -Fq "${marker}" <<<"${license}"; then
+    echo "LICENSE in the package is not the full Apache 2.0 text (missing: ${marker})" >&2
     exit 1
   fi
 done
 
+# NOTICE carries the copyright line (root AGENTS.md, "Provenance").
+notice_file=$(tar -xzOf "${tarball}" package/NOTICE)
+notice="Copyright (c) 2026 Julien Herr, and respective contributors"
+if ! grep -Fq "${notice}" <<<"${notice_file}"; then
+  echo "NOTICE in the package lacks: ${notice}" >&2
+  exit 1
+fi
+
 # Allowlist: anything else in the tarball is a packaging mistake.
 # Directory entries (trailing slash) are allowed for the package root and dist/ only.
-unexpected=$(grep -Ev '^package/(package\.json|README\.md|LICENSE|dist/.+|dist/)?$' <<<"${entries}" || true)
+unexpected=$(grep -Ev '^package/(package\.json|README\.md|LICENSE|NOTICE|dist/.+|dist/)?$' <<<"${entries}" || true)
 if [[ -n "${unexpected}" ]]; then
   echo "Unexpected entries in the package:" >&2
   echo "${unexpected}" >&2

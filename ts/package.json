@@ -34,7 +34,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "NOTICE"
   ],
   "publishConfig": {
     "access": "public",
@@ -49,6 +50,7 @@
     "build": "vp pack",
     "lint": "vp lint src test",
     "lint:fix": "vp lint --fix src test",
+    "check:headers": "scripts/tests/header-policy.test.sh",
     "format": "vp fmt . --write",
     "format:check": "vp fmt --check",
     "typecheck": "vp check",

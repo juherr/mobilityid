@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +19,8 @@ import path from "node:path";
 
 import { defineConfig } from "vite-plus";
 
+// Every TypeScript file carries the header from license-header.txt (Julien Herr only; root
+// AGENTS.md "Provenance").
 const canonicalHeader = readFileSync(
   path.resolve(import.meta.dirname, "license-header.txt"),
   "utf8",
