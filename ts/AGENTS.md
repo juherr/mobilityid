@@ -27,7 +27,7 @@ command below from `ts/`.
 - One test pattern: `vp test ContractId`.
 - Package check (pack, content, publint, throw-away Node + TypeScript consumer): `scripts/verify-package.sh [version]`; runs in CI on Node 24.
 - Lint + headers: `bun run lint`; fix: `bun run lint:fix`.
-- Format: `bun run format`, verify: `bun run format:check`.
+- Format: `bun run format`, verify: `bun run format:check`. Always go through the locked toolchain (`bun run ...` or `node_modules/.bin/vp`): a newer global `vp` formats Markdown differently (final newline) and produces files CI rejects.
 
 ## Code Style
 
