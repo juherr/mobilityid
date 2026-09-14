@@ -57,16 +57,19 @@ Java (Maven Central) and TypeScript (npm) are released together by the manually 
 2. Dispatch `Release` from `main` with `version = X.Y.Z`. It validates the version with
    `scripts/validate-release-version.sh` (strict SemVer, no `v`, no build metadata, no
    SNAPSHOT: the same rules for Maven Central, npm and the git tag), then runs the preflights:
-   Java (`java/scripts/verify.sh`) and TypeScript (`bun run check`, `npm pack`, tarball checked
-   by `scripts/verify-npm-package.sh` and uploaded as an artifact), each also asserting that
-   its registry credentials are present. Only when **both** pass does it publish, idempotently
-   (an already published version is skipped): Java through nmcp, TypeScript by publishing the
-   exact verified tarball. It then waits until Maven Central resolves the artifacts and creates
+   Java (`java/scripts/verify.sh`, also asserting the Maven Central credentials are present) and
+   TypeScript (`ts/scripts/verify-package.sh`: build, `npm pack`, tarball content, publint,
+   throw-away consumer; the tarball is uploaded as an artifact). Only when **both** pass does it
+   publish, idempotently (an already published version is skipped): Java through nmcp,
+   TypeScript by publishing the exact verified tarball with OIDC trusted publishing. It then waits until Maven Central resolves the artifacts and creates
    the signed `vX.Y.Z` tag and the GitHub Release. A failing preflight, including a missing
    secret, leaves every registry untouched.
 3. Re-run a failed run with `gh run rerun <run-id> --failed` rather than dispatching again, so the
    tag still points at the commit that produced the published artifacts.
 
 The `maven-central` environment provides `CENTRAL_USERNAME`, `CENTRAL_TOKEN` (a Central Portal
-user token), `GPG_PRIVATE_KEY` (armored) and `GPG_PASSPHRASE`; the `npm` environment provides
-`NPM_TOKEN`. The public GPG key must be available from a public keyserver.
+user token), `GPG_PRIVATE_KEY` (armored) and `GPG_PASSPHRASE`; the public GPG key must be
+available from a public keyserver. The `npm` environment holds **no secret**: npm is published
+through Trusted Publishing (OIDC) bound to `release.yml` and this environment, after a one-time
+manual first publication (`ts/README.md`, "Publishing to npm"). Never add an npm token to the
+repository secrets.

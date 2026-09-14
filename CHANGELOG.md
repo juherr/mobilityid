@@ -21,7 +21,11 @@ which requires a dated section for the version below and a matching file in
 - **Release:** the `Release` workflow is dispatched manually with the version as input, validates
   the changelog and release notes, publishes idempotently, then creates the signed `vX.Y.Z` tag
   and the GitHub Release; secrets are `CENTRAL_USERNAME`, `CENTRAL_TOKEN`, `GPG_PRIVATE_KEY`,
-  `GPG_PASSPHRASE`, `NPM_TOKEN`.
+  `GPG_PASSPHRASE`; npm is published through Trusted Publishing (OIDC) with no token.
+- **TypeScript:** package metadata completed for publication (`repository`, `homepage`, `bugs`,
+  `keywords`, `publishConfig`, `sideEffects`, bundled `LICENSE`); `scripts/verify-package.sh`
+  packs, checks (content, publint) and consumes the tarball from a throw-away Node + TypeScript
+  project, in CI and in the release preflight.
 
 ### Added
 
