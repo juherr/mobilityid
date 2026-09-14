@@ -15,7 +15,7 @@ Guidance for coding agents working in this repository. `CLAUDE.md` imports this 
   - `scala/` -> legacy/primary Scala implementation (sbt, specs2).
   - `java/` -> Java 21 port (`mobilityid4j`) using Gradle.
   - `go/` -> Go port (`mobilityid.juherr.dev/go`) using Go toolchain.
-  - `php/` -> PHP port (Composer package `juherr/mobility-id`, PHP 8.3+).
+  - `php/` -> PHP port (Composer package `juherr/mobility-id`, PHP 8.4+).
   - `ts/` -> TypeScript port (`@juherr/mobilityid`) using Bun + Vite+ instead of pnpm + Vitest.
 - Tool versions are pinned in `mise.toml` (Java, Node, sbt, Gradle, PHP, Go, golangci-lint).
 - Each workspace has its own `AGENTS.md` (commands, toolchain, style) and `README.md` (API design choices). Read the workspace `AGENTS.md` before working in it; this file only holds what is shared.
@@ -66,13 +66,13 @@ for single-suite and lint invocations. Full gates per workspace:
 | `scala/` | `sbt headerCheck test` (cross: `sbt +test`) | `sbt "core/testOnly *ContractIdSpec"` |
 | `java/` | `./gradlew check` | `./gradlew test --tests "*ContractIdTest"` |
 | `go/` | `golangci-lint run && go vet ./... && go test ./...` | `go test ./... -run TestContractID` |
-| `php/` | `composer check` | `./vendor/bin/phpunit --filter ContractIdIsoTest` |
+| `php/` | `composer check` (needs pcov or xdebug for Infection) | `./vendor/bin/phpunit --filter ContractIdIsoTest` |
 | `ts/` | `bun run lint && bun run check` | `vp test ContractId` |
 
 ### CI and release
 
 - One CI workflow per workspace (`.github/workflows/ci-{scala,java,go,php,ts}.yml`); only touch the workflow of the workspace you changed.
-- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, runs the Java and TypeScript preflights, and only when both pass publishes Java (Maven Central Portal via nmcp) and TypeScript (npm via Trusted Publishing/OIDC, no token) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`). Full procedure in `CONTRIBUTING.md`.
+- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, runs the Java and TypeScript preflights, and only when both pass publishes Java (Maven Central Portal via nmcp) and TypeScript (npm via Trusted Publishing/OIDC, no token) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`); PHP uses `php/vX.Y.Z` tags (`release-php.yml`, pushes a `git subtree split` of `php/` to the `juherr/mobility-id-php` mirror that Packagist follows). Full procedure in `CONTRIBUTING.md`.
 - `CI Workflows` (`ci-workflows.yml`) lints every workflow with actionlint and zizmor; every checkout uses `persist-credentials: false` and publishing workflows disable caches.
 - Security gates: `dependency-submission.yml` submits the resolved Gradle graph (GitHub cannot parse Gradle) on `main` and same-repository PRs; dependency review on pull requests (same workflow, job after the submission, fails on high+ in any scope); Dependabot alerts on `main`; weekly/on-demand OWASP Dependency-Check full scan (`security.yml`, not a PR gate). Fork PRs get no Java review before merge.
 
@@ -86,12 +86,14 @@ validate/apply commands; CI fails on a missing header.
 header line, `scala/build.sbt`). `ts/` is a port inspired by the Scala library and credits Julien
 Herr only, by the maintainer's decision: its header template is `ts/license-header.txt`, its
 `README.md` states the inspiration, and `ts/scripts/tests/header-policy.test.sh` proves the gate
-rejects any other copyright line. `java/`, `go/` and `php/` currently keep both lines. Root
+rejects any other copyright line. `php/` follows the same policy (header template in
+`php/.php-cs-fixer.dist.php`, Scala library credited in `php/README.md`). `java/` and `go/`
+currently keep both lines. Root
 `LICENSE` is the full Apache 2.0 text; root `NOTICE` lists the workspaces and which notice
 applies to each. Packaged artifacts ship the full license text (`ts/LICENSE`) plus a `NOTICE`
 with the copyright line, asserted by `scripts/verify-npm-package.sh`.
 
-**License header format** (`scala/`, `java/`, `go/`, `php/`; `ts/` omits the 2014 line):
+**License header format** (`scala/`, `java/`, `go/`; `php/` and `ts/` omit the 2014 line):
 ```
 Copyright (c) 2014 The New Motion team, and respective contributors
 Copyright (c) 2026 Julien Herr, and respective contributors

@@ -64,7 +64,8 @@ GitHub Release body.
 ## Release workflow
 
 Java (Maven Central) and TypeScript (npm) are released together by the manually dispatched
-`Release` workflow; Go is released from `go/vX.Y.Z` tags by `Release Go`.
+`Release` workflow; Go is released from `go/vX.Y.Z` tags by `Release Go`; PHP is released from
+`php/vX.Y.Z` tags by `Release PHP` (see "PHP and Packagist" below).
 
 1. Open and merge a release PR that turns the `Unreleased` section into `## [X.Y.Z] - YYYY-MM-DD`
    and adds `.github/release-notes/X.Y.Z.md`.
@@ -87,3 +88,33 @@ available from a public keyserver. The `npm` environment holds **no secret**: np
 through Trusted Publishing (OIDC) bound to `release.yml` and this environment, after a one-time
 manual first publication (`ts/README.md`, "Publishing to npm"). Never add an npm token to the
 repository secrets.
+
+### PHP and Packagist
+
+Packagist cannot index a package that lives in a sub-directory, so `php/` is published through a
+read-only split repository, `juherr/mobility-id-php`, that Packagist follows.
+
+One-time setup:
+
+1. Create the empty GitHub repository `juherr/mobility-id-php` (public, no initial commit).
+2. Generate a dedicated SSH key pair (`ssh-keygen -t ed25519 -N '' -f mobility-id-php-deploy`),
+   add the public key as a **deploy key with write access** on `juherr/mobility-id-php`, and
+   store the private key as the `PHP_MIRROR_DEPLOY_KEY` secret of the `packagist` environment of
+   this repository (the environment holds nothing else).
+3. Push a first split by hand from a checkout of `main` so the mirror has a `main` branch:
+   `git push git@github.com:juherr/mobility-id-php.git "$(git subtree split --prefix=php HEAD)":refs/heads/main`.
+4. Submit `https://github.com/juherr/mobility-id-php` on https://packagist.org/packages/submit and
+   enable the GitHub hook on the mirror (Packagist "Settings" page, or the Packagist GitHub App)
+   so every pushed tag is picked up automatically.
+
+Release procedure:
+
+1. Merge the release PR (`Unreleased` -> `## [X.Y.Z] - YYYY-MM-DD` for the PHP entries).
+2. Tag and push: `git tag -s php/vX.Y.Z -m "mobility-id (PHP) X.Y.Z" && git push origin php/vX.Y.Z`.
+3. `Release PHP` runs `composer check` on PHP 8.4, computes `git subtree split --prefix=php`,
+   pushes the split commit to the mirror's `main` and as the `vX.Y.Z` tag, then creates the
+   GitHub Release on this repository. An existing mirror tag that already points at the same
+   split commit is skipped; one that points elsewhere fails the run (a published Composer version
+   is never moved: bump the version instead).
+4. Check `https://packagist.org/packages/juherr/mobility-id` lists the new version; if the hook
+   was not installed, click "Update" once.

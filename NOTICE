@@ -10,7 +10,8 @@ for the full text). It contains five workspaces:
           The original license file is preserved at scala/LICENSE.
 - java/   mobilityid4j, Java port.
 - go/     mobilityid.juherr.dev/go, Go port.
-- php/    juherr/mobility-id, PHP port.
+- php/    juherr/mobility-id, PHP port, inspired by the Scala library.
+          Copyright (c) 2026 Julien Herr, and respective contributors
 - ts/     @juherr/mobilityid, TypeScript port, inspired by the Scala library.
           Copyright (c) 2026 Julien Herr, and respective contributors
 

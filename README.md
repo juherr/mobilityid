@@ -12,7 +12,7 @@ This repository contains multiple implementations of the same mobility ID domain
 - `scala/`: original Scala implementation (sbt + specs2)
 - `java/`: Java 21 port (`mobilityid4j`, Gradle)
 - `go/`: Go port (`mobilityid.juherr.dev/go`)
-- `php/`: PHP port (`juherr/mobilityid`)
+- `php/`: PHP port (`juherr/mobility-id`, PHP 8.4+)
 - `ts/`: TypeScript port (`@juherr/mobilityid`, Bun + Vite+)
 
 ## Quick start
@@ -94,6 +94,7 @@ Run from `java/`:
 
 - Java and TypeScript are released together by the manually dispatched `Release` workflow (`.github/workflows/release.yml`): it validates `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, publishes `mobilityid4j` to Maven Central and `@juherr/mobilityid` to npm, then creates the signed `vX.Y.Z` tag and the GitHub Release.
 - Go is released from `go/vX.Y.Z` tags (`.github/workflows/release-go.yml`).
+- PHP is released from `php/vX.Y.Z` tags (`.github/workflows/release-php.yml`): the `php/` history is split and pushed to the `juherr/mobility-id-php` mirror that Packagist follows.
 - Procedure and required secrets: `CONTRIBUTING.md`.
 
 ## License

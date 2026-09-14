@@ -1,108 +1,149 @@
-# Mobility ID PHP Library
+# juherr/mobility-id
 
-This library provides a PHP port of the Scala Mobility ID domain model, offering an idiomatic PHP API for handling various mobility identifiers like Country Codes, Provider IDs, Contract IDs, and EVSE IDs, along with their associated validation and check-digit algorithms.
+PHP port of the Mobility ID domain library, inspired by the original Scala library (`scala/` in
+this repository, created by The New Motion): same domain model, same identifiers, same test
+fixtures, written for PHP 8.4+.
 
 ## Goals
 
-- Build a PHP 8.3+ port in a separate `php/` workspace.
-- Keep Scala (`sbt`) code as the behavior reference during migration.
-- Provide an idiomatic PHP API while documenting all intentional differences.
-- Enforce quality from day one: `pint` (Laravel), `PHPStan`.
+- Keep behavior aligned with the Scala implementation (the behavior reference of the monorepo).
+- Provide an idiomatic PHP API with strict and forgiving parsing entry points.
+- Enforce quality gates from day one: formatting, license headers, static analysis, automated
+  refactoring, unit and mutation tests.
 
 ## Chosen Architecture
 
-- New Composer project under `php/` for easy later extraction.
-- Module: `mobility-id`: domain model + validation + check-digit algorithms + PHP-friendly parsing helpers.
-- Namespace: `Juherr\MobilityId`.
-- Structure: PSR-4 autoloading (`src/` for source files, `tests/` for test files).
+- One Composer package under `php/`, mirrored to a split repository for Packagist (see
+  "Publishing").
+- Namespace `Juherr\MobilityId` (`src/`), tests in `Juherr\MobilityId\Tests` (`tests/`), PSR-4.
+- Domain model + validation + check-digit algorithms + parsing helpers, no framework dependency.
+  `league/iso3166` provides the ISO 3166-1 alpha-2 table; `ext-intl` is required.
 
 ## Tooling Decisions
 
-- **Build/Dependencies**: Composer
-- **PHP**: 8.3+
-- **Tests**: PHPUnit
-- **Formatting**: `friendsofphp/php-cs-fixer` (PSR-12)
-- **Static analysis**: `phpstan/phpstan` (level 10) with strict rules
-- **CI matrix**: PHP 8.3, 8.4, 8.5
+- **PHP baseline: 8.4** (`composer.json` `php: ^8.4`, `config.platform.php = 8.4.0`, CI on 8.4
+  and 8.5). The code uses `final readonly class` / `abstract readonly class` (8.2), typed class
+  constants (8.3) and `new Foo()->method()` without wrapping parentheses (8.4). The baseline was
+  raised from 8.3 to track the currently supported PHP releases and keep the Rector level set at
+  the latest stable version. Property hooks and asymmetric visibility are not used: promoted
+  `public` properties on a `readonly` class already give immutable value objects without
+  accessors.
+- **Build/Dependencies**: Composer. `composer.json` is kept normalized (`composer normalize`)
+  and validated with `--strict`; `composer audit --abandoned=fail` runs in the gate.
+- **Tests**: PHPUnit 12 (attributes, data providers). `tests/fixtures/check-digit-{iso,din}.csv`
+  hold 200 payloads each whose check digits were computed by the TypeScript and Go ports (which
+  agree on every row), so the PHP algorithms are pinned to the other workspaces beyond the Scala
+  fixtures.
+- **Mutation testing**: Infection (`infection.json5`), minimum MSI and covered MSI of 95 % on
+  `src/`; the current score is 100 %. `PublicVisibility` is disabled (a library's public
+  methods are its API). It needs a coverage driver (`pcov` in CI).
+- **Formatting**: php-cs-fixer with `@PER-CS2.0` + `@PhpCsFixer` (and their `:risky` sets),
+  `@PHP84Migration`, non-Yoda comparisons, `self::assert*()` in tests; also writes the license
+  header (`header_comment`). `php_unit_strict` is off because the tests compare value objects
+  with `assertEquals` on purpose.
+- **Static analysis**: PHPStan level 10 with `bleedingEdge`, `phpstan-strict-rules`,
+  `phpstan-deprecation-rules` and `phpstan-phpunit` (auto-loaded by `extension-installer`), on
+  `src/` and `tests/`, no ignore list.
+- **Refactoring**: Rector (`rector.php`) with the PHP level set resolved from `composer.json`,
+  dead code, code quality, type declarations, privatization, early return and PHPUnit sets.
+  `rector:check` (dry run) is part of the gate, so any drift fails CI. Two rules are skipped:
+  `PreferPHPUnitThisCallRector` (conflicts with php-cs-fixer's static assertions) and
+  `YieldDataProviderRector` (detaches trailing comments from data-provider rows).
+- **CI matrix**: PHP 8.4 and 8.5 (`.github/workflows/ci-php.yml`), `coverage: pcov`.
 
 ## API Design Decisions
 
 - PHP API is idiomatic, not a 1:1 Scala mirror.
-- Parsing functions return nullable types (`?T`) for expected invalid input (e.g., `EvseId::opt`).
-- Strict factories (`of(...)`) throw `InvalidArgumentException`.
-- Domain types are immutable (`readonly` classes/properties). _(Note: `readonly` keyword on classes had to be temporarily omitted due to a bug in PHP 8.5.3 affecting static properties, pending PHP update)_
-- Canonical rendering preserved (`__toString()` method).
+- Strict factories (`of(...)`, `ofParts(...)`) throw `InvalidArgumentException`; forgiving
+  parsers (`opt(...)`, `parse(...)`) return `?T`.
+- Domain types are immutable: every value object is a `final readonly class` (the two shared
+  bases are `abstract readonly class`), so their public properties are read-only.
+- The contract-id and EVSE-id standards are marker interfaces (`ContractIdStandard\Iso`,
+  `ContractIdStandard\Emi3`, `ContractIdStandard\Din`, `EvseIdStandard\Iso`,
+  `EvseIdStandard\Din`) and one final class per standard; there is no string constant to replace
+  with a backed enum, dispatch on the standard is done with `instanceof`.
+- Input is uppercased once, at the factory; comparisons and check digits work on the normalized
+  value. Canonical rendering is preserved (`__toString()`, `toString()`, `toCompactString()`).
+- `PartyId::of()` accepts `CountryCode|PhoneCountryCode` and
+  `ProviderId|OperatorIdIso|OperatorIdDin` (wider than Scala, which only pairs `CountryCode`
+  with `ProviderId`/`OperatorIdIso`); a DIN operator id longer than three digits is rejected
+  because it is not a party code.
+- Check-digit algorithms are pure static functions without cached state: the tables are cheap to
+  rebuild and a lazily initialised static cache would only be exercised by the first test of a
+  process, hiding table mutations from Infection.
 
-## Core Components Implemented
+## Core Components
 
 ### Foundational Identifiers
--   `CountryCode`: ISO 3166-1 alpha-2 country codes (e.g., "NL", "DE").
--   `PhoneCountryCode`: Phone country codes (e.g., "+31", "+49").
--   `ProviderId`: Three-letter identifier for providers (e.g., "TNM", "ABC").
--   `OperatorIdIso`: ISO-style operator ID (three-letter alphanumeric).
--   `OperatorIdDin`: DIN-style operator ID (three to six digit numeric).
--   `PartyId`: Combination of CountryCode and Provider/Operator ID (e.g., "NL-TNM").
+- `CountryCode`: ISO 3166-1 alpha-2 country codes (e.g., "NL", "DE"), validated with
+  `league/iso3166`.
+- `PhoneCountryCode`: Phone country codes (e.g., "+31", "+49").
+- `ProviderId`: Three-character identifier for providers (e.g., "TNM", "ABC").
+- `OperatorIdIso`: ISO-style operator ID (three alphanumeric characters).
+- `OperatorIdDin`: DIN-style operator ID (three to six digits).
+- `PartyId`: Combination of CountryCode and Provider/Operator ID (e.g., "NL-TNM").
 
 ### Check-Digit Algorithms
--   `CheckDigitIso`: ISO 15118-1 compliant check digit calculation.
--   `CheckDigitDin`: DIN SPEC 91286 compliant check digit calculation.
+- `CheckDigitIso`: ISO 15118-1 check digit (also used by EMI3).
+- `CheckDigitDin`: DIN SPEC 91286 check digit.
 
 ### Contract Model
--   `AbstractContractId`: Base class for contract IDs.
--   `ContractIdStandard\Iso`, `ContractIdStandard\Emi3`, `ContractIdStandard\Din`: Marker interfaces for different contract ID standards.
--   `ContractIdIso`: Concrete implementation for ISO 15118-1 contract IDs.
--   `ContractIdEmi3`: Concrete implementation for EMI3 contract IDs.
--   `ContractIdDin`: Concrete implementation for DIN SPEC 91286 contract IDs.
--   `ContractIdParser`: Utility class for parsing and validating contract ID strings according to different standards.
+- `AbstractContractId`: Base class for contract IDs, with the `convertToDin()`,
+  `convertToEmi3()` and `convertToIso()` conversions.
+- `ContractIdIso`, `ContractIdEmi3`, `ContractIdDin`: one final class per standard.
+- `ContractIdParser`: regexes and check-digit helpers shared by the three classes.
 
 ### EVSE Model
--   `AbstractEvseId`: Base class for EVSE IDs.
--   `EvseIdStandard\Iso`, `EvseIdStandard\Din`: Marker interfaces for different EVSE ID standards.
--   `EvseIdIso`: Concrete implementation for ISO EVSE IDs.
--   `EvseIdDin`: Concrete implementation for DIN EVSE IDs.
--   `EvseIdParser`: Utility class for parsing and validating EVSE ID strings according to different standards.
--   `EvseId`: Main factory class for creating EVSE IDs (can parse both ISO and DIN formats).
+- `AbstractEvseId`: Base class for EVSE IDs.
+- `EvseIdIso`, `EvseIdDin`: one final class per format.
+- `EvseIdParser`: regexes shared by the two classes.
+- `EvseId`: entry point that tries ISO first, then DIN.
 
-## How to Install
+## Commands
 
-Navigate to the `php/` directory and run Composer install:
+All commands run from `php/`.
 
 ```bash
 composer install
+composer check          # full gate, what CI runs (see below)
+composer test           # PHPUnit
+composer test:coverage  # PHPUnit with a text coverage report (needs pcov or xdebug)
+composer analyse        # PHPStan
+composer format         # php-cs-fixer, applies formatting and license headers
+composer format:check   # php-cs-fixer, dry run
+composer rector         # Rector, applies refactorings
+composer rector:check   # Rector, dry run
+composer infection      # mutation testing (needs pcov or xdebug)
+./vendor/bin/phpunit --filter ContractIdIsoTest
 ```
 
-## How to Run Tests
+`composer check` chains `composer validate --strict`, `composer normalize --dry-run`,
+`composer audit --abandoned=fail`, `format:check`, `analyse`, `rector:check`, `test` and
+`infection`.
 
-From the `php/` directory:
+### Local PHP 8.4 with pcov
+
+`mise.toml` pins PHP 8.4. Infection needs a coverage driver; with Homebrew PHP, `pecl install
+pcov` may fail to find `pcre2.h`, in which case build it with the pcre2 include path:
 
 ```bash
-composer test
+pecl download pcov && tar xzf pcov-*.tgz && cd pcov-*/
+phpize && CPPFLAGS="-I$(brew --prefix pcre2)/include" ./configure && make
+# then load modules/pcov.so through an extra ini file (extension=... / pcov.enabled=1)
 ```
 
-## How to Run Static Analysis
+## Publishing
 
-From the `php/` directory:
+Packagist only indexes a repository whose `composer.json` sits at its root, so `php/` is
+published through a read-only split repository (`juherr/mobility-id-php`) that Packagist
+follows. `.github/workflows/release-php.yml` runs on every `php/vX.Y.Z` tag: it runs `composer
+check`, splits the `php/` history with `git subtree split`, pushes the split commit to the
+mirror's `main` and as the `vX.Y.Z` tag (refusing to move an existing tag), then creates the
+GitHub Release. The mirror is written with a deploy key stored as `PHP_MIRROR_DEPLOY_KEY` in the
+`packagist` environment. One-time setup and the release procedure are in `CONTRIBUTING.md`.
+
+Install from Packagist:
 
 ```bash
-composer analyse
+composer require juherr/mobility-id
 ```
-
-## How to Run Formatter
-
-From the `php/` directory:
-
-```bash
-composer format
-```
-
-This command runs `php-cs-fixer` to automatically fix coding style issues according to the configured PSR-12 standard.
-
-## How to Run Format Check (CI mode)
-
-From the `php/` directory:
-
-```bash
-composer format:check
-```
-
-This command runs `php-cs-fixer` in dry-run mode and fails when formatting changes are needed.
