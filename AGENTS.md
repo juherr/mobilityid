@@ -82,6 +82,17 @@ All source files carry the same Apache 2.0 header, enforced per workspace (sbt-h
 golangci-lint `goheader`, php-cs-fixer, Oxlint header plugin). Each workspace `AGENTS.md` gives the
 validate/apply commands; CI fails on a missing header.
 
+**Provenance.** `scala/core` is the modified New Motion code; the four ports are translations of
+it, not clean-room implementations from the standards: they reuse its algorithms and lookup tables
+(`CheckDigitIso`: `p1s`/`p2s` matrix powers, the `encoding` table, `sumEq`), its regexes and its
+error messages verbatim (`Undecodable matrix`, `... is not a valid Contract Id for ...`,
+`Given check digit ... is not equal to computed ...`), and their test fixtures mirror
+`scala/core`. They are therefore derivative works under Apache-2.0 §4(c), and the 2014 New Motion
+copyright line stays in every workspace, port sources and tests included. Do not remove it from a
+port unless that port has been rewritten without reference to the Scala code, and record the
+rewrite here when that happens. Packaged license files (`ts/LICENSE`, shipped in the npm tarball)
+carry both lines as well; `scripts/verify-npm-package.sh` checks the tarball for them.
+
 **License header format** (identical in every language):
 ```
 Copyright (c) 2014 The New Motion team, and respective contributors

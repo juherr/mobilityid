@@ -10,6 +10,9 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
+- **TypeScript:** the packaged `LICENSE` names the package and its origin (a translation of the
+  New Motion Scala implementation) and keeps both copyright notices; the release package check
+  now fails when the tarball's `LICENSE` lacks the Apache 2.0 grant or either notice.
 - **CI:** OWASP Dependency-Check no longer runs on pull requests; it scans `main` weekly and on
   demand with a cached NVD database and fails on CVSS >= 7.0, aligned with the pull request
   dependency review gate.
