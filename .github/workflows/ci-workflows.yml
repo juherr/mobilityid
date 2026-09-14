@@ -1,0 +1,43 @@
+name: CI Workflows
+
+# Repository policy: every workflow is linted (actionlint) and audited (zizmor) on change.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - 'mise.toml'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'mise.toml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-workflows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-policy:
+    name: Repository policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up workflow linters
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: actionlint zizmor
+
+      - name: Lint GitHub Actions
+        run: |
+          actionlint -color
+          zizmor --min-severity medium .github/workflows
