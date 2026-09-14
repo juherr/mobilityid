@@ -169,7 +169,8 @@ tasks.matching { it.name.startsWith("nmcpPublish") && it.name.contains("CentralP
 
 dependencyCheck {
   format = org.owasp.dependencycheck.reporting.ReportGenerator.Format.ALL.toString()
-  failBuildOnCVSS = 9.0f
+  // High and critical (CVSS >= 7.0), the same bar as the pull request dependency review gate.
+  failBuildOnCVSS = 7.0f
   suppressionFile = "${rootDir}/.github/dependency-check-suppressions.xml"
 
   nvd {
