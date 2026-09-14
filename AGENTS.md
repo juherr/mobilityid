@@ -72,7 +72,7 @@ for single-suite and lint invocations. Full gates per workspace:
 ### CI and release
 
 - One CI workflow per workspace (`.github/workflows/ci-{scala,java,go,php,ts}.yml`); only touch the workflow of the workspace you changed.
-- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, publishes Java (Maven Central Portal) and TypeScript (npm) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`). Full procedure in `CONTRIBUTING.md`.
+- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, runs the Java and TypeScript preflights, and only when both pass publishes Java (Maven Central Portal) and TypeScript (npm) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`). Full procedure in `CONTRIBUTING.md`.
 - `CI Workflows` (`ci-workflows.yml`) lints every workflow with actionlint and zizmor; every checkout uses `persist-credentials: false` and publishing workflows disable caches.
 - Security gates: dependency review (`dependency-review.yml`) and OWASP Dependency-Check (`security.yml`).
 
