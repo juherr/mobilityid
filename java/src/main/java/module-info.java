@@ -19,7 +19,7 @@ import org.jspecify.annotations.NullMarked;
 /** Mobility ID domain model: contract IDs, EVSE IDs, party/operator identifiers and check digits. */
 @NullMarked
 module dev.juherr.mobilityid4j {
-    requires static org.jspecify;
+    requires static transitive org.jspecify;
 
     exports dev.juherr.mobilityid4j;
     exports dev.juherr.mobilityid4j.interpolators;
