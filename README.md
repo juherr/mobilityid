@@ -75,7 +75,7 @@ vp test ContractId
 - CI validates Gradle Wrapper integrity on every run (`gradle/actions/wrapper-validation`).
 - Gradle distribution integrity is pinned with `distributionSha256Sum` in `java/gradle/wrapper/gradle-wrapper.properties`.
 - Pull requests run a dependency review gate (`actions/dependency-review-action`) via `.github/workflows/dependency-review.yml`.
-- OWASP dependency scanning runs in `.github/workflows/security.yml`.
+- OWASP Dependency-Check scans the full Java dependency set weekly on `main` (and on demand) in `.github/workflows/security.yml`; it is not a pull request gate.
 
 ## Java release checks
 

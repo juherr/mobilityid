@@ -167,4 +167,8 @@ signing inputs required, `verifyRelease` scheduled before the nmcp upload task.
 ## Security scanning
 
 - Pull requests run dependency review in `.github/workflows/dependency-review.yml`.
-- OWASP Dependency-Check runs in `.github/workflows/security.yml`.
+- OWASP Dependency-Check runs weekly on `main` and on `workflow_dispatch` in
+  `.github/workflows/security.yml`, failing on CVSS >= 7.0 (same bar as the PR gate). The NVD
+  database is cached between runs under `~/.gradle/dependency-check-data`. Locally:
+  `NVD_API_KEY=... ./gradlew --no-configuration-cache dependencyCheckAnalyze`.
+- Dependabot alerts cover `main` continuously between two weekly scans.

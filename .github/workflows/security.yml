@@ -1,7 +1,9 @@
 name: Security
 
+# Full SCA of the current dependency set. Not a pull request gate: PRs are covered by
+# `dependency-review.yml` (newly introduced high+ vulnerabilities) and `main` by Dependabot
+# alerts; this weekly scan catches vulnerabilities disclosed after a dependency was merged.
 on:
-  pull_request:
   schedule:
     - cron: "30 2 * * 1"
   workflow_dispatch:
@@ -38,6 +40,18 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
+
+      - name: Restore OWASP Dependency-Check data
+        # The NVD database lives in the Gradle plugin's default data directory
+        # (`$GRADLE_USER_HOME/dependency-check-data`), which setup-gradle does not cache.
+        # The key is unique per run so the refreshed database is always saved; restore-keys
+        # picks the most recent one and the plugin then only downloads the delta.
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: dependency-check-data-${{ github.run_id }}
+          restore-keys: |
+            dependency-check-data-
 
       - name: Run OWASP dependency check
         # The plugin is not configuration-cache compatible; do not store then discard a cache entry.
