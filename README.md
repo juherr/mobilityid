@@ -1,6 +1,11 @@
 ## mobilityid monorepo
 
-[![CI](https://github.com/juherr/mobilityid/actions/workflows/ci.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci.yml)
+[![CI Java](https://github.com/juherr/mobilityid/actions/workflows/ci-java.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-java.yml)
+[![CI Scala](https://github.com/juherr/mobilityid/actions/workflows/ci-scala.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-scala.yml)
+[![CI Go](https://github.com/juherr/mobilityid/actions/workflows/ci-go.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-go.yml)
+[![CI PHP](https://github.com/juherr/mobilityid/actions/workflows/ci-php.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-php.yml)
+[![CI TypeScript](https://github.com/juherr/mobilityid/actions/workflows/ci-ts.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-ts.yml)
+[![codecov](https://codecov.io/gh/juherr/mobilityid/graph/badge.svg)](https://codecov.io/gh/juherr/mobilityid)
 
 This repository contains multiple implementations of the same mobility ID domain:
 
@@ -69,7 +74,7 @@ vp test ContractId
 - `mise.toml` uses simplified version formats: major.minor for sbt/gradle (e.g., `1.12`, `9.7`), major only for Java/Node (e.g., `21`, `24`). See `AGENTS.md` for configuration details.
 - CI validates Gradle Wrapper integrity on every run (`gradle/actions/wrapper-validation`).
 - Gradle distribution integrity is pinned with `distributionSha256Sum` in `java/gradle/wrapper/gradle-wrapper.properties`.
-- Pull requests run a dependency review gate (`actions/dependency-review-action`) via `.github/workflows/ci.yml`.
+- Pull requests run a dependency review gate (`actions/dependency-review-action`) via `.github/workflows/dependency-review.yml`.
 - OWASP dependency scanning runs in `.github/workflows/security.yml`.
 
 ## Java release checks

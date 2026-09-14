@@ -9,8 +9,10 @@ Java 21 port of the mobility ID domain model and validation logic.
 - dependency and plugin versions in `gradle/libs.versions.toml` (Gradle version catalog); the two
   settings plugins that bootstrap the build (foojay toolchain resolver, nmcp) keep their version
   inline in `settings.gradle.kts` because the catalog is not available there
-- `consumer-smoke/`: a separate Gradle build (Java + Kotlin) that consumes the published artifact
-  from an isolated repository on the module path (`scripts/verify-consumer.sh`)
+- `consumer-smoke/`: a separate Gradle build that consumes the published artifact from an
+  isolated repository, from Java on the module path and from Kotlin on the classpath
+  (`scripts/verify-consumer.sh`); its Kotlin Gradle plugin version is inline in its own
+  `build.gradle.kts`, outside the main catalog
 - `scripts/verify.sh`: single verification entry point (gates, release guard wiring, consumer smoke)
 - Gradle runs with the configuration cache and build cache enabled (`gradle.properties`)
 
@@ -125,7 +127,9 @@ The library is annotated for Kotlin interop out of the box:
 - No checked exceptions: strict factories throw `IllegalArgumentException`, tolerant parsers
   return `null`.
 - `consumer-smoke/src/main/kotlin` is compiled with `-Xjspecify-annotations=strict` and
-  `-Werror` in CI, so a wrong nullability contract fails the build.
+  `-Werror` in CI and only uses tolerant results through `?.` / `null` branches on the call
+  expression itself, so a return type that flips to non-null fails the build ("unnecessary safe
+  call"), and a strict factory that flips to nullable fails the non-null assignment.
 
 ## Publishing (Maven Central Portal)
 
@@ -162,5 +166,5 @@ signing inputs required, `verifyRelease` scheduled before the nmcp upload task.
 
 ## Security scanning
 
-- Pull requests run dependency review in `.github/workflows/ci.yml`.
+- Pull requests run dependency review in `.github/workflows/dependency-review.yml`.
 - OWASP Dependency-Check runs in `.github/workflows/security.yml`.

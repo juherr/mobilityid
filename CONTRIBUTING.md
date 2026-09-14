@@ -16,7 +16,8 @@ uses its own wrapper or package manager (`./gradlew`, `sbt`, `go`, `composer`, `
    workspace with the same test cases, in the same pull request or a linked one.
 3. Format before committing (`spotlessApply`, `gofmt`, `composer format`, `bun run format`).
 4. Verification entry points: `java/scripts/verify.sh` runs the Java gates, the release-guard check
-   and the isolated consumer smoke; other workspaces expose their full gate in their `AGENTS.md`.
+   and the isolated consumer smoke; `scripts/tests/run.sh` tests the release scripts; other
+   workspaces expose their full gate in their `AGENTS.md`.
 5. Update the documentation that describes what you changed (`README.md` of the workspace,
    `AGENTS.md` when commands or gates change) and add a line to `CHANGELOG.md` under `Unreleased`.
 
@@ -53,7 +54,9 @@ Java (Maven Central) and TypeScript (npm) are released together by the manually 
 
 1. Open and merge a release PR that turns the `Unreleased` section into `## [X.Y.Z] - YYYY-MM-DD`
    and adds `.github/release-notes/X.Y.Z.md`.
-2. Dispatch `Release` from `main` with `version = X.Y.Z`. It validates the inputs, runs the Java
+2. Dispatch `Release` from `main` with `version = X.Y.Z`. It validates the version with
+   `scripts/validate-release-version.sh` (strict SemVer, no `v`, no build metadata, no
+   SNAPSHOT: the same rules for Maven Central, npm and the git tag), runs the Java
    and TypeScript gates, publishes each registry idempotently (an already published version is
    skipped), waits until Maven Central resolves the artifacts, then creates the signed `vX.Y.Z`
    tag and the GitHub Release.
