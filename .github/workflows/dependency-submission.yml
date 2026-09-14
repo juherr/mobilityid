@@ -1,0 +1,66 @@
+name: Dependency Submission
+
+# Submits the resolved Gradle dependency graph of `java/` (direct and transitive, including the
+# build-plugin classpath) to the GitHub Dependency Graph. GitHub cannot parse Gradle builds
+# itself, so without this submission neither Dependency Review nor Dependabot alerts see any
+# Java dependency. No path filter on purpose: Dependency Review compares the snapshot of the
+# pull request head with the one of its merge base on `main`, so every commit of `main` and
+# every pull request head needs a snapshot.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-submission-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  java:
+    name: Java dependency graph
+    # The Dependency Submission API needs `contents: write`, which GITHUB_TOKEN never has for a
+    # pull request from a fork (or from Dependabot). Those pull requests are skipped here and get
+    # no Java dependency review (see CONTRIBUTING.md); the push to `main` after merge submits
+    # their graph and Dependabot alerts take over.
+    if: >-
+      github.event_name != 'pull_request'
+      || (github.event.pull_request.head.repo.full_name == github.repository
+          && github.actor != 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Generate and submit dependency graph
+        id: graph
+        uses: gradle/actions/dependency-submission@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
+        with:
+          build-root-directory: java
+          dependency-graph: generate-and-submit
+          # No graph is produced when the configuration is loaded from the configuration cache.
+          additional-arguments: --no-configuration-cache
+
+      - name: Verify the snapshot carries the resolved transitive dependencies
+        env:
+          SNAPSHOT: ${{ steps.graph.outputs.dependency-graph-file }}
+        run: scripts/verify-dependency-graph.sh "$SNAPSHOT"

@@ -13,6 +13,10 @@ which requires a dated section for the version below and a matching file in
 - **CI:** OWASP Dependency-Check no longer runs on pull requests; it scans `main` weekly and on
   demand with a cached NVD database and fails on CVSS >= 7.0, aligned with the pull request
   dependency review gate.
+- **CI:** the resolved Gradle dependency graph (transitive dependencies and build plugins
+  included) is now submitted to GitHub for `main` and same-repository pull requests, so
+  Dependency Review and Dependabot alerts finally cover the Java workspace; Dependency Review now
+  fails on high/critical vulnerabilities in every scope, development dependencies included.
 - **Breaking (Java):** tolerant `parse*` methods return `@Nullable T` instead of `Optional<T>`
   so Kotlin callers get `T?` and the shape matches the other ports; wrap with
   `Optional.ofNullable(...)` when an `Optional` is wanted. Nothing had been published before this

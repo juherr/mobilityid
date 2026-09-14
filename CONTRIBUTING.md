@@ -37,6 +37,14 @@ messages, code, comments and documentation are written in English.
 - Codecov comments the diff coverage on pull requests (flag per workspace, `codecov.yml`). It is
   informational: the hard coverage gates live in each workspace's own check. Uploads need the
   `CODECOV_TOKEN` repository secret (forks upload tokenless).
+- `Dependency Review` rejects newly introduced high/critical vulnerabilities in any scope. GitHub
+  parses the npm, Composer, Go and Actions manifests itself; the Java graph (direct and
+  transitive, tests and build plugins included) is submitted by `Dependency Submission` for the
+  pull request head and every commit of `main`, and the review waits for it. Pull requests from
+  forks and from Dependabot cannot submit a graph (`GITHUB_TOKEN` is read-only there): their Java
+  dependency changes are not reviewed before merge; the push to `main` submits the merged graph
+  and Dependabot alerts report anything vulnerable. Do not merge such a pull request that changes
+  `java/gradle/libs.versions.toml` without checking the advisories of the new versions by hand.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes
