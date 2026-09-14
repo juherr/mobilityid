@@ -14,6 +14,6 @@ for the full text). It contains five workspaces:
 - ts/     @juherr/mobilityid, TypeScript port, inspired by the Scala library.
           Copyright (c) 2026 Julien Herr, and respective contributors
 
-The 2014 New Motion notice covers the Scala-derived portions; it does not
-imply authorship of files written later. Each source file states its own
-copyright in its header, enforced per workspace (see AGENTS.md).
+The New Motion team is credited for the original Scala implementation
+(scala/). The later ports have their own authors, named in the header of
+each source file and enforced per workspace (see AGENTS.md).
