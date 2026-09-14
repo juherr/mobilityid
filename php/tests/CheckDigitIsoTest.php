@@ -52,7 +52,7 @@ final class CheckDigitIsoTest extends TestCase
     public function testFailOnMalformedInput(string $input, string $expectedMessage): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage($expectedMessage);
+        $this->expectExceptionMessageIs($expectedMessage);
         CheckDigitIso::calculate($input);
     }
 

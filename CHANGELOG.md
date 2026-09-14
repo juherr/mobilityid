@@ -46,7 +46,7 @@ which requires a dated section for the version below and a matching file in
   PHPStan level 10 with `phpstan-strict-rules`, `phpstan-deprecation-rules` and
   `phpstan-phpunit` (the `Locale::getISOCountries()` ignore is gone), a Rector dry run
   (`rector.php`, PHP 8.4 level set) and Infection with a 95 % minimum MSI (currently 100 %).
-  Dependencies updated: php-cs-fixer 3.95, PHPStan 2.2, PHPUnit 12.5, league/iso3166 4.5.
+  Dependencies updated: php-cs-fixer 3.95, PHPStan 2.2, PHPUnit 13.3, league/iso3166 4.5.
 - **PHP:** `CountryCode` validates through `ISO3166::alpha2()` instead of caching the whole
   country table; the check-digit classes no longer keep lazily initialised static state.
 - **TypeScript:** source headers, `NOTICE` and the header gate credit Julien Herr only; the

@@ -21,7 +21,7 @@ fixtures, written for PHP 8.4+.
 
 ## Tooling Decisions
 
-- **PHP baseline: 8.4** (`composer.json` `php: ^8.4`, `config.platform.php = 8.4.0`, CI on 8.4
+- **PHP baseline: 8.4** (`composer.json` `php: ^8.4.1`, `config.platform.php = 8.4.1` (PHPUnit 13 needs 8.4.1), CI on 8.4
   and 8.5). The code uses `final readonly class` / `abstract readonly class` (8.2), typed class
   constants (8.3) and `new Foo()->method()` without wrapping parentheses (8.4). The baseline was
   raised from 8.3 to track the currently supported PHP releases and keep the Rector level set at
@@ -30,7 +30,7 @@ fixtures, written for PHP 8.4+.
   accessors.
 - **Build/Dependencies**: Composer. `composer.json` is kept normalized (`composer normalize`)
   and validated with `--strict`; `composer audit --abandoned=fail` runs in the gate.
-- **Tests**: PHPUnit 12 (attributes, data providers). `tests/fixtures/check-digit-{iso,din}.csv`
+- **Tests**: PHPUnit 13 (attributes, data providers). `tests/fixtures/check-digit-{iso,din}.csv`
   hold 200 payloads each whose check digits were computed by the TypeScript and Go ports (which
   agree on every row), so the PHP algorithms are pinned to the other workspaces beyond the Scala
   fixtures.

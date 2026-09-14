@@ -105,7 +105,7 @@ final class PartyIdTest extends TestCase
     {
         // A DIN operator id may carry up to six digits, which is not a three-character party code.
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid party code derived from identifier. (Was: 1234)');
+        $this->expectExceptionMessageIs('Invalid party code derived from identifier. (Was: 1234)');
         PartyId::of(CountryCode::of('DE'), OperatorIdDin::of('1234'));
     }
 }

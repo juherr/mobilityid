@@ -25,7 +25,7 @@
         "source": "https://github.com/juherr/mobilityid/tree/main/php"
     },
     "require": {
-        "php": "^8.4",
+        "php": "^8.4.1",
         "ext-intl": "*",
         "league/iso3166": "^4.4"
     },
@@ -38,7 +38,7 @@
         "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
-        "phpunit/phpunit": "^12.5",
+        "phpunit/phpunit": "^13.3",
         "rector/rector": "^2.6"
     },
     "autoload": {
@@ -58,7 +58,7 @@
             "phpstan/extension-installer": true
         },
         "platform": {
-            "php": "8.4.0"
+            "php": "8.4.1"
         },
         "sort-packages": true
     },

@@ -154,7 +154,7 @@ final class EvseIdIsoTest extends TestCase
     public function testOfPartsRejectsThirtyOneCharactersAfterTheIdType(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("'E" . str_repeat('1', 31) . "' is not a valid ISO Power Outlet ID");
+        $this->expectExceptionMessageIs("'E" . str_repeat('1', 31) . "' is not a valid ISO Power Outlet ID");
         EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), str_repeat('1', 31));
     }
 

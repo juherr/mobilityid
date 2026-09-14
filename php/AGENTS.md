@@ -21,7 +21,7 @@ from `php/`.
 
 - PHP 8.4+ (`mise.toml`); CI runs 8.4 and 8.5 with `pcov` (`.github/workflows/ci-php.yml`).
 - php-cs-fixer (`@PER-CS2.0` + `@PhpCsFixer`, license header), PHPStan level 10 + strict rules,
-  Rector, PHPUnit 12, Infection (minimum MSI 95 %), composer-normalize.
+  Rector, PHPUnit 13, Infection (minimum MSI 95 %), composer-normalize.
 - Configuration files: `.php-cs-fixer.dist.php`, `phpstan.neon`, `rector.php`,
   `infection.json5`, `phpunit.xml`.
 
