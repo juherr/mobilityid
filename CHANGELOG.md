@@ -16,10 +16,11 @@ which requires a dated section for the version below and a matching file in
 - **TypeScript:** `ValidationError`, thrown by every strict factory and parser on invalid input.
   It extends `TypeError`, so existing `instanceof TypeError` checks still hold.
 
-- **PHP:** `Release PHP` workflow (`php/vX.Y.Z` tags): runs the gate, pushes a
-  `git subtree split` of `php/` to the `juherr/mobility-id-php` mirror and creates the GitHub
-  Release, so `juherr/mobility-id` can be published on Packagist from the monorepo. The package
-  ships `LICENSE` and `NOTICE`, and `composer.json` carries keywords, homepage and support links.
+- **Release:** the `Release` workflow now also publishes PHP: a `Preflight PHP` job runs
+  `composer check`, then `Release PHP` pushes a `git subtree split` of `php/` to the
+  `juherr/mobility-id-php` mirror as `vX.Y.Z`, the repository Packagist follows (Packagist
+  cannot index a package in a sub-directory). The package ships `LICENSE` and `NOTICE`, and
+  `composer.json` carries keywords, homepage and support links.
 - **PHP:** 400 cross-language check-digit fixtures (`tests/fixtures/check-digit-{iso,din}.csv`,
   computed by the TypeScript port and verified by the Go port) and unit tests for the ISO
   check-digit matrix arithmetic.

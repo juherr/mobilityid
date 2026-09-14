@@ -145,17 +145,33 @@ final class EvseIdIsoTest extends TestCase
         self::assertSame('NL*TNM*E84A*6B87', (string) $evseId);
     }
 
-    public function testOfPartsAcceptsThirtyCharactersAfterTheIdType(): void
+    /**
+     * Scala: PowerOutletId = ([A-Za-z0-9\*]{1,31}) after the `E` id type, for `apply` and `create` alike.
+     */
+    public function testOfAndOfPartsAcceptThirtyOneCharactersAfterTheIdType(): void
     {
-        $evseId = EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), str_repeat('1', 30));
-        self::assertSame('NL*TNM*E' . str_repeat('1', 30), (string) $evseId);
+        $powerOutletId = str_repeat('1', 31);
+        $rendered = 'NL*TNM*E' . $powerOutletId;
+
+        $fromParts = EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), $powerOutletId);
+        $fromString = EvseIdIso::of($rendered);
+
+        self::assertSame($rendered, (string) $fromParts);
+        self::assertEquals($fromParts, $fromString);
+        self::assertEquals($fromParts, EvseIdIso::of((string) $fromParts));
     }
 
-    public function testOfPartsRejectsThirtyOneCharactersAfterTheIdType(): void
+    public function testOfRejectsThirtyTwoCharactersAfterTheIdType(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessageIs("'E" . str_repeat('1', 31) . "' is not a valid ISO Power Outlet ID");
-        EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), str_repeat('1', 31));
+        EvseIdIso::of('NL*TNM*E' . str_repeat('1', 32));
+    }
+
+    public function testOfPartsRejectsThirtyTwoCharactersAfterTheIdType(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageIs("'E" . str_repeat('1', 32) . "' is not a valid ISO Power Outlet ID");
+        EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), str_repeat('1', 32));
     }
 
     public function testOfPartsValidIsoEvseIdWithEPrefix(): void

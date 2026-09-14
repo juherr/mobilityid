@@ -72,7 +72,7 @@ for single-suite and lint invocations. Full gates per workspace:
 ### CI and release
 
 - One CI workflow per workspace (`.github/workflows/ci-{scala,java,go,php,ts}.yml`); only touch the workflow of the workspace you changed.
-- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, runs the Java and TypeScript preflights, and only when both pass publishes Java (Maven Central Portal via nmcp) and TypeScript (npm via Trusted Publishing/OIDC, no token) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`); PHP uses `php/vX.Y.Z` tags (`release-php.yml`, pushes a `git subtree split` of `php/` to the `juherr/mobility-id-php` mirror that Packagist follows). Full procedure in `CONTRIBUTING.md`.
+- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, runs the Java, TypeScript and PHP preflights, and only when all pass publishes Java (Maven Central Portal via nmcp), TypeScript (npm via Trusted Publishing/OIDC, no token) and PHP (a `git subtree split` of `php/` pushed to the `juherr/mobility-id-php` mirror that Packagist follows, via a deploy key) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`). Full procedure in `CONTRIBUTING.md`.
 - `CI Workflows` (`ci-workflows.yml`) lints every workflow with actionlint and zizmor; every checkout uses `persist-credentials: false` and publishing workflows disable caches.
 - Security gates: `dependency-submission.yml` submits the resolved Gradle graph (GitHub cannot parse Gradle) on `main` and same-repository PRs; dependency review on pull requests (same workflow, job after the submission, fails on high+ in any scope); Dependabot alerts on `main`; weekly/on-demand OWASP Dependency-Check full scan (`security.yml`, not a PR gate). Fork PRs get no Java review before merge.
 
@@ -157,7 +157,7 @@ Before finalizing a change, an agent should:
 
 The project uses simplified version formats in `mise.toml`:
 - **Java/Node**: major only (`21`, `24`)
-- **sbt/gradle/php/go**: major.minor (`1.12`, `9.7`, `8.3`, `1.26`)
+- **sbt/gradle/php/go**: major.minor (`1.12`, `9.7`, `8.4`, `1.26`)
 
 This is enforced via `extractVersionTemplate` and `autoReplaceStringTemplate` in the customManager configuration in `.github/renovate.json`:
 

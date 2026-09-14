@@ -55,6 +55,7 @@ from `php/`.
 
 ## Release
 
-- Tag `php/vX.Y.Z` on `main`; `Release PHP` (`.github/workflows/release-php.yml`) runs the gate,
-  pushes the `git subtree split` of `php/` to the mirror repository and creates the GitHub
-  Release. Packagist follows the mirror. Setup and secrets: `CONTRIBUTING.md`.
+- PHP is released by the common `Release` workflow (`.github/workflows/release.yml`, dispatched
+  with the version): `Preflight PHP` runs `composer check`, `Release PHP` pushes the
+  `git subtree split` of `php/` to the mirror repository as `vX.Y.Z`. Packagist follows the
+  mirror. Setup and secrets: `CONTRIBUTING.md`.

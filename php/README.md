@@ -45,7 +45,8 @@ fixtures, written for PHP 8.4+.
   `phpstan-deprecation-rules` and `phpstan-phpunit` (auto-loaded by `extension-installer`), on
   `src/` and `tests/`, no ignore list.
 - **Refactoring**: Rector (`rector.php`) with the PHP level set resolved from `composer.json`,
-  dead code, code quality, type declarations, privatization, early return and PHPUnit sets.
+  dead code, code quality, type declarations, early return and PHPUnit sets (no privatization
+  set: nothing may narrow the public API automatically).
   `rector:check` (dry run) is part of the gate, so any drift fails CI. Two rules are skipped:
   `PreferPHPUnitThisCallRector` (conflicts with php-cs-fixer's static assertions) and
   `YieldDataProviderRector` (detaches trailing comments from data-provider rows).
@@ -135,11 +136,13 @@ CPPFLAGS="-I$(brew --prefix pcre2)/include" pecl install pcov
 
 Packagist only indexes a repository whose `composer.json` sits at its root, so `php/` is
 published through a read-only split repository (`juherr/mobility-id-php`) that Packagist
-follows. `.github/workflows/release-php.yml` runs on every `php/vX.Y.Z` tag: it runs `composer
-check`, splits the `php/` history with `git subtree split`, pushes the split commit to the
-mirror's `main` and as the `vX.Y.Z` tag (refusing to move an existing tag), then creates the
-GitHub Release. The mirror is written with a deploy key stored as `PHP_MIRROR_DEPLOY_KEY` in the
-`packagist` environment. One-time setup and the release procedure are in `CONTRIBUTING.md`.
+follows. PHP is part of the common `Release` workflow (`.github/workflows/release.yml`, one
+`vX.Y.Z` version for every port): the `Preflight PHP` job runs `composer check` and checks the
+deploy key is present before any registry is touched, then `Release PHP` splits the `php/`
+history with `git subtree split` and pushes the split commit to the mirror's `main` and as the
+`vX.Y.Z` tag (refusing to move an existing tag). The mirror is written with a deploy key stored
+as `PHP_MIRROR_DEPLOY_KEY` in the `packagist` environment. One-time setup and the release
+procedure are in `CONTRIBUTING.md`.
 
 Install from Packagist:
 

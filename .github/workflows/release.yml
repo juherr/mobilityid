@@ -1,10 +1,11 @@
 name: Release
 
 # Manually dispatched from main with the version as input. Every non-destructive check (version,
-# changelog, Java and TypeScript verification) runs before either registry is touched, then Java
-# (Maven Central) and TypeScript (npm) are published idempotently, and the signed `vX.Y.Z` tag and
-# the GitHub Release are created only once every registry has accepted the artifacts. Re-run a failed run (`gh run rerun <id> --failed`) instead
-# of dispatching again: every job is idempotent and keeps the original commit.
+# changelog, Java, TypeScript and PHP verification) runs before any registry is touched, then Java
+# (Maven Central), TypeScript (npm) and PHP (the `php/` split pushed to the Packagist mirror) are
+# published idempotently, and the signed `vX.Y.Z` tag and the GitHub Release are created only
+# once every registry has accepted the artifacts. Re-run a failed run (`gh run rerun <id> --failed`)
+# instead of dispatching again: every job is idempotent and keeps the original commit.
 # Go is released separately from `go/vX.Y.Z` tags (release-go.yml).
 
 on:
@@ -142,11 +143,51 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  preflight-php:
+    name: Preflight PHP
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: packagist
+    defaults:
+      run:
+        working-directory: php
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Check the Packagist mirror deploy key is present
+        env:
+          MIRROR_DEPLOY_KEY: ${{ secrets.PHP_MIRROR_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${MIRROR_DEPLOY_KEY}" ]]; then
+            echo "PHP_MIRROR_DEPLOY_KEY is not set in the packagist environment" >&2
+            exit 1
+          fi
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
+        with:
+          php-version: "8.4"
+          extensions: intl
+          tools: composer
+          # Infection (part of `composer check`) needs a coverage driver.
+          coverage: pcov
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Run the full gate (validate, normalize, audit, format, PHPStan, Rector, PHPUnit, Infection)
+        run: composer check
+
   release-java:
     name: Release Java to Maven Central
-    # Both preflights must pass so that no registry receives the version while the other
+    # Every preflight must pass so that no registry receives the version while another
     # workspace would fail its own verification; the publish itself stays idempotent.
-    needs: [preflight-java, preflight-ts]
+    needs: [preflight-java, preflight-ts, preflight-php]
     runs-on: ubuntu-latest
     timeout-minutes: 40
     environment: maven-central
@@ -213,7 +254,7 @@ jobs:
 
   release-ts:
     name: Release TypeScript to npm
-    needs: [preflight-java, preflight-ts]
+    needs: [preflight-java, preflight-ts, preflight-php]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # npm Trusted Publishing (OIDC): this job is bound on npmjs.com to this exact workflow file
@@ -265,9 +306,65 @@ jobs:
           fi
           npm publish "${tarball}" --tag "${npm_tag}"
 
+  release-php:
+    name: Release PHP to the Packagist mirror
+    needs: [preflight-java, preflight-ts, preflight-php]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Packagist only indexes a repository whose composer.json sits at its root, so the php/
+    # workspace is mirrored to a read-only split repository that Packagist follows through its
+    # GitHub hook. The mirror is written with a deploy key; nothing else is needed on this side.
+    environment: packagist
+    env:
+      MIRROR_REPOSITORY: juherr/mobility-id-php
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          # git subtree split needs the whole history of php/.
+          fetch-depth: 0
+
+      - name: Split the php/ workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "mobilityid release workflow"
+          git config user.email "actions@users.noreply.github.com"
+          split_sha="$(git subtree split --prefix=php "${GITHUB_SHA}")"
+          echo "SPLIT_SHA=${split_sha}" >> "${GITHUB_ENV}"
+          echo "php/ at ${GITHUB_SHA} splits to ${split_sha}"
+
+      - name: Push the split to the mirror repository
+        shell: bash
+        env:
+          MIRROR_DEPLOY_KEY: ${{ secrets.PHP_MIRROR_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          tag="v${RELEASE_VERSION}"
+          umask 077
+          key_file="${RUNNER_TEMP}/mobilityid-php-mirror-key"
+          printf '%s\n' "${MIRROR_DEPLOY_KEY}" > "${key_file}"
+          trap 'rm -f "${key_file}"' EXIT
+          export GIT_SSH_COMMAND="ssh -i ${key_file} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          mirror="git@github.com:${MIRROR_REPOSITORY}.git"
+
+          existing="$(git ls-remote --tags "${mirror}" "refs/tags/${tag}" | cut -f1)"
+          if [[ -n "${existing}" ]]; then
+            if [[ "${existing}" == "${SPLIT_SHA}" ]]; then
+              echo "Mirror already carries ${tag} at ${SPLIT_SHA}; skipping push."
+              exit 0
+            fi
+            echo "Mirror tag ${tag} points at ${existing}, not at the split ${SPLIT_SHA}; a published Composer version is never moved." >&2
+            exit 1
+          fi
+
+          git push "${mirror}" "${SPLIT_SHA}:refs/heads/main"
+          git push "${mirror}" "${SPLIT_SHA}:refs/tags/${tag}"
+
   finalize:
     name: Tag and create GitHub Release
-    needs: [release-java, release-ts]
+    needs: [release-java, release-ts, release-php]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: maven-central

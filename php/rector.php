@@ -34,7 +34,9 @@ return RectorConfig::configure()
         deadCode: true,
         codeQuality: true,
         typeDeclarations: true,
-        privatization: true,
+        // No privatization set: external usages of a library's public API are invisible to Rector
+        // and to this test suite, so nothing may narrow visibility automatically (Infection's
+        // PublicVisibility mutator is disabled for the same reason).
         earlyReturn: true,
         phpunitCodeQuality: true,
     )

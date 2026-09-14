@@ -92,9 +92,8 @@ Run from `java/`:
 
 ## Releases
 
-- Java and TypeScript are released together by the manually dispatched `Release` workflow (`.github/workflows/release.yml`): it validates `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, publishes `mobilityid4j` to Maven Central and `@juherr/mobilityid` to npm, then creates the signed `vX.Y.Z` tag and the GitHub Release.
+- Java, TypeScript and PHP are released together by the manually dispatched `Release` workflow (`.github/workflows/release.yml`): it validates `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, publishes `mobilityid4j` to Maven Central, `@juherr/mobilityid` to npm and the `php/` split to the `juherr/mobility-id-php` mirror that Packagist follows, then creates the signed `vX.Y.Z` tag and the GitHub Release.
 - Go is released from `go/vX.Y.Z` tags (`.github/workflows/release-go.yml`).
-- PHP is released from `php/vX.Y.Z` tags (`.github/workflows/release-php.yml`): the `php/` history is split and pushed to the `juherr/mobility-id-php` mirror that Packagist follows.
 - Procedure and required secrets: `CONTRIBUTING.md`.
 
 ## License

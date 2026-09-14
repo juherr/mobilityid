@@ -63,22 +63,24 @@ GitHub Release body.
 
 ## Release workflow
 
-Java (Maven Central) and TypeScript (npm) are released together by the manually dispatched
-`Release` workflow; Go is released from `go/vX.Y.Z` tags by `Release Go`; PHP is released from
-`php/vX.Y.Z` tags by `Release PHP` (see "PHP and Packagist" below).
+Java (Maven Central), TypeScript (npm) and PHP (Packagist, through a split mirror; see "PHP and
+Packagist" below) are released together by the manually dispatched `Release` workflow; Go is
+released from `go/vX.Y.Z` tags by `Release Go`.
 
 1. Open and merge a release PR that turns the `Unreleased` section into `## [X.Y.Z] - YYYY-MM-DD`
    and adds `.github/release-notes/X.Y.Z.md`.
 2. Dispatch `Release` from `main` with `version = X.Y.Z`. It validates the version with
    `scripts/validate-release-version.sh` (strict SemVer, no `v`, no build metadata, no
    SNAPSHOT: the same rules for Maven Central, npm and the git tag), then runs the preflights:
-   Java (`java/scripts/verify.sh`, also asserting the Maven Central credentials are present) and
+   Java (`java/scripts/verify.sh`, also asserting the Maven Central credentials are present),
    TypeScript (`ts/scripts/verify-package.sh`: build, `npm pack`, tarball content, publint,
-   throw-away consumer; the tarball is uploaded as an artifact). Only when **both** pass does it
-   publish, idempotently (an already published version is skipped): Java through nmcp,
-   TypeScript by publishing the exact verified tarball with OIDC trusted publishing. It then waits until Maven Central resolves the artifacts and creates
-   the signed `vX.Y.Z` tag and the GitHub Release. A failing preflight, including a missing
-   secret, leaves every registry untouched.
+   throw-away consumer; the tarball is uploaded as an artifact) and PHP (`composer check`, also
+   asserting the mirror deploy key is present). Only when **all three** pass does it publish,
+   idempotently (an already published version is skipped): Java through nmcp, TypeScript by
+   publishing the exact verified tarball with OIDC trusted publishing, PHP by pushing the
+   `php/` split to the Packagist mirror as `vX.Y.Z`. It then waits until Maven Central resolves
+   the artifacts and creates the signed `vX.Y.Z` tag and the GitHub Release. A failing
+   preflight, including a missing secret, leaves every registry untouched.
 3. Re-run a failed run with `gh run rerun <run-id> --failed` rather than dispatching again, so the
    tag still points at the commit that produced the published artifacts.
 
@@ -107,14 +109,11 @@ One-time setup:
    enable the GitHub hook on the mirror (Packagist "Settings" page, or the Packagist GitHub App)
    so every pushed tag is picked up automatically.
 
-Release procedure:
-
-1. Merge the release PR (`Unreleased` -> `## [X.Y.Z] - YYYY-MM-DD` for the PHP entries).
-2. Tag and push: `git tag -s php/vX.Y.Z -m "mobility-id (PHP) X.Y.Z" && git push origin php/vX.Y.Z`.
-3. `Release PHP` runs `composer check` on PHP 8.4, computes `git subtree split --prefix=php`,
-   pushes the split commit to the mirror's `main` and as the `vX.Y.Z` tag, then creates the
-   GitHub Release on this repository. An existing mirror tag that already points at the same
-   split commit is skipped; one that points elsewhere fails the run (a published Composer version
-   is never moved: bump the version instead).
-4. Check `https://packagist.org/packages/juherr/mobility-id` lists the new version; if the hook
-   was not installed, click "Update" once.
+What the `Release` workflow does for PHP: `Preflight PHP` runs `composer check` on PHP 8.4 and
+fails early when `PHP_MIRROR_DEPLOY_KEY` is missing; `Release PHP` computes
+`git subtree split --prefix=php` on the released commit and pushes the split commit to the
+mirror's `main` and as the `vX.Y.Z` tag. An existing mirror tag that already points at the same
+split commit is skipped (re-runs are idempotent); one that points elsewhere fails the run (a
+published Composer version is never moved: bump the version instead). After the run, check
+`https://packagist.org/packages/juherr/mobility-id` lists the new version; if the hook was not
+installed, click "Update" once.

@@ -62,12 +62,11 @@ final readonly class EvseIdIso extends AbstractEvseId implements Iso
             $normalizedPowerOutletId = substr($normalizedPowerOutletId, 1);
         }
 
-        $fullPowerOutletId = self::ID_TYPE . $normalizedPowerOutletId;
-        $regex = '/^' . EvseIdParser::getIsoPowerOutletIdRegex() . '$/'; // Need to validate the powerOutletId separately
-
-        if (preg_match($regex, $fullPowerOutletId) !== 1) {
+        // Scala validates the power outlet id after the id type: E + ([A-Za-z0-9*]{1,31}).
+        $regex = '/^' . EvseIdParser::getIsoPowerOutletIdRegex() . '$/';
+        if (preg_match($regex, $normalizedPowerOutletId) !== 1) {
             throw new \InvalidArgumentException(
-                "'{$fullPowerOutletId}' is not a valid ISO Power Outlet ID"
+                "'" . self::ID_TYPE . $normalizedPowerOutletId . "' is not a valid ISO Power Outlet ID"
             );
         }
 
