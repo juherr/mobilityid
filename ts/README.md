@@ -70,7 +70,7 @@ scripts/verify-package.sh            # or: scripts/verify-package.sh 1.2.3
 ```
 
 It runs `bun run check` (typecheck, tests, build), `npm pack`, asserts the tarball content
-(`../scripts/verify-npm-package.sh`), runs `publint`, then installs the tarball in a throw-away
+(`../scripts/verify-npm-package.sh`, allowlist: `package.json`, `README.md`, `LICENSE`, `dist/**`), runs the pinned `publint`, then installs the tarball in a throw-away
 project and uses it from Node (ESM) and TypeScript (declarations resolve through `exports`,
 tolerant parsers are `T | null`). `package.json` is restored afterwards. The same script runs in
 `ci-ts.yml` (Node 24) and in the `Release` preflight.

@@ -9,28 +9,30 @@ cd "$(dirname "$0")/.."
 version="${1:-$(node -p "require('./package.json').version")}"
 out_dir="${2:-$(pwd)/build/npm-package}"
 repo_root="$(cd .. && pwd)"
+tarball="${out_dir}/juherr-mobilityid-${version}.tgz"
 
-rm -rf "${out_dir}"
+# Never wipe a caller-provided directory: create it if needed and replace only our own tarball.
 mkdir -p "${out_dir}"
+rm -f "${tarball}"
 
 # The version is stamped into package.json for the pack only; the working copy is restored on exit
-# (from a byte copy, not from git, so uncommitted edits survive).
+# (from a byte copy, not from git, so uncommitted edits survive). The consumer project is a
+# temporary directory removed by the same trap, whether the run succeeds or fails.
 manifest_backup=$(mktemp)
+consumer=$(mktemp -d)
 cp package.json "${manifest_backup}"
-trap 'cp "${manifest_backup}" package.json; rm -f "${manifest_backup}"' EXIT
+trap 'cp "${manifest_backup}" package.json; rm -f "${manifest_backup}"; rm -rf "${consumer}"' EXIT
 if [[ "${version}" != "$(node -p "require('./package.json').version")" ]]; then
   vp exec bun pm pkg set version="${version}" >/dev/null
 fi
 
 vp exec bun run check
 npm pack --silent --pack-destination "${out_dir}"
-tarball="${out_dir}/juherr-mobilityid-${version}.tgz"
 "${repo_root}/scripts/verify-npm-package.sh" "${tarball}" "${version}"
 
-# publint: exports/main/types consistency of the packed package.
-npx --yes publint@latest "${tarball}"
+# publint (pinned devDependency, run from the lockfile): exports/main/types consistency of the packed package.
+node_modules/.bin/publint "${tarball}"
 
-consumer=$(mktemp -d)
 cat > "${consumer}/package.json" <<JSON
 { "name": "mobilityid-consumer-smoke", "private": true, "type": "module" }
 JSON
@@ -64,5 +66,4 @@ cat > "${consumer}/tsconfig.json" <<'JSON'
 JSON
 node_modules/.bin/tsc -p "${consumer}/tsconfig.json"
 echo "@juherr/mobilityid consumer smoke (typescript): OK"
-rm -rf "${consumer}"
 echo "verified package: ${tarball}"

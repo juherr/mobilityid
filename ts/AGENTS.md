@@ -27,7 +27,7 @@ command below from `ts/`.
 - One test pattern: `vp test ContractId`.
 - Package check (pack, content, publint, throw-away Node + TypeScript consumer): `scripts/verify-package.sh [version]`; runs in CI on Node 24.
 - Lint + headers: `bun run lint`; fix: `bun run lint:fix`.
-- Format: `bun run format`, verify: `bun run format:check`. Markdown files must keep their final newline: the macOS `vp`/oxfmt binary strips it while the Linux binary used in CI requires it, and CI is the reference. Do not commit a `vp check --fix` that removes final newlines from `*.md`.
+- Format: `bun run format`, verify: `bun run format:check`. Markdown is excluded from `vp fmt` (`vite.config.ts`): the macOS and Linux oxfmt binaries disagree on the final newline.
 
 ## Code Style
 

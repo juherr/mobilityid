@@ -28,6 +28,8 @@ JSON
       no-dts) rm "${dir}/dist/index.d.ts" ;;
       leak-src) mkdir -p "${dir}/src" && echo "x" > "${dir}/src/index.ts" ;;
       no-license) rm "${dir}/LICENSE" ;;
+      stray-root) echo "secret=1" > "${dir}/.env" ;;
+      stray-dir) mkdir -p "${dir}/scripts" && echo "x" > "${dir}/scripts/release.sh" ;;
     esac
   done
   tar -czf "${work}/${name}.tgz" -C "${work}/${name}" package
@@ -51,6 +53,8 @@ expect 1 "missing dist/index.js" "$(make_tarball nojs 1.2.3 no-js)" 1.2.3
 expect 1 "missing dist/index.d.ts" "$(make_tarball nodts 1.2.3 no-dts)" 1.2.3
 expect 1 "sources leaked into the package" "$(make_tarball leak 1.2.3 leak-src)" 1.2.3
 expect 1 "missing LICENSE" "$(make_tarball nolic 1.2.3 no-license)" 1.2.3
+expect 1 "unexpected root file (.env)" "$(make_tarball stray 1.2.3 stray-root)" 1.2.3
+expect 1 "unexpected directory (scripts/)" "$(make_tarball straydir 1.2.3 stray-dir)" 1.2.3
 expect 1 "tarball does not exist" "${work}/missing.tgz" 1.2.3
 
 if (( failures > 0 )); then
