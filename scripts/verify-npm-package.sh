@@ -36,6 +36,7 @@ require package.json
 require dist/index.js
 require dist/index.d.ts
 require README.md
+require LICENSE
 forbid 'src/'
 forbid 'test/'
 forbid 'node_modules/'

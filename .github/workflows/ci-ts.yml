@@ -59,5 +59,9 @@ jobs:
       - name: Check license headers
         run: vp exec bun run lint
 
+      - name: Verify the npm package (pack, content, publint, throw-away consumer)
+        if: matrix.node-version == '24'
+        run: scripts/verify-package.sh
+
       - name: Package dry-run
         run: vp exec bun pm pack --dry-run

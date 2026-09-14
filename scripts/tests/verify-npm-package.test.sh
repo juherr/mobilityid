@@ -21,11 +21,13 @@ JSON
   echo "export {};" > "${dir}/dist/index.js"
   echo "export {};" > "${dir}/dist/index.d.ts"
   echo "# readme" > "${dir}/README.md"
+  echo "license" > "${dir}/LICENSE"
   for op in "$@"; do
     case "${op}" in
       no-js) rm "${dir}/dist/index.js" ;;
       no-dts) rm "${dir}/dist/index.d.ts" ;;
       leak-src) mkdir -p "${dir}/src" && echo "x" > "${dir}/src/index.ts" ;;
+      no-license) rm "${dir}/LICENSE" ;;
     esac
   done
   tar -czf "${work}/${name}.tgz" -C "${work}/${name}" package
@@ -48,6 +50,7 @@ expect 1 "version mismatch" "$(make_tarball ok 1.2.3)" 1.2.4
 expect 1 "missing dist/index.js" "$(make_tarball nojs 1.2.3 no-js)" 1.2.3
 expect 1 "missing dist/index.d.ts" "$(make_tarball nodts 1.2.3 no-dts)" 1.2.3
 expect 1 "sources leaked into the package" "$(make_tarball leak 1.2.3 leak-src)" 1.2.3
+expect 1 "missing LICENSE" "$(make_tarball nolic 1.2.3 no-license)" 1.2.3
 expect 1 "tarball does not exist" "${work}/missing.tgz" 1.2.3
 
 if (( failures > 0 )); then
