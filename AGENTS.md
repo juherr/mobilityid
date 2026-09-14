@@ -78,17 +78,13 @@ for single-suite and lint invocations. Full gates per workspace:
 
 ### License headers
 
-All source files carry an Apache 2.0 header, enforced per workspace (sbt-header, Spotless,
+All source files carry the same Apache 2.0 header, enforced per workspace (sbt-header, Spotless,
 golangci-lint `goheader`, php-cs-fixer, Oxlint header plugin). Each workspace `AGENTS.md` gives the
 validate/apply commands; CI fails on a missing header.
 
-Only `scala/` is derived from The New Motion code, so only its header keeps the 2014 New Motion
-copyright line (`Copyright (c) 2014 The New Motion team, and respective contributors`, first line,
-see `scala/build.sbt`). The ports (`java/`, `go/`, `php/`, `ts/`) are new code and credit Julien
-Herr only; never add the New Motion line to a port.
-
-**License header format** (ports; Scala prepends the New Motion line):
+**License header format** (identical in every language):
 ```
+Copyright (c) 2014 The New Motion team, and respective contributors
 Copyright (c) 2026 Julien Herr, and respective contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
