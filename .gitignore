@@ -52,3 +52,6 @@ java/bin/
 
 # jqwik failure database (java/ workspace)
 java/.jqwik-database
+
+# Kotlin compiler session data (java/consumer-smoke)
+.kotlin/

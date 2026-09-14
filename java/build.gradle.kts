@@ -216,6 +216,13 @@ publishing {
     }
   }
 
+  repositories {
+    // Isolated repository consumed by consumer-smoke (scripts/verify-consumer.sh).
+    maven {
+      name = "smoke"
+      url = uri(layout.buildDirectory.dir("smoke-repo"))
+    }
+  }
 }
 
 signing {
@@ -250,7 +257,7 @@ spotless {
  */
 """)
     palantirJavaFormat(libs.versions.palantir.java.format.get())
-    target("src/*/java/**/*.java")
+    target("src/*/java/**/*.java", "consumer-smoke/src/**/*.java")
     formatAnnotations()
     removeUnusedImports()
     trimTrailingWhitespace()
