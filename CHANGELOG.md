@@ -8,6 +8,19 @@ which requires a dated section for the version below and a matching file in
 
 ## [Unreleased]
 
+### Added
+
+- **TypeScript:** `tryParse` on every identifier and in `MobilityIdParsers`, returning a
+  `ParseResult<T>` (`{ ok: true, value }` or `{ ok: false, error }`) so callers get the failure
+  reason without exceptions; `parse` and `parseStrict` are unchanged.
+
+### Fixed
+
+- **TypeScript:** `EvseIdIso.fromParts` and `EvseId.fromParts` no longer drop a leading `E` from
+  the power outlet id; as in Scala and Java, `("NL", "TNM", "E840*6487")` keeps
+  `powerOutletId === "E840*6487"` and renders `NL*TNM*EE840*6487`. Found by the new
+  render/parse round-trip property.
+
 ### Changed
 
 - **TypeScript:** source headers, `NOTICE` and the header gate credit Julien Herr only; the
@@ -16,6 +29,11 @@ which requires a dated section for the version below and a matching file in
   `LICENSE` is only the short header or `NOTICE` lacks the copyright line.
 - **Repository:** root `LICENSE` is the full Apache 2.0 text; the workspace list and which
   copyright notice applies to each move to `NOTICE`.
+- **TypeScript:** ESM-only package resolved through `exports` alone (the legacy `main`/`types`
+  fields are gone; Node >= 22 was already required); the published shape is checked by
+  `publint --strict` and Are The Types Wrong; stricter `tsconfig` (`verbatimModuleSyntax`,
+  `isolatedDeclarations`, `erasableSyntaxOnly`, ES2023) with an explicit TypeScript 6
+  devDependency; property-based tests (fast-check) and coverage thresholds; Vite+ 0.3.
 - **CI:** OWASP Dependency-Check no longer runs on pull requests; it scans `main` weekly and on
   demand with a cached NVD database and fails on CVSS >= 7.0, aligned with the pull request
   dependency review gate.

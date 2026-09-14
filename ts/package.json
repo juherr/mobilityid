@@ -53,7 +53,8 @@
     "format:check": "vp fmt --check",
     "typecheck": "vp check",
     "test": "vp test --coverage",
-    "check": "vp check && vp test --coverage && vp pack && publint --strict && attw --pack . --profile esm-only",
+    "check:shape": "publint --strict && attw --pack . --profile esm-only",
+    "check": "vp check && vp test --coverage && vp pack && bun run check:shape",
     "check:package": "scripts/verify-package.sh"
   },
   "devDependencies": {

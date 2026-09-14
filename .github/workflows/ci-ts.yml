@@ -50,8 +50,8 @@ jobs:
       - name: Check
         run: vp check
 
-      - name: Test
-        run: vp test
+      - name: Test (coverage thresholds from vite.config.ts)
+        run: vp test --coverage
 
       - name: Build
         run: vp pack
@@ -62,6 +62,9 @@ jobs:
       - name: Check the header gate rejects a missing or extra copyright line
         if: matrix.node-version == '24'
         run: vp exec bun run check:headers
+
+      - name: Validate the package shape (publint, Are The Types Wrong)
+        run: vp exec bun run check:shape
 
       - name: Verify the npm package (pack, content, publint, throw-away consumer)
         if: matrix.node-version == '24'
