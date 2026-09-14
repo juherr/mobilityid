@@ -18,33 +18,37 @@ package dev.juherr.mobilityid4j.smoke
 
 import dev.juherr.mobilityid4j.ContractId
 import dev.juherr.mobilityid4j.ContractIdStandard
-import dev.juherr.mobilityid4j.EvseId
 import dev.juherr.mobilityid4j.EvseIdDin
 import dev.juherr.mobilityid4j.EvseIdIso
 import dev.juherr.mobilityid4j.interpolators.MobilityIdParsers
 
 /**
- * Compiles only if Kotlin reads the JSpecify contracts: strict factories are non-null, tolerant
- * parsers are `T?`, sealed interfaces are exhaustive in `when`.
+ * Compile-time proof that Kotlin reads the JSpecify contracts. Every statement is written so that
+ * the opposite nullability fails the build under `-Xjspecify-annotations=strict -Werror`:
+ * - a strict factory result is assigned to a non-null type without `!!` (fails if it became nullable);
+ * - a tolerant parser result is used through `?.` and matched against `null` directly on the call
+ *   expression, never through a widened `T?` declaration (fails with "unnecessary safe call" /
+ *   "senseless null" if it became non-null).
  */
 object KotlinSmoke {
     @JvmStatic
     fun main(args: Array<String>) {
-        // Non-null: assigning to a non-null type without `!!` must compile.
         val strict: ContractId = ContractId.parseStrict(ContractIdStandard.ISO, "NL-TNM-000122045-U")
+        check(strict.countryCode().value() == "NL")
 
-        // Nullable: the safe-call chain must be required (a plain call would not compile under -Werror).
-        val tolerant: ContractId? = ContractId.parse(ContractIdStandard.ISO, "NL-TNM-000122045-X")
-        check(tolerant?.toCompactString() == null) { "tolerant parser should return null" }
+        val invalid = ContractId.parse(ContractIdStandard.ISO, "NL-TNM-000122045-X")?.toCompactString()
+        check(invalid == null) { "tolerant parser should return null" }
 
-        val evse: EvseId? = MobilityIdParsers.parseEvseId("+49*810*000*438")
-        val rendered = when (evse) {
+        val rendered = when (val evse = MobilityIdParsers.parseEvseId("+49*810*000*438")) {
             is EvseIdIso -> "iso:" + evse.toCompactString()
             is EvseIdDin -> "din:" + evse.toString()
             null -> "invalid"
         }
-        check(rendered.startsWith("din:")) { "expected a DIN EVSE id, got " }
-        check(strict.countryCode().value() == "NL")
+        check(rendered.startsWith("din:")) { "expected a DIN EVSE id, got $rendered" }
+
+        val country = MobilityIdParsers.parseCountryCode("XX")?.value() ?: "none"
+        check(country == "none")
+
         println("mobilityid4j Kotlin consumer smoke: OK ($strict, $rendered)")
     }
 }
