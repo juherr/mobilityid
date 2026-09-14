@@ -187,10 +187,9 @@ function validateDin(
 function createIso(countryCode: string, operatorId: string, powerOutletId: string): EvseIdIso {
   const country = CountryCode.from(countryCode);
   const operator = OperatorIdIso.from(operatorId);
-  const normalizedPowerOutletId = powerOutletId.startsWith("E")
-    ? powerOutletId.slice(1)
-    : powerOutletId;
-  return new EvseIdIso(country, operator, normalizedPowerOutletId);
+  // The E type marker is part of the rendering, not of the power outlet id: parsing already
+  // consumed it and a power outlet id given by parts may itself start with E (as in Scala).
+  return new EvseIdIso(country, operator, powerOutletId);
 }
 
 function createDin(countryCode: string, operatorId: string, powerOutletId: string): EvseIdDin {

@@ -60,6 +60,13 @@ describe("EvseId", () => {
 
   it("supports strict creation by parts", () => {
     expect(EvseId.fromParts("NL", "TNM", "840*6487").toString()).toBe("NL*TNM*E840*6487");
+    // A power outlet id starting with E keeps it: the E type marker is added on rendering only
+    // (Scala EvseIdSpec "Accept valid combination of ISO parameters").
+    const leadingE = EvseIdIso.fromParts("NL", "TNM", "E840*6487");
+    expect(leadingE.powerOutletId).toBe("E840*6487");
+    expect(leadingE.toString()).toBe("NL*TNM*EE840*6487");
+    expect(EvseId.fromParts("NL", "TNM", "E840*6487").powerOutletId).toBe("E840*6487");
+    expect(EvseIdIso.parseStrict("NL*TNM*EE840*6487")).toStrictEqual(leadingE);
     expect(EvseId.fromParts("+31", "745", "840*6487").toString()).toBe("+31*745*840*6487");
     expect(() => EvseId.fromParts("+31", "ABC", "840*6487")).toThrow(TypeError);
   });
