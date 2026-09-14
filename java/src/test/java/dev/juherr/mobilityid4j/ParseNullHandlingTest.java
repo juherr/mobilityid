@@ -24,25 +24,25 @@ import org.junit.jupiter.api.Test;
 class ParseNullHandlingTest {
     @Test
     void directParsersReturnEmptyOnNull() {
-        assertThat(CountryCode.parse(null)).isEmpty();
-        assertThat(PhoneCountryCode.parse(null)).isEmpty();
-        assertThat(ProviderId.parse(null)).isEmpty();
-        assertThat(OperatorIdIso.parse(null)).isEmpty();
-        assertThat(OperatorIdDin.parse(null)).isEmpty();
+        assertThat(CountryCode.parse(null)).isNull();
+        assertThat(PhoneCountryCode.parse(null)).isNull();
+        assertThat(ProviderId.parse(null)).isNull();
+        assertThat(OperatorIdIso.parse(null)).isNull();
+        assertThat(OperatorIdDin.parse(null)).isNull();
     }
 
     @Test
     void convenienceParsersReturnEmptyOnNull() {
-        assertThat(MobilityIdParsers.parseContractIdIso(null)).isEmpty();
-        assertThat(MobilityIdParsers.parseContractIdDin(null)).isEmpty();
-        assertThat(MobilityIdParsers.parseContractIdEmi3(null)).isEmpty();
-        assertThat(MobilityIdParsers.parseEvseId(null)).isEmpty();
-        assertThat(MobilityIdParsers.parseEvseIdIso(null)).isEmpty();
-        assertThat(MobilityIdParsers.parseEvseIdDin(null)).isEmpty();
-        assertThat(MobilityIdParsers.parseProviderId(null)).isEmpty();
-        assertThat(MobilityIdParsers.parseCountryCode(null)).isEmpty();
-        assertThat(MobilityIdParsers.parsePhoneCountryCode(null)).isEmpty();
-        assertThat(MobilityIdParsers.parseOperatorIdIso(null)).isEmpty();
-        assertThat(MobilityIdParsers.parseOperatorIdDin(null)).isEmpty();
+        assertThat(MobilityIdParsers.parseContractIdIso(null)).isNull();
+        assertThat(MobilityIdParsers.parseContractIdDin(null)).isNull();
+        assertThat(MobilityIdParsers.parseContractIdEmi3(null)).isNull();
+        assertThat(MobilityIdParsers.parseEvseId(null)).isNull();
+        assertThat(MobilityIdParsers.parseEvseIdIso(null)).isNull();
+        assertThat(MobilityIdParsers.parseEvseIdDin(null)).isNull();
+        assertThat(MobilityIdParsers.parseProviderId(null)).isNull();
+        assertThat(MobilityIdParsers.parseCountryCode(null)).isNull();
+        assertThat(MobilityIdParsers.parsePhoneCountryCode(null)).isNull();
+        assertThat(MobilityIdParsers.parseOperatorIdIso(null)).isNull();
+        assertThat(MobilityIdParsers.parseOperatorIdDin(null)).isNull();
     }
 }

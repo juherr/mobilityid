@@ -64,20 +64,20 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
      * Parses an ISO EVSE identifier.
      *
      * @param evseId raw EVSE ID
-     * @return parsed ISO EVSE ID, or empty when invalid
+     * @return parsed ISO EVSE ID, or {@code null} when invalid
      */
-    public static Optional<EvseIdIso> parse(@Nullable String evseId) {
+    public static @Nullable EvseIdIso parse(@Nullable String evseId) {
         if (evseId == null) {
-            return Optional.empty();
+            return null;
         }
         var matcher = FULL.matcher(evseId);
         if (!matcher.matches()) {
-            return Optional.empty();
+            return null;
         }
         try {
-            return Optional.of(of(matcher.group(1), matcher.group(2), matcher.group(3)));
+            return of(matcher.group(1), matcher.group(2), matcher.group(3));
         } catch (IllegalArgumentException e) {
-            return Optional.empty();
+            return null;
         }
     }
 
@@ -89,10 +89,10 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
         var op = operatorId.toUpperCase(Locale.ROOT);
         var po = powerOutletId.toUpperCase(Locale.ROOT);
 
-        if (CountryCode.parse(cc).isEmpty()) {
+        if (CountryCode.parse(cc) == null) {
             return Optional.of(new EvseValidationError(1, "Invalid countryCode for ISO or DIN format"));
         }
-        if (OperatorIdIso.parse(op).isEmpty()) {
+        if (OperatorIdIso.parse(op) == null) {
             return Optional.of(new EvseValidationError(2, "Invalid operatorId for ISO format"));
         }
         if (!POWER_OUTLET.matcher(po).matches()) {

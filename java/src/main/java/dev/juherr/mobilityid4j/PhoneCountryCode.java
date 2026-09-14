@@ -16,7 +16,6 @@
  */
 package dev.juherr.mobilityid4j;
 
-import java.util.Optional;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
@@ -60,16 +59,16 @@ public record PhoneCountryCode(String value) {
      * Parses a phone country code.
      *
      * @param value candidate phone country code
-     * @return validated phone country code, or empty when invalid
+     * @return validated phone country code, or {@code null} when invalid
      */
-    public static Optional<PhoneCountryCode> parse(@Nullable String value) {
+    public static @Nullable PhoneCountryCode parse(@Nullable String value) {
         if (value == null) {
-            return Optional.empty();
+            return null;
         }
         try {
-            return Optional.of(of(value));
+            return of(value);
         } catch (IllegalArgumentException e) {
-            return Optional.empty();
+            return null;
         }
     }
 

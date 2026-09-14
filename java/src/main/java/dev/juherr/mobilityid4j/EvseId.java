@@ -16,7 +16,6 @@
  */
 package dev.juherr.mobilityid4j;
 
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /** Common EVSE identifier contract across supported formats. */
@@ -56,17 +55,16 @@ public sealed interface EvseId permits EvseIdIso, EvseIdDin {
      * Parses an EVSE ID string in either ISO or DIN form.
      *
      * @param evseId raw EVSE ID
-     * @return parsed EVSE ID, or empty when invalid
+     * @return parsed EVSE ID, or {@code null} when invalid
      */
-    static Optional<EvseId> parse(@Nullable String evseId) {
+    static @Nullable EvseId parse(@Nullable String evseId) {
         if (evseId == null) {
-            return Optional.empty();
+            return null;
         }
         var iso = EvseIdIso.parse(evseId);
-        if (iso.isPresent()) {
-            return Optional.of(iso.orElseThrow());
+        if (iso != null) {
+            return iso;
         }
-        var din = EvseIdDin.parse(evseId);
-        return din.map(it -> it);
+        return EvseIdDin.parse(evseId);
     }
 }

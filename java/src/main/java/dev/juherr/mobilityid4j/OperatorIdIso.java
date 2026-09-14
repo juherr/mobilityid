@@ -16,7 +16,6 @@
  */
 package dev.juherr.mobilityid4j;
 
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -46,16 +45,16 @@ public record OperatorIdIso(String id) implements OperatorId {
      * Parses an ISO operator identifier.
      *
      * @param id candidate operator ID
-     * @return validated operator ID, or empty when invalid
+     * @return validated operator ID, or {@code null} when invalid
      */
-    public static Optional<OperatorIdIso> parse(@Nullable String id) {
+    public static @Nullable OperatorIdIso parse(@Nullable String id) {
         if (id == null) {
-            return Optional.empty();
+            return null;
         }
         try {
-            return Optional.of(of(id));
+            return of(id);
         } catch (IllegalArgumentException e) {
-            return Optional.empty();
+            return null;
         }
     }
 

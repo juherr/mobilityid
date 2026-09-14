@@ -26,7 +26,6 @@ import dev.juherr.mobilityid4j.OperatorIdDin;
 import dev.juherr.mobilityid4j.OperatorIdIso;
 import dev.juherr.mobilityid4j.PhoneCountryCode;
 import dev.juherr.mobilityid4j.ProviderId;
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /** Convenience parser entry points for mobility ID domain types. */
@@ -37,9 +36,9 @@ public final class MobilityIdParsers {
      * Parses an ISO contract ID.
      *
      * @param raw raw contract ID string
-     * @return parsed contract ID, or empty when invalid
+     * @return parsed contract ID, or {@code null} when invalid
      */
-    public static Optional<ContractId> parseContractIdIso(@Nullable String raw) {
+    public static @Nullable ContractId parseContractIdIso(@Nullable String raw) {
         return ContractId.parse(ContractIdStandard.ISO, raw);
     }
 
@@ -47,9 +46,9 @@ public final class MobilityIdParsers {
      * Parses a DIN contract ID.
      *
      * @param raw raw contract ID string
-     * @return parsed contract ID, or empty when invalid
+     * @return parsed contract ID, or {@code null} when invalid
      */
-    public static Optional<ContractId> parseContractIdDin(@Nullable String raw) {
+    public static @Nullable ContractId parseContractIdDin(@Nullable String raw) {
         return ContractId.parse(ContractIdStandard.DIN, raw);
     }
 
@@ -57,9 +56,9 @@ public final class MobilityIdParsers {
      * Parses an EMI3 contract ID.
      *
      * @param raw raw contract ID string
-     * @return parsed contract ID, or empty when invalid
+     * @return parsed contract ID, or {@code null} when invalid
      */
-    public static Optional<ContractId> parseContractIdEmi3(@Nullable String raw) {
+    public static @Nullable ContractId parseContractIdEmi3(@Nullable String raw) {
         return ContractId.parse(ContractIdStandard.EMI3, raw);
     }
 
@@ -67,9 +66,9 @@ public final class MobilityIdParsers {
      * Parses an EVSE ID in ISO or DIN format.
      *
      * @param raw raw EVSE ID
-     * @return parsed EVSE ID, or empty when invalid
+     * @return parsed EVSE ID, or {@code null} when invalid
      */
-    public static Optional<EvseId> parseEvseId(@Nullable String raw) {
+    public static @Nullable EvseId parseEvseId(@Nullable String raw) {
         return EvseId.parse(raw);
     }
 
@@ -77,9 +76,9 @@ public final class MobilityIdParsers {
      * Parses an ISO EVSE ID.
      *
      * @param raw raw EVSE ID
-     * @return parsed ISO EVSE ID, or empty when invalid
+     * @return parsed ISO EVSE ID, or {@code null} when invalid
      */
-    public static Optional<EvseIdIso> parseEvseIdIso(@Nullable String raw) {
+    public static @Nullable EvseIdIso parseEvseIdIso(@Nullable String raw) {
         return EvseIdIso.parse(raw);
     }
 
@@ -87,9 +86,9 @@ public final class MobilityIdParsers {
      * Parses a DIN EVSE ID.
      *
      * @param raw raw EVSE ID
-     * @return parsed DIN EVSE ID, or empty when invalid
+     * @return parsed DIN EVSE ID, or {@code null} when invalid
      */
-    public static Optional<EvseIdDin> parseEvseIdDin(@Nullable String raw) {
+    public static @Nullable EvseIdDin parseEvseIdDin(@Nullable String raw) {
         return EvseIdDin.parse(raw);
     }
 
@@ -97,9 +96,9 @@ public final class MobilityIdParsers {
      * Parses a provider ID.
      *
      * @param raw raw provider ID
-     * @return parsed provider ID, or empty when invalid
+     * @return parsed provider ID, or {@code null} when invalid
      */
-    public static Optional<ProviderId> parseProviderId(@Nullable String raw) {
+    public static @Nullable ProviderId parseProviderId(@Nullable String raw) {
         return ProviderId.parse(raw);
     }
 
@@ -107,9 +106,9 @@ public final class MobilityIdParsers {
      * Parses a country code.
      *
      * @param raw raw country code
-     * @return parsed country code, or empty when invalid
+     * @return parsed country code, or {@code null} when invalid
      */
-    public static Optional<CountryCode> parseCountryCode(@Nullable String raw) {
+    public static @Nullable CountryCode parseCountryCode(@Nullable String raw) {
         return CountryCode.parse(raw);
     }
 
@@ -117,9 +116,9 @@ public final class MobilityIdParsers {
      * Parses a phone country code.
      *
      * @param raw raw phone country code
-     * @return parsed phone country code, or empty when invalid
+     * @return parsed phone country code, or {@code null} when invalid
      */
-    public static Optional<PhoneCountryCode> parsePhoneCountryCode(@Nullable String raw) {
+    public static @Nullable PhoneCountryCode parsePhoneCountryCode(@Nullable String raw) {
         return PhoneCountryCode.parse(raw);
     }
 
@@ -127,9 +126,9 @@ public final class MobilityIdParsers {
      * Parses an ISO operator ID.
      *
      * @param raw raw operator ID
-     * @return parsed operator ID, or empty when invalid
+     * @return parsed operator ID, or {@code null} when invalid
      */
-    public static Optional<OperatorIdIso> parseOperatorIdIso(@Nullable String raw) {
+    public static @Nullable OperatorIdIso parseOperatorIdIso(@Nullable String raw) {
         return OperatorIdIso.parse(raw);
     }
 
@@ -137,9 +136,9 @@ public final class MobilityIdParsers {
      * Parses a DIN operator ID.
      *
      * @param raw raw operator ID
-     * @return parsed operator ID, or empty when invalid
+     * @return parsed operator ID, or {@code null} when invalid
      */
-    public static Optional<OperatorIdDin> parseOperatorIdDin(@Nullable String raw) {
+    public static @Nullable OperatorIdDin parseOperatorIdDin(@Nullable String raw) {
         return OperatorIdDin.parse(raw);
     }
 }

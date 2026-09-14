@@ -57,7 +57,7 @@ Useful commands:
 ## API choices
 
 - idiomatic Java API (not a 1:1 Scala mirror)
-- tolerant parsing methods return `Optional<T>`
+- tolerant parsing methods return `@Nullable T` (JSpecify), never `Optional`
 - strict factory methods throw `IllegalArgumentException`
 - immutable domain types
 - local `var` is preferred when the inferred type is obvious at a glance; otherwise explicit types are kept for readability
@@ -67,9 +67,8 @@ Useful commands:
 Parse contract ID (tolerant API):
 
 ```java
-var maybeContract = ContractId.parse(ContractIdStandard.ISO, "NL-TNM-000722345-X");
-if (maybeContract.isPresent()) {
-  var contract = maybeContract.orElseThrow();
+var contract = ContractId.parse(ContractIdStandard.ISO, "NL-TNM-000722345-X");
+if (contract != null) {
   System.out.println(contract.toCompactString());
 }
 ```
@@ -92,12 +91,9 @@ var iso = din.convertTo(ContractIdStandard.ISO);
 Parse EVSE ID and branch by format:
 
 ```java
-var maybeEvse = EvseId.parse("NL*TNM*E840*6487");
-if (maybeEvse.isPresent()) {
-  var evse = maybeEvse.orElseThrow();
-  if (evse instanceof EvseIdIso isoEvse) {
-    System.out.println(isoEvse.toCompactString());
-  }
+var evse = EvseId.parse("NL*TNM*E840*6487");
+if (evse instanceof EvseIdIso isoEvse) {
+  System.out.println(isoEvse.toCompactString());
 }
 ```
 
@@ -109,8 +105,8 @@ The library is annotated for Kotlin interop out of the box:
   tolerant parser parameters), so Kotlin sees platform-free types: `String` parameters are
   non-null, `parse(raw: String?)` accepts null. If your Kotlin version does not treat JSpecify as
   strict by default, add `-Xjspecify-annotations=strict` to `freeCompilerArgs`.
-- Tolerant parsers return `Optional<T>`; use `ContractId.parse(ContractIdStandard.ISO, raw).getOrNull()`
-  (`kotlin.jvm.optionals`).
+- Tolerant parsers return `@Nullable T`, seen as `T?` from Kotlin:
+  `ContractId.parse(ContractIdStandard.ISO, raw)?.toCompactString() ?: "invalid"`.
 - `EvseId` and `OperatorId` are Java sealed interfaces: `when (evse) { is EvseIdIso -> ...; is EvseIdDin -> ... }`
   is exhaustive without an `else` branch.
 - Domain types are Java records: components are accessed as functions (`countryCode.value()`),

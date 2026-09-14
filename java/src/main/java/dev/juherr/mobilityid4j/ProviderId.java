@@ -16,7 +16,6 @@
  */
 package dev.juherr.mobilityid4j;
 
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -46,16 +45,16 @@ public record ProviderId(String id) {
      * Parses a provider identifier.
      *
      * @param id candidate provider ID
-     * @return validated provider ID, or empty when invalid
+     * @return validated provider ID, or {@code null} when invalid
      */
-    public static Optional<ProviderId> parse(@Nullable String id) {
+    public static @Nullable ProviderId parse(@Nullable String id) {
         if (id == null) {
-            return Optional.empty();
+            return null;
         }
         try {
-            return Optional.of(of(id));
+            return of(id);
         } catch (IllegalArgumentException e) {
-            return Optional.empty();
+            return null;
         }
     }
 

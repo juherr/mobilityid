@@ -23,16 +23,16 @@ import org.junit.jupiter.api.Test;
 class MobilityIdParsersTest {
     @Test
     void parsesMainTypes() {
-        assertThat(MobilityIdParsers.parseContractIdIso("NL-TNM-000722345-X")).isPresent();
-        assertThat(MobilityIdParsers.parseContractIdDin("NL-TNM-722345-8")).isPresent();
-        assertThat(MobilityIdParsers.parseContractIdEmi3("NL-TNM-C00722345-N")).isPresent();
-        assertThat(MobilityIdParsers.parseEvseId("NL*TNM*E840*6487")).isPresent();
-        assertThat(MobilityIdParsers.parseEvseIdIso("NL*TNM*E840*6487")).isPresent();
-        assertThat(MobilityIdParsers.parseEvseIdDin("+49*810*000*438")).isPresent();
-        assertThat(MobilityIdParsers.parseProviderId("ABC")).isPresent();
-        assertThat(MobilityIdParsers.parseCountryCode("NL")).isPresent();
-        assertThat(MobilityIdParsers.parsePhoneCountryCode("+31")).isPresent();
-        assertThat(MobilityIdParsers.parseOperatorIdIso("TNM")).isPresent();
-        assertThat(MobilityIdParsers.parseOperatorIdDin("456")).isPresent();
+        assertThat(MobilityIdParsers.parseContractIdIso("NL-TNM-000722345-X")).isNotNull();
+        assertThat(MobilityIdParsers.parseContractIdDin("NL-TNM-722345-8")).isNotNull();
+        assertThat(MobilityIdParsers.parseContractIdEmi3("NL-TNM-C00722345-N")).isNotNull();
+        assertThat(MobilityIdParsers.parseEvseId("NL*TNM*E840*6487")).isNotNull();
+        assertThat(MobilityIdParsers.parseEvseIdIso("NL*TNM*E840*6487")).isNotNull();
+        assertThat(MobilityIdParsers.parseEvseIdDin("+49*810*000*438")).isNotNull();
+        assertThat(MobilityIdParsers.parseProviderId("ABC")).isNotNull();
+        assertThat(MobilityIdParsers.parseCountryCode("NL")).isNotNull();
+        assertThat(MobilityIdParsers.parsePhoneCountryCode("+31")).isNotNull();
+        assertThat(MobilityIdParsers.parseOperatorIdIso("TNM")).isNotNull();
+        assertThat(MobilityIdParsers.parseOperatorIdDin("456")).isNotNull();
     }
 }

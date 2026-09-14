@@ -16,7 +16,6 @@
  */
 package dev.juherr.mobilityid4j;
 
-import java.util.Optional;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
@@ -62,20 +61,20 @@ public record PartyId(CountryCode countryCode, String partyCode) {
      * Parses a party identifier from compact or separated representation.
      *
      * @param raw candidate party ID
-     * @return parsed party ID, or empty when invalid
+     * @return parsed party ID, or {@code null} when invalid
      */
-    public static Optional<PartyId> parse(@Nullable String raw) {
+    public static @Nullable PartyId parse(@Nullable String raw) {
         if (raw == null) {
-            return Optional.empty();
+            return null;
         }
         var matcher = PATTERN.matcher(raw);
         if (!matcher.matches()) {
-            return Optional.empty();
+            return null;
         }
         try {
-            return Optional.of(new PartyId(CountryCode.of(matcher.group(1)), matcher.group(2)));
+            return new PartyId(CountryCode.of(matcher.group(1)), matcher.group(2));
         } catch (IllegalArgumentException e) {
-            return Optional.empty();
+            return null;
         }
     }
 
