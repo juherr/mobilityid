@@ -4,6 +4,8 @@ dependencycheck = "13.0.0"
 errorprone = "2.50.0"
 errorprone-plugin = "5.1.1"
 jqwik = "1.10.1"
+jacoco = "0.8.15"
+japicmp-plugin = "0.4.6"
 jspecify = "1.0.1"
 junit = "6.1.3"
 nullaway = "0.14.1"
@@ -23,4 +25,5 @@ nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
 [plugins]
 dependencycheck = { id = "org.owasp.dependencycheck", version.ref = "dependencycheck" }
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
+japicmp = { id = "me.champeau.gradle.japicmp", version.ref = "japicmp-plugin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
