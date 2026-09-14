@@ -1,7 +1,7 @@
 name: Security
 
 # Full SCA of the current dependency set. Not a pull request gate: PRs are covered by
-# `dependency-review.yml` (newly introduced high+ vulnerabilities) and `main` by Dependabot
+# `dependency-submission.yml` (newly introduced high+ vulnerabilities) and `main` by Dependabot
 # alerts; this weekly scan catches vulnerabilities disclosed after a dependency was merged.
 on:
   schedule:

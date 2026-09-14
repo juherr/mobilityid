@@ -1,11 +1,11 @@
 name: Dependency Submission
 
 # Submits the resolved Gradle dependency graph of `java/` (direct and transitive, including the
-# build-plugin classpath) to the GitHub Dependency Graph. GitHub cannot parse Gradle builds
-# itself, so without this submission neither Dependency Review nor Dependabot alerts see any
-# Java dependency. No path filter on purpose: Dependency Review compares the snapshot of the
-# pull request head with the one of its merge base on `main`, so every commit of `main` and
-# every pull request head needs a snapshot.
+# build-plugin classpath) to the GitHub Dependency Graph, then runs Dependency Review on pull
+# requests. GitHub cannot parse Gradle builds itself, so without this submission neither
+# Dependency Review nor Dependabot alerts see any Java dependency. No path filter on purpose:
+# Dependency Review compares the snapshot of the pull request head with the one of its merge
+# base on `main`, so every commit of `main` and every pull request head needs a snapshot.
 on:
   push:
     branches:
@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  java:
+  java-graph:
     name: Java dependency graph
     # The Dependency Submission API needs `contents: write`, which GITHUB_TOKEN never has for a
     # pull request from a fork (or from Dependabot). Those pull requests are skipped here and get
@@ -64,3 +64,39 @@ jobs:
         env:
           SNAPSHOT: ${{ steps.graph.outputs.dependency-graph-file }}
         run: scripts/verify-dependency-graph.sh "$SNAPSHOT"
+
+  dependency-review:
+    name: Dependency review
+    # Pull request gate: rejects newly introduced high/critical vulnerabilities in every
+    # ecosystem. Manifest-based ecosystems (npm, Composer, Go, Actions) are parsed by GitHub; the
+    # Java graph is the snapshot submitted by the job above, hence `needs`: the review never runs
+    # before the submission has completed (when both sides lack a snapshot GitHub raises no
+    # warning, so `retry-on-snapshot-warnings` alone cannot close that race). Fork and Dependabot
+    # pull requests have the submission skipped and are reviewed on the manifest ecosystems only.
+    needs: java-graph
+    if: >-
+      github.event_name == 'pull_request'
+      && !cancelled()
+      && (needs.java-graph.result == 'success' || needs.java-graph.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@3c4e3dcb1aa7874d2c16be7d79418e9b7efd6261 # v4
+        with:
+          fail-on-severity: high
+          # Test and build-plugin dependencies count too: Java test/plugin classpaths, npm
+          # devDependencies and Composer require-dev are all "development" scope.
+          fail-on-scopes: runtime, development, unknown
+          # Second guard for the propagation delay between the submission and the compare API.
+          retry-on-snapshot-warnings: ${{ needs.java-graph.result == 'success' }}
+          retry-on-snapshot-warnings-timeout: 120
