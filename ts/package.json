@@ -58,9 +58,12 @@
     "check": "vp check && vp test && vp pack"
   },
   "devDependencies": {
-    "@tony.ganchev/eslint-plugin-header": "^3.4.3",
-    "@types/node": "^24.0.0",
-    "publint": "0.3.24",
-    "vite-plus": "^0.1.16"
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@tony.ganchev/eslint-plugin-header": "3.4.4",
+    "@types/node": "^24.13.4",
+    "fast-check": "^4.10.0",
+    "publint": "^0.3.24",
+    "typescript": "^6.0.3",
+    "vite-plus": "0.3.1"
   }
 }

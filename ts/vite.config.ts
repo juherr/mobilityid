@@ -17,7 +17,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { defineConfig } from "vite-plus";
+import { defineConfig, type UserConfig } from "vite-plus";
 
 // Every TypeScript file carries the header from license-header.txt (Julien Herr only; root
 // AGENTS.md "Provenance").
@@ -29,7 +29,8 @@ const canonicalHeader = readFileSync(
   .trimEnd();
 const blockHeaderLines = `\n${canonicalHeader.split("\n").slice(1, -1).join("\n")}\n `;
 
-export default defineConfig({
+// Explicit type: `isolatedDeclarations` refuses an inferred default export.
+const config: UserConfig = defineConfig({
   fmt: {
     // Markdown is left to editors: the macOS and Linux oxfmt binaries disagree on the final newline.
     ignorePatterns: ["dist/**", "bun.lock", "**/*.md"],
@@ -82,3 +83,5 @@ export default defineConfig({
     clean: true,
   },
 });
+
+export default config;
