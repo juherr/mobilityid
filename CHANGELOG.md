@@ -10,6 +10,9 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
+- **Java, Go, PHP, TypeScript:** license headers and the packaged `LICENSE` files credit Julien
+  Herr only; the ports are new code, and the 2014 New Motion copyright line stays on the
+  derived Scala workspace alone.
 - **CI:** OWASP Dependency-Check no longer runs on pull requests; it scans `main` weekly and on
   demand with a cached NVD database and fails on CVSS >= 7.0, aligned with the pull request
   dependency review gate.
