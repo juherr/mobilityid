@@ -36,8 +36,11 @@ build
 
 # PHP (php/ workspace)
 vendor/
-.phpunit.cache/
-.php-cs-fixer.cache
+php/.phpunit.cache/
+php/.php-cs-fixer.cache
+php/.phpstan.cache/
+php/.rector.cache/
+php/.infection/
 
 # TypeScript (ts/ workspace)
 ts/node_modules/
