@@ -37,6 +37,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Setup JDK ${{ matrix.java-version }}
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
@@ -55,3 +57,18 @@ jobs:
 
       - name: Publish Dry Run
         run: ./gradlew publishToMavenLocal
+
+      - name: Verify release guard wiring
+        run: scripts/verify-release-wiring.sh
+
+      - name: Verify isolated consumer (Java + Kotlin, module path)
+        run: scripts/verify-consumer.sh
+
+      - name: Upload JaCoCo report
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: jacoco-report-jdk-${{ matrix.java-version }}
+          path: java/build/reports/jacoco/test/
+          if-no-files-found: ignore
