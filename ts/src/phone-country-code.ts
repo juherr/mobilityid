@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 
 const PHONE_COUNTRY_CODE_REGEX = /^\+?[0-9]{1,3}$/;
 
@@ -31,7 +32,7 @@ export class PhoneCountryCode {
 
   public static from(raw: string): PhoneCountryCode {
     if (!PhoneCountryCode.isValid(raw)) {
-      throw new TypeError(
+      throw new ValidationError(
         `phone Country Code must start with a '+' sign and be followed by 1-3 digits. (Was: ${raw})`,
       );
     }
@@ -39,12 +40,13 @@ export class PhoneCountryCode {
     return new PhoneCountryCode(raw);
   }
 
+  public static tryParse(raw: string): ParseResult<PhoneCountryCode> {
+    return attempt(() => PhoneCountryCode.from(raw));
+  }
+
   public static parse(raw: string): PhoneCountryCode | null {
-    try {
-      return PhoneCountryCode.from(raw);
-    } catch {
-      return null;
-    }
+    const result = PhoneCountryCode.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {

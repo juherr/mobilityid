@@ -82,7 +82,16 @@ All source files carry the same Apache 2.0 header, enforced per workspace (sbt-h
 golangci-lint `goheader`, php-cs-fixer, Oxlint header plugin). Each workspace `AGENTS.md` gives the
 validate/apply commands; CI fails on a missing header.
 
-**License header format** (identical in every language):
+**Provenance.** `scala/core` is the modified New Motion code and keeps the 2014 notice (first
+header line, `scala/build.sbt`). `ts/` is a port inspired by the Scala library and credits Julien
+Herr only, by the maintainer's decision: its header template is `ts/license-header.txt`, its
+`README.md` states the inspiration, and `ts/scripts/tests/header-policy.test.sh` proves the gate
+rejects any other copyright line. `java/`, `go/` and `php/` currently keep both lines. Root
+`LICENSE` is the full Apache 2.0 text; root `NOTICE` lists the workspaces and which notice
+applies to each. Packaged artifacts ship the full license text (`ts/LICENSE`) plus a `NOTICE`
+with the copyright line, asserted by `scripts/verify-npm-package.sh`.
+
+**License header format** (`scala/`, `java/`, `go/`, `php/`; `ts/` omits the 2014 line):
 ```
 Copyright (c) 2014 The New Motion team, and respective contributors
 Copyright (c) 2026 Julien Herr, and respective contributors

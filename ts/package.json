@@ -24,8 +24,6 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -34,7 +32,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "NOTICE"
   ],
   "publishConfig": {
     "access": "public",
@@ -49,16 +48,23 @@
     "build": "vp pack",
     "lint": "vp lint src test",
     "lint:fix": "vp lint --fix src test",
+    "check:headers": "scripts/tests/header-policy.test.sh",
     "format": "vp fmt . --write",
     "format:check": "vp fmt --check",
     "typecheck": "vp check",
-    "test": "vp test",
-    "check": "vp check && vp test && vp pack"
+    "test": "vp test --coverage",
+    "check:shape": "publint --strict && attw --pack . --profile esm-only",
+    "check": "vp check && vp test --coverage && vp pack && bun run check:shape",
+    "check:package": "scripts/verify-package.sh"
   },
   "devDependencies": {
-    "@tony.ganchev/eslint-plugin-header": "^3.4.3",
-    "@types/node": "^24.0.0",
-    "publint": "0.3.24",
-    "vite-plus": "^0.1.16"
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@tony.ganchev/eslint-plugin-header": "3.4.4",
+    "@types/node": "^24.13.4",
+    "@vitest/coverage-v8": "4.1.11",
+    "fast-check": "^4.10.0",
+    "publint": "^0.3.24",
+    "typescript": "^6.0.3",
+    "vite-plus": "0.3.1"
   }
 }

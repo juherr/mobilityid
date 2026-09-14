@@ -1,0 +1,19 @@
+Mobility ID
+https://github.com/juherr/mobilityid
+
+This repository is licensed under the Apache License, Version 2.0 (see LICENSE
+for the full text). It contains five workspaces:
+
+- scala/  The original Mobility ID library (Scala), modified.
+          Copyright (c) 2014 The New Motion team, and respective contributors
+          Copyright (c) 2026 Julien Herr, and respective contributors
+          The original license file is preserved at scala/LICENSE.
+- java/   mobilityid4j, Java port.
+- go/     mobilityid.juherr.dev/go, Go port.
+- php/    juherr/mobility-id, PHP port.
+- ts/     @juherr/mobilityid, TypeScript port, inspired by the Scala library.
+          Copyright (c) 2026 Julien Herr, and respective contributors
+
+The New Motion team is credited for the original Scala implementation
+(scala/). The later ports have their own authors, named in the header of
+each source file and enforced per workspace (see AGENTS.md).

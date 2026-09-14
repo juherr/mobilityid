@@ -1,0 +1,6 @@
+@juherr/mobilityid
+TypeScript port of the Mobility ID library, https://github.com/juherr/mobilityid
+
+Copyright (c) 2026 Julien Herr, and respective contributors
+
+Licensed under the Apache License, Version 2.0; see LICENSE for the full text.

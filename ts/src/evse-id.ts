@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +16,11 @@
 
 import { CountryCode } from "./country-code.js";
 import { OperatorIdDin, OperatorIdIso, type OperatorId } from "./operator-id.js";
+import { type ParseResult, ValidationError, attempt, failure } from "./parse-result.js";
 import { PartyId } from "./party-id.js";
 import { PhoneCountryCode } from "./phone-country-code.js";
 
-type ValidationError = Readonly<{ priority: number; description: string }>;
+type FormatError = Readonly<{ priority: number; description: string }>;
 
 const ISO_COUNTRY_REGEX = /^([A-Za-z]{2})$/;
 const ISO_OPERATOR_REGEX = /^([A-Za-z0-9]{3})$/;
@@ -65,26 +65,22 @@ export class EvseIdIso extends EvseIdBase {
     );
   }
 
-  public static parse(raw: string): EvseIdIso | null {
-    const match = ISO_EVSE_REGEX.exec(raw);
-    if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
-      return null;
-    }
+  public static tryParse(raw: string): ParseResult<EvseIdIso> {
+    return attempt(() => EvseIdIso.parseStrict(raw));
+  }
 
-    try {
-      return createIso(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
-    } catch {
-      return null;
-    }
+  public static parse(raw: string): EvseIdIso | null {
+    const result = EvseIdIso.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public static parseStrict(raw: string): EvseIdIso {
-    const parsed = EvseIdIso.parse(raw);
-    if (parsed === null) {
-      throw new TypeError(`Invalid ISO EVSE ID: ${raw}`);
+    const match = ISO_EVSE_REGEX.exec(raw);
+    if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
+      throw new ValidationError(`Invalid ISO EVSE ID: ${raw}`);
     }
 
-    return parsed;
+    return createIso(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
   }
 
   public get partyId(): PartyId {
@@ -129,26 +125,22 @@ export class EvseIdDin extends EvseIdBase {
     );
   }
 
-  public static parse(raw: string): EvseIdDin | null {
-    const match = DIN_EVSE_REGEX.exec(raw);
-    if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
-      return null;
-    }
+  public static tryParse(raw: string): ParseResult<EvseIdDin> {
+    return attempt(() => EvseIdDin.parseStrict(raw));
+  }
 
-    try {
-      return createDin(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
-    } catch {
-      return null;
-    }
+  public static parse(raw: string): EvseIdDin | null {
+    const result = EvseIdDin.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public static parseStrict(raw: string): EvseIdDin {
-    const parsed = EvseIdDin.parse(raw);
-    if (parsed === null) {
-      throw new TypeError(`Invalid DIN EVSE ID: ${raw}`);
+    const match = DIN_EVSE_REGEX.exec(raw);
+    if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
+      throw new ValidationError(`Invalid DIN EVSE ID: ${raw}`);
     }
 
-    return parsed;
+    return createDin(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
   }
 
   public toString(): string {
@@ -160,7 +152,7 @@ function validateIso(
   countryCode: string,
   operatorId: string,
   powerOutletId: string,
-): ValidationError | null {
+): FormatError | null {
   if (!ISO_COUNTRY_REGEX.test(countryCode)) {
     return { priority: 1, description: "Invalid countryCode for ISO or DIN format" };
   }
@@ -178,7 +170,7 @@ function validateDin(
   countryCode: string,
   operatorId: string,
   powerOutletId: string,
-): ValidationError | null {
+): FormatError | null {
   if (!DIN_COUNTRY_REGEX.test(countryCode)) {
     return { priority: 1, description: "Invalid countryCode for ISO or DIN format" };
   }
@@ -195,10 +187,9 @@ function validateDin(
 function createIso(countryCode: string, operatorId: string, powerOutletId: string): EvseIdIso {
   const country = CountryCode.from(countryCode);
   const operator = OperatorIdIso.from(operatorId);
-  const normalizedPowerOutletId = powerOutletId.startsWith("E")
-    ? powerOutletId.slice(1)
-    : powerOutletId;
-  return new EvseIdIso(country, operator, normalizedPowerOutletId);
+  // The E type marker is part of the rendering, not of the power outlet id: parsing already
+  // consumed it and a power outlet id given by parts may itself start with E (as in Scala).
+  return new EvseIdIso(country, operator, powerOutletId);
 }
 
 function createDin(countryCode: string, operatorId: string, powerOutletId: string): EvseIdDin {
@@ -227,27 +218,38 @@ export const EvseId = {
     }
 
     if (isoError.priority >= dinError.priority) {
-      throw new TypeError(isoError.description);
+      throw new ValidationError(isoError.description);
     }
 
-    throw new TypeError(dinError.description);
+    throw new ValidationError(dinError.description);
   },
 
-  parse(raw: string): EvseId | null {
-    const iso = EvseIdIso.parse(raw);
-    if (iso !== null) {
+  // ISO is tried first, then DIN; a failure carries both reasons since neither format is implied.
+  tryParse(raw: string): ParseResult<EvseId> {
+    const iso = EvseIdIso.tryParse(raw);
+    if (iso.ok) {
       return iso;
     }
 
-    return EvseIdDin.parse(raw);
+    const din = EvseIdDin.tryParse(raw);
+    if (din.ok) {
+      return din;
+    }
+
+    return failure(`Invalid EVSE ID: ${raw} (ISO: ${iso.error}; DIN: ${din.error})`);
+  },
+
+  parse(raw: string): EvseId | null {
+    const result = EvseId.tryParse(raw);
+    return result.ok ? result.value : null;
   },
 
   parseStrict(raw: string): EvseId {
-    const parsed = this.parse(raw);
-    if (parsed === null) {
-      throw new TypeError(`Invalid EVSE ID: ${raw}`);
+    const result = EvseId.tryParse(raw);
+    if (!result.ok) {
+      throw new ValidationError(result.error);
     }
 
-    return parsed;
+    return result.value;
   },
 };

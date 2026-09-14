@@ -30,8 +30,11 @@ vp exec bun run check
 npm pack --silent --pack-destination "${out_dir}"
 "${repo_root}/scripts/verify-npm-package.sh" "${tarball}" "${version}"
 
-# publint (pinned devDependency, run from the lockfile): exports/main/types consistency of the packed package.
-node_modules/.bin/publint "${tarball}"
+# publint and Are The Types Wrong (pinned devDependencies, run from the lockfile) on the tarball that
+# ships: `exports` consistency, and type resolution from every module system consumers may use
+# (the package is ESM-only, so the CommonJS failures are expected and ignored by the profile).
+node_modules/.bin/publint --strict "${tarball}"
+node_modules/.bin/attw --profile esm-only "${tarball}"
 
 cat > "${consumer}/package.json" <<JSON
 { "name": "mobilityid-consumer-smoke", "private": true, "type": "module" }
@@ -39,27 +42,42 @@ JSON
 npm install --silent --no-audit --no-fund --prefix "${consumer}" "${tarball}"
 
 cat > "${consumer}/smoke.mjs" <<'JS'
-import { ContractId, ContractIdStandards, MobilityIdParsers } from "@juherr/mobilityid";
+import { ContractId, ContractIdStandards, MobilityIdParsers, ValidationError } from "@juherr/mobilityid";
 
 const strict = ContractId.parseStrict(ContractIdStandards.ISO, "NL-TNM-000122045-U");
 if (strict.toCompactString() !== "NLTNM000122045U") throw new Error("unexpected rendering " + strict);
 if (ContractId.parse(ContractIdStandards.ISO, "NL-TNM-000122045-X") !== null) throw new Error("tolerant parser should return null");
+try {
+  ContractId.parseStrict(ContractIdStandards.ISO, "NL-TNM-000122045-X");
+  throw new Error("strict parser should throw");
+} catch (error) {
+  if (!(error instanceof ValidationError) || !(error instanceof TypeError)) throw error;
+}
 const evse = MobilityIdParsers.parseEvseId("+49*810*000*438");
 if (evse === null) throw new Error("expected a DIN EVSE id");
 console.log("@juherr/mobilityid consumer smoke (node): OK", String(strict), String(evse));
 JS
 node "${consumer}/smoke.mjs"
 
-# Type declarations must resolve through `exports` under NodeNext; the tolerant contract is `T | null`.
+# Type declarations must resolve through `exports` under NodeNext; the tolerant contract is `T | null`
+# and `tryParse` is a discriminated union.
 cat > "${consumer}/smoke.ts" <<'TS'
-import { ContractId, ContractIdStandards, type ContractIdStandard } from "@juherr/mobilityid";
+import {
+  ContractId,
+  ContractIdStandards,
+  type ContractIdStandard,
+  type ParseResult,
+} from "@juherr/mobilityid";
 
 const standard: ContractIdStandard = ContractIdStandards.ISO;
 const strict: ContractId = ContractId.parseStrict(standard, "NL-TNM-000122045-U");
 const tolerant: ContractId | null = ContractId.parse(standard, "NL-TNM-000122045-X");
 // @ts-expect-error tolerant parsers are nullable
 const notNull: ContractId = ContractId.parse(standard, "NL-TNM-000122045-X");
-export { strict, tolerant, notNull };
+// The result union narrows on `ok` without a cast.
+const result: ParseResult<ContractId> = ContractId.tryParse(standard, "NL-TNM-000122045-X");
+const outcome: string = result.ok ? result.value.toString() : result.error;
+export { strict, tolerant, notNull, outcome };
 TS
 cat > "${consumer}/tsconfig.json" <<'JSON'
 { "compilerOptions": { "module": "NodeNext", "moduleResolution": "NodeNext", "strict": true, "noEmit": true, "skipLibCheck": false, "types": [] }, "files": ["smoke.ts"] }

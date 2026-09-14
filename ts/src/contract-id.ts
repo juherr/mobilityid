@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +18,7 @@ import { checkDigitDin } from "./check-digit-din.js";
 import { checkDigitIso } from "./check-digit-iso.js";
 import { ContractIdStandards, type ContractIdStandard } from "./contract-id-standard.js";
 import { CountryCode } from "./country-code.js";
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 import { PartyId } from "./party-id.js";
 import { ProviderId } from "./provider-id.js";
 
@@ -88,7 +88,7 @@ export class ContractId {
     const normalizedInstance = instanceValue.toUpperCase();
 
     if (!parser.instanceRegex.test(normalizedInstance)) {
-      throw new TypeError(
+      throw new ValidationError(
         `${instanceValue} is not a valid instance value for ${parser.name} format`,
       );
     }
@@ -97,7 +97,7 @@ export class ContractId {
       `${cc.toString()}${provider.toString()}${normalizedInstance}`,
     );
     if (checkDigit !== undefined && checkDigit.toUpperCase() !== computed) {
-      throw new TypeError(
+      throw new ValidationError(
         `Given check digit '${checkDigit}' is not equal to computed '${computed}'`,
       );
     }
@@ -105,19 +105,20 @@ export class ContractId {
     return new ContractId(standard, cc, provider, normalizedInstance, computed);
   }
 
+  public static tryParse(standard: ContractIdStandard, raw: string): ParseResult<ContractId> {
+    return attempt(() => ContractId.parseStrict(standard, raw));
+  }
+
   public static parse(standard: ContractIdStandard, raw: string): ContractId | null {
-    try {
-      return ContractId.parseStrict(standard, raw);
-    } catch {
-      return null;
-    }
+    const result = ContractId.tryParse(standard, raw);
+    return result.ok ? result.value : null;
   }
 
   public static parseStrict(standard: ContractIdStandard, raw: string): ContractId {
     const parser = parsers[standard];
     const match = parser.fullRegex.exec(raw);
     if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
-      throw new TypeError(`${raw} is not a valid Contract Id for ${parser.name}`);
+      throw new ValidationError(`${raw} is not a valid Contract Id for ${parser.name}`);
     }
 
     const [, country, provider, instance, check] = match;
@@ -152,7 +153,9 @@ export class ContractId {
 
     if (this.standard === ContractIdStandards.EMI3 && targetStandard === ContractIdStandards.DIN) {
       if (!this.instanceValue.startsWith("C0")) {
-        throw new TypeError(`${this.toString()} cannot be converted to ${parsers.DIN.name} format`);
+        throw new ValidationError(
+          `${this.toString()} cannot be converted to ${parsers.DIN.name} format`,
+        );
       }
 
       const dinInstance = this.instanceValue.slice(2, 8);
@@ -168,7 +171,9 @@ export class ContractId {
 
     if (this.standard === ContractIdStandards.ISO && targetStandard === ContractIdStandards.DIN) {
       if (!this.instanceValue.startsWith("00")) {
-        throw new TypeError(`${this.toString()} cannot be converted to ${parsers.DIN.name} format`);
+        throw new ValidationError(
+          `${this.toString()} cannot be converted to ${parsers.DIN.name} format`,
+        );
       }
 
       const dinInstance = this.instanceValue.slice(2, 8);
@@ -211,7 +216,9 @@ export class ContractId {
       );
     }
 
-    throw new TypeError(`It is not possible to convert ${this.standard} to ${targetStandard}`);
+    throw new ValidationError(
+      `It is not possible to convert ${this.standard} to ${targetStandard}`,
+    );
   }
 
   public toString(): string {

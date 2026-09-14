@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +14,7 @@
  * limitations under the License.
  */
 
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 import { isValidPartyCode } from "./provider-id.js";
 
 const OPERATOR_DIN_REGEX = /^[0-9]{3,6}$/;
@@ -33,18 +33,21 @@ export class OperatorIdIso {
 
   public static from(raw: string): OperatorIdIso {
     if (!OperatorIdIso.isValid(raw)) {
-      throw new TypeError("OperatorId must have a length of 3 and be ASCII letters or digits");
+      throw new ValidationError(
+        "OperatorId must have a length of 3 and be ASCII letters or digits",
+      );
     }
 
     return new OperatorIdIso(raw.toUpperCase());
   }
 
+  public static tryParse(raw: string): ParseResult<OperatorIdIso> {
+    return attempt(() => OperatorIdIso.from(raw));
+  }
+
   public static parse(raw: string): OperatorIdIso | null {
-    try {
-      return OperatorIdIso.from(raw);
-    } catch {
-      return null;
-    }
+    const result = OperatorIdIso.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {
@@ -66,18 +69,19 @@ export class OperatorIdDin {
 
   public static from(raw: string): OperatorIdDin {
     if (!OperatorIdDin.isValid(raw)) {
-      throw new TypeError("OperatorId must have a length of 3-6 chars and be digits");
+      throw new ValidationError("OperatorId must have a length of 3-6 chars and be digits");
     }
 
     return new OperatorIdDin(raw.toUpperCase());
   }
 
+  public static tryParse(raw: string): ParseResult<OperatorIdDin> {
+    return attempt(() => OperatorIdDin.from(raw));
+  }
+
   public static parse(raw: string): OperatorIdDin | null {
-    try {
-      return OperatorIdDin.from(raw);
-    } catch {
-      return null;
-    }
+    const result = OperatorIdDin.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {

@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +26,23 @@ describe("MobilityIdParsers", () => {
       "NL-TNM-000122045-U",
     );
     expect(MobilityIdParsers.parseEvseId("DE*AB7*E840*6487")?.toString()).toBe("DE*AB7*E840*6487");
+  });
+
+  it("covers every identifier", () => {
+    expect(MobilityIdParsers.parsePhoneCountryCode("+31")?.toString()).toBe("+31");
+    expect(MobilityIdParsers.parseOperatorIdIso("TNM")?.toString()).toBe("TNM");
+    expect(MobilityIdParsers.parseOperatorIdDin("456")?.toString()).toBe("456");
+    expect(MobilityIdParsers.parsePartyId("NL*TNM")?.toString()).toBe("NL-TNM");
+    expect(MobilityIdParsers.parseContractIdDin("NL-TNM-722345-8")?.toString()).toBe(
+      "NL-TNM-722345-8",
+    );
+    expect(MobilityIdParsers.parseContractIdEmi3("NL-TNM-C00722345-N")?.toString()).toBe(
+      "NL-TNM-C00722345-N",
+    );
+    expect(MobilityIdParsers.parseEvseIdIso("NL*TNM*E840*6487")?.toString()).toBe(
+      "NL*TNM*E840*6487",
+    );
+    expect(MobilityIdParsers.parseEvseIdDin("+49*810*000*438")?.toString()).toBe("+49*810*000*438");
   });
 
   it("returns null on invalid values", () => {

@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +19,7 @@ import { ContractIdStandards } from "./contract-id-standard.js";
 import { CountryCode } from "./country-code.js";
 import { EvseId, EvseIdDin, EvseIdIso } from "./evse-id.js";
 import { OperatorIdDin, OperatorIdIso } from "./operator-id.js";
+import type { ParseResult } from "./parse-result.js";
 import { PartyId } from "./party-id.js";
 import { PhoneCountryCode } from "./phone-country-code.js";
 import { ProviderId } from "./provider-id.js";
@@ -71,5 +71,53 @@ export const MobilityIdParsers = {
 
   parseEvseIdDin(raw: string): EvseIdDin | null {
     return EvseIdDin.parse(raw);
+  },
+
+  tryParseCountryCode(raw: string): ParseResult<CountryCode> {
+    return CountryCode.tryParse(raw);
+  },
+
+  tryParsePhoneCountryCode(raw: string): ParseResult<PhoneCountryCode> {
+    return PhoneCountryCode.tryParse(raw);
+  },
+
+  tryParseProviderId(raw: string): ParseResult<ProviderId> {
+    return ProviderId.tryParse(raw);
+  },
+
+  tryParseOperatorIdIso(raw: string): ParseResult<OperatorIdIso> {
+    return OperatorIdIso.tryParse(raw);
+  },
+
+  tryParseOperatorIdDin(raw: string): ParseResult<OperatorIdDin> {
+    return OperatorIdDin.tryParse(raw);
+  },
+
+  tryParsePartyId(raw: string): ParseResult<PartyId> {
+    return PartyId.tryParse(raw);
+  },
+
+  tryParseContractIdIso(raw: string): ParseResult<ContractId> {
+    return ContractId.tryParse(ContractIdStandards.ISO, raw);
+  },
+
+  tryParseContractIdDin(raw: string): ParseResult<ContractId> {
+    return ContractId.tryParse(ContractIdStandards.DIN, raw);
+  },
+
+  tryParseContractIdEmi3(raw: string): ParseResult<ContractId> {
+    return ContractId.tryParse(ContractIdStandards.EMI3, raw);
+  },
+
+  tryParseEvseId(raw: string): ParseResult<EvseId> {
+    return EvseId.tryParse(raw);
+  },
+
+  tryParseEvseIdIso(raw: string): ParseResult<EvseIdIso> {
+    return EvseIdIso.tryParse(raw);
+  },
+
+  tryParseEvseIdDin(raw: string): ParseResult<EvseIdDin> {
+    return EvseIdDin.tryParse(raw);
   },
 };

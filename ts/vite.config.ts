@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +17,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { defineConfig } from "vite-plus";
+import { defineConfig, type UserConfig } from "vite-plus";
 
+// Every TypeScript file carries the header from license-header.txt (Julien Herr only; root
+// AGENTS.md "Provenance").
 const canonicalHeader = readFileSync(
   path.resolve(import.meta.dirname, "license-header.txt"),
   "utf8",
@@ -28,7 +29,8 @@ const canonicalHeader = readFileSync(
   .trimEnd();
 const blockHeaderLines = `\n${canonicalHeader.split("\n").slice(1, -1).join("\n")}\n `;
 
-export default defineConfig({
+// Explicit type: `isolatedDeclarations` refuses an inferred default export.
+const config: UserConfig = defineConfig({
   fmt: {
     // Markdown is left to editors: the macOS and Linux oxfmt binaries disagree on the final newline.
     ignorePatterns: ["dist/**", "bun.lock", "**/*.md"],
@@ -66,6 +68,15 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
+      include: ["src/**/*.ts"],
+      // Enforced by `vp test --coverage` (bun run test, bun run check, CI); a filtered run
+      // (`vp test ContractId`) skips coverage on purpose.
+      thresholds: {
+        statements: 90,
+        branches: 85,
+        functions: 90,
+        lines: 90,
+      },
     },
   },
   pack: {
@@ -81,3 +92,5 @@ export default defineConfig({
     clean: true,
   },
 });
+
+export default config;

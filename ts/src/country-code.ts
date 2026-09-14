@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 
 const COUNTRY_CODE_REGEX = /^[A-Za-z]{2}$/;
 
@@ -39,18 +40,19 @@ export class CountryCode {
 
   public static from(raw: string): CountryCode {
     if (!CountryCode.isValid(raw)) {
-      throw new TypeError("Country Code must be valid according to ISO 3166-1 alpha-2");
+      throw new ValidationError("Country Code must be valid according to ISO 3166-1 alpha-2");
     }
 
     return new CountryCode(raw.toUpperCase());
   }
 
+  public static tryParse(raw: string): ParseResult<CountryCode> {
+    return attempt(() => CountryCode.from(raw));
+  }
+
   public static parse(raw: string): CountryCode | null {
-    try {
-      return CountryCode.from(raw);
-    } catch {
-      return null;
-    }
+    const result = CountryCode.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {

@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 
 const PARTY_CODE_REGEX = /^[A-Za-z0-9]{3}$/;
 
@@ -35,18 +36,21 @@ export class ProviderId {
 
   public static from(raw: string): ProviderId {
     if (!ProviderId.isValid(raw)) {
-      throw new TypeError("OperatorId must have a length of 3 and be ASCII letters or digits");
+      throw new ValidationError(
+        "OperatorId must have a length of 3 and be ASCII letters or digits",
+      );
     }
 
     return new ProviderId(raw.toUpperCase());
   }
 
+  public static tryParse(raw: string): ParseResult<ProviderId> {
+    return attempt(() => ProviderId.from(raw));
+  }
+
   public static parse(raw: string): ProviderId | null {
-    try {
-      return ProviderId.from(raw);
-    } catch {
-      return null;
-    }
+    const result = ProviderId.tryParse(raw);
+    return result.ok ? result.value : null;
   }
 
   public toString(): string {

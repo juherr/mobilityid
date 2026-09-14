@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import { ValidationError } from "./parse-result.js";
 
 const values = new Map<string, number>();
 
@@ -30,7 +31,7 @@ export function checkDigitDin(code: string): string {
   const lookup = Array.from(normalized, (char) => {
     const value = values.get(char);
     if (value === undefined) {
-      throw new TypeError(
+      throw new ValidationError(
         `invalid character '${char}' in code '${code}'; must consist of uppercase ASCII letters and digits`,
       );
     }

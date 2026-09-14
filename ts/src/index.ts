@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +22,7 @@ export { CountryCode } from "./country-code.js";
 export { EvseId, EvseIdDin, EvseIdIso, type EvseId as EvseIdValue } from "./evse-id.js";
 export { MobilityIdParsers } from "./parsers.js";
 export { OperatorIdDin, OperatorIdIso, type OperatorId } from "./operator-id.js";
+export { ValidationError, type ParseResult } from "./parse-result.js";
 export { PartyId } from "./party-id.js";
 export { PhoneCountryCode } from "./phone-country-code.js";
 export { ProviderId } from "./provider-id.js";
