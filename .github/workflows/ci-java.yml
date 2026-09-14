@@ -61,7 +61,7 @@ jobs:
       - name: Verify release guard wiring
         run: scripts/verify-release-wiring.sh
 
-      - name: Verify isolated consumer (Java + Kotlin, module path)
+      - name: Verify isolated consumer (Java on the module path, Kotlin on the classpath)
         run: scripts/verify-consumer.sh
 
       - name: Upload JaCoCo report

@@ -27,8 +27,8 @@ which requires a dated section for the version below and a matching file in
 
 - **Java:** jqwik property-based suites for check digits and contract-id round trips; JaCoCo
   coverage gates (90 % lines, 80 % branches); japicmp API-compatibility check against the last
-  published release; isolated Java + Kotlin consumer smoke on the module path
-  (`java/scripts/verify-consumer.sh`); `java/scripts/verify.sh` as the single verification entry
+  published release; isolated consumer smoke consuming the published artifact from Java on the
+  module path and from Kotlin (classpath, strict JSpecify) (`java/scripts/verify-consumer.sh`); `java/scripts/verify.sh` as the single verification entry
   point.
 - **Repository:** workflow linting (actionlint, zizmor), Codecov diff coverage on pull requests
-  (Java flag first), tested release scripts (`scripts/tests`), `CONTRIBUTING.md`, this changelog.
+  (Java flag first), tested release scripts (`scripts/tests`: version validation, Central resolution check, npm tarball content), `CONTRIBUTING.md`, this changelog.

@@ -67,14 +67,30 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: maven-central
     defaults:
       run:
         working-directory: java
     steps:
+
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+
+      - name: Check Maven Central credentials and signing inputs
+        shell: bash
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_TOKEN: ${{ secrets.CENTRAL_TOKEN }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "${CENTRAL_USERNAME}"
+          test -n "${CENTRAL_TOKEN}"
+          test -n "${GPG_PRIVATE_KEY}"
+          test -n "${GPG_PASSPHRASE}"
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
@@ -98,6 +114,7 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: npm
     defaults:
       run:
         working-directory: ts
@@ -107,6 +124,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Check npm credentials
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: test -n "${NPM_TOKEN}"
+
       - name: Setup Vite+ and Node 24
         uses: voidzero-dev/setup-vp@237a7eda494c3466dcb53e9f067142b9218d64a1 # v1
         with:
@@ -114,8 +137,27 @@ jobs:
           cache: false
           working-directory: ts
 
-      - name: Validate package
+      - name: Set release version
+        run: vp exec bun pm pkg set version="${RELEASE_VERSION}"
+
+      - name: Validate and build package
         run: vp exec bun run check
+
+      - name: Pack and verify the tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/npm-package"
+          npm pack --silent --pack-destination "${RUNNER_TEMP}/npm-package"
+          ../scripts/verify-npm-package.sh "${RUNNER_TEMP}/npm-package/juherr-mobilityid-${RELEASE_VERSION}.tgz" "${RELEASE_VERSION}"
+
+      - name: Upload the verified tarball
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/npm-package/juherr-mobilityid-${{ inputs.version }}.tgz
+          if-no-files-found: error
+          retention-days: 7
 
   release-java:
     name: Release Java to Maven Central
@@ -153,15 +195,6 @@ jobs:
         with:
           # No cache in a publishing workflow (zizmor cache-poisoning).
           cache-disabled: true
-
-      - name: Check release inputs
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "${MAVEN_CENTRAL_USERNAME}"
-          test -n "${MAVEN_CENTRAL_PASSWORD}"
-          test -n "${SIGNING_KEY}"
-          test -n "${SIGNING_PASSWORD}"
 
       - name: Publish to Maven Central
         shell: bash
@@ -201,47 +234,42 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: npm
-    defaults:
-      run:
-        working-directory: ts
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
-      - name: Setup Vite+ and Node 24
-        uses: voidzero-dev/setup-vp@237a7eda494c3466dcb53e9f067142b9218d64a1 # v1
+      - name: Setup Node 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "24"
-          # No cache in a publishing workflow (zizmor cache-poisoning).
-          cache: false
-          working-directory: ts
           registry-url: "https://registry.npmjs.org"
 
-      - name: Check release inputs
-        shell: bash
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: test -n "${NPM_TOKEN}"
+      - name: Download the verified tarball
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/npm-package
 
-      - name: Publish to npm
+      - name: Publish the verified tarball to npm
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          tarball="${RUNNER_TEMP}/npm-package/juherr-mobilityid-${RELEASE_VERSION}.tgz"
+          scripts/verify-npm-package.sh "${tarball}" "${RELEASE_VERSION}"
           if npm view "@juherr/mobilityid@${RELEASE_VERSION}" version >/dev/null 2>&1; then
             echo "@juherr/mobilityid@${RELEASE_VERSION} is already on npm; skipping publish."
             exit 0
           fi
-          vp exec bun pm pkg set version="${RELEASE_VERSION}"
           if [[ "${RELEASE_VERSION}" == *-* ]]; then
             npm_tag="next"
           else
             npm_tag="latest"
           fi
-          vp exec bun publish --access public --tag "${npm_tag}"
+          npm publish "${tarball}" --access public --tag "${npm_tag}"
 
   finalize:
     name: Tag and create GitHub Release

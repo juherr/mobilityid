@@ -56,11 +56,14 @@ Java (Maven Central) and TypeScript (npm) are released together by the manually 
    and adds `.github/release-notes/X.Y.Z.md`.
 2. Dispatch `Release` from `main` with `version = X.Y.Z`. It validates the version with
    `scripts/validate-release-version.sh` (strict SemVer, no `v`, no build metadata, no
-   SNAPSHOT: the same rules for Maven Central, npm and the git tag), runs the Java
-   and TypeScript preflights (`java/scripts/verify.sh`, `bun run check`) and only when **both**
-   pass publishes each registry idempotently (an already published version is skipped), waits
-   until Maven Central resolves the artifacts, then creates the signed `vX.Y.Z` tag and the
-   GitHub Release. A failing preflight leaves every registry untouched.
+   SNAPSHOT: the same rules for Maven Central, npm and the git tag), then runs the preflights:
+   Java (`java/scripts/verify.sh`) and TypeScript (`bun run check`, `npm pack`, tarball checked
+   by `scripts/verify-npm-package.sh` and uploaded as an artifact), each also asserting that
+   its registry credentials are present. Only when **both** pass does it publish, idempotently
+   (an already published version is skipped): Java through nmcp, TypeScript by publishing the
+   exact verified tarball. It then waits until Maven Central resolves the artifacts and creates
+   the signed `vX.Y.Z` tag and the GitHub Release. A failing preflight, including a missing
+   secret, leaves every registry untouched.
 3. Re-run a failed run with `gh run rerun <run-id> --failed` rather than dispatching again, so the
    tag still points at the commit that produced the published artifacts.
 
