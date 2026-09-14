@@ -31,4 +31,4 @@ which requires a dated section for the version below and a matching file in
   (`java/scripts/verify-consumer.sh`); `java/scripts/verify.sh` as the single verification entry
   point.
 - **Repository:** workflow linting (actionlint, zizmor), Codecov diff coverage on pull requests
-  (Java flag first), `CONTRIBUTING.md`, this changelog.
+  (Java flag first), tested release scripts (`scripts/tests`), `CONTRIBUTING.md`, this changelog.
