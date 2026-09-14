@@ -42,11 +42,17 @@ JSON
 npm install --silent --no-audit --no-fund --prefix "${consumer}" "${tarball}"
 
 cat > "${consumer}/smoke.mjs" <<'JS'
-import { ContractId, ContractIdStandards, MobilityIdParsers } from "@juherr/mobilityid";
+import { ContractId, ContractIdStandards, MobilityIdParsers, ValidationError } from "@juherr/mobilityid";
 
 const strict = ContractId.parseStrict(ContractIdStandards.ISO, "NL-TNM-000122045-U");
 if (strict.toCompactString() !== "NLTNM000122045U") throw new Error("unexpected rendering " + strict);
 if (ContractId.parse(ContractIdStandards.ISO, "NL-TNM-000122045-X") !== null) throw new Error("tolerant parser should return null");
+try {
+  ContractId.parseStrict(ContractIdStandards.ISO, "NL-TNM-000122045-X");
+  throw new Error("strict parser should throw");
+} catch (error) {
+  if (!(error instanceof ValidationError) || !(error instanceof TypeError)) throw error;
+}
 const evse = MobilityIdParsers.parseEvseId("+49*810*000*438");
 if (evse === null) throw new Error("expected a DIN EVSE id");
 console.log("@juherr/mobilityid consumer smoke (node): OK", String(strict), String(evse));

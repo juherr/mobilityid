@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { attempt, type ParseResult } from "./parse-result.js";
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 
 const COUNTRY_CODE_REGEX = /^[A-Za-z]{2}$/;
 
@@ -40,7 +40,7 @@ export class CountryCode {
 
   public static from(raw: string): CountryCode {
     if (!CountryCode.isValid(raw)) {
-      throw new TypeError("Country Code must be valid according to ISO 3166-1 alpha-2");
+      throw new ValidationError("Country Code must be valid according to ISO 3166-1 alpha-2");
     }
 
     return new CountryCode(raw.toUpperCase());

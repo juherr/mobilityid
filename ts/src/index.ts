@@ -22,7 +22,7 @@ export { CountryCode } from "./country-code.js";
 export { EvseId, EvseIdDin, EvseIdIso, type EvseId as EvseIdValue } from "./evse-id.js";
 export { MobilityIdParsers } from "./parsers.js";
 export { OperatorIdDin, OperatorIdIso, type OperatorId } from "./operator-id.js";
-export type { ParseResult } from "./parse-result.js";
+export { ValidationError, type ParseResult } from "./parse-result.js";
 export { PartyId } from "./party-id.js";
 export { PhoneCountryCode } from "./phone-country-code.js";
 export { ProviderId } from "./provider-id.js";

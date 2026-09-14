@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +18,8 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  checkDigitDin,
+  checkDigitIso,
   ContractId,
   ContractIdStandards,
   CountryCode,
@@ -29,6 +32,7 @@ import {
   PartyId,
   PhoneCountryCode,
   ProviderId,
+  ValidationError,
   type ParseResult,
 } from "../src/index.js";
 import { attempt } from "../src/parse-result.js";
@@ -118,12 +122,36 @@ describe("tryParse", () => {
     );
   });
 
-  it("only captures TypeError: anything else is a bug and keeps propagating", () => {
+  it("only captures ValidationError: any other error is a bug and keeps propagating", () => {
     expect(() =>
       attempt(() => {
         throw new RangeError("not an invalid input");
       }),
     ).toThrow(RangeError);
+    // A native TypeError from a programming mistake must not become a failure result.
+    const broken = null as unknown as { value: string };
+    expect(() => attempt(() => broken.value.length)).toThrow(TypeError);
+    expect(() =>
+      attempt(() => {
+        throw new TypeError("plain TypeError, not a validation failure");
+      }),
+    ).toThrow(TypeError);
+  });
+
+  it("strict parsers throw ValidationError, which is still a TypeError", () => {
+    for (const strict of [
+      () => CountryCode.from("ZZ"),
+      () => ContractId.parseStrict(ContractIdStandards.ISO, "NL-TNM-000122045-X"),
+      () => EvseId.parseStrict("NL*TNM*840*6487"),
+      () => checkDigitIso(""),
+      () => checkDigitDin("é"),
+    ]) {
+      expect(strict).toThrow(ValidationError);
+      expect(strict).toThrow(TypeError);
+    }
+    const error = attempt(() => CountryCode.from("ZZ"));
+    expect(error.ok).toBe(false);
+    expect(new ValidationError("x").name).toBe("ValidationError");
   });
 
   it("is frozen, like the domain objects", () => {

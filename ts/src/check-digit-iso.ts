@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { ValidationError } from "./parse-result.js";
+
 type Matrix = Readonly<{ m11: number; m12: number; m21: number; m22: number }>;
 type Vec = Readonly<{ v1: number; v2: number }>;
 
@@ -114,11 +116,11 @@ export function checkDigitIso(code: string): string {
   const normalized = code.toUpperCase();
 
   if (normalized.length !== p1s.length || normalized.length !== p2s.length) {
-    throw new TypeError(`Code must have a length of ${p1s.length}`);
+    throw new ValidationError(`Code must have a length of ${p1s.length}`);
   }
 
   if (!checkDigitInputRegex.test(normalized)) {
-    throw new TypeError("Code must consist of uppercase ASCII letters and digits");
+    throw new ValidationError("Code must consist of uppercase ASCII letters and digits");
   }
 
   const sumEq = (matrices: Matrix[], toVec: (matrix: Matrix) => Vec): Vec => {
@@ -128,12 +130,12 @@ export function checkDigitIso(code: string): string {
       const character = normalized.charAt(index);
       const matrix = encoding.get(character);
       if (!matrix) {
-        throw new TypeError(`Invalid character: ${character}.`);
+        throw new ValidationError(`Invalid character: ${character}.`);
       }
 
       const positionMatrix = matrices[index];
       if (!positionMatrix) {
-        throw new TypeError(`Missing matrix at index: ${index}.`);
+        throw new Error(`Missing matrix at index: ${index}.`);
       }
 
       const qr = toVec(matrix);
@@ -158,7 +160,7 @@ export function checkDigitIso(code: string): string {
 
   const decoded = decoding.get(matrixKey(m15));
   if (!decoded) {
-    throw new TypeError(`Undecodable matrix: ${matrixKey(m15)}.`);
+    throw new Error(`Undecodable matrix: ${matrixKey(m15)}.`);
   }
 
   return decoded;

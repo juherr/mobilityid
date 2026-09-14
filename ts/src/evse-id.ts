@@ -16,11 +16,11 @@
 
 import { CountryCode } from "./country-code.js";
 import { OperatorIdDin, OperatorIdIso, type OperatorId } from "./operator-id.js";
-import { attempt, failure, type ParseResult } from "./parse-result.js";
+import { type ParseResult, ValidationError, attempt, failure } from "./parse-result.js";
 import { PartyId } from "./party-id.js";
 import { PhoneCountryCode } from "./phone-country-code.js";
 
-type ValidationError = Readonly<{ priority: number; description: string }>;
+type FormatError = Readonly<{ priority: number; description: string }>;
 
 const ISO_COUNTRY_REGEX = /^([A-Za-z]{2})$/;
 const ISO_OPERATOR_REGEX = /^([A-Za-z0-9]{3})$/;
@@ -77,7 +77,7 @@ export class EvseIdIso extends EvseIdBase {
   public static parseStrict(raw: string): EvseIdIso {
     const match = ISO_EVSE_REGEX.exec(raw);
     if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
-      throw new TypeError(`Invalid ISO EVSE ID: ${raw}`);
+      throw new ValidationError(`Invalid ISO EVSE ID: ${raw}`);
     }
 
     return createIso(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
@@ -137,7 +137,7 @@ export class EvseIdDin extends EvseIdBase {
   public static parseStrict(raw: string): EvseIdDin {
     const match = DIN_EVSE_REGEX.exec(raw);
     if (!match || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
-      throw new TypeError(`Invalid DIN EVSE ID: ${raw}`);
+      throw new ValidationError(`Invalid DIN EVSE ID: ${raw}`);
     }
 
     return createDin(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
@@ -152,7 +152,7 @@ function validateIso(
   countryCode: string,
   operatorId: string,
   powerOutletId: string,
-): ValidationError | null {
+): FormatError | null {
   if (!ISO_COUNTRY_REGEX.test(countryCode)) {
     return { priority: 1, description: "Invalid countryCode for ISO or DIN format" };
   }
@@ -170,7 +170,7 @@ function validateDin(
   countryCode: string,
   operatorId: string,
   powerOutletId: string,
-): ValidationError | null {
+): FormatError | null {
   if (!DIN_COUNTRY_REGEX.test(countryCode)) {
     return { priority: 1, description: "Invalid countryCode for ISO or DIN format" };
   }
@@ -218,10 +218,10 @@ export const EvseId = {
     }
 
     if (isoError.priority >= dinError.priority) {
-      throw new TypeError(isoError.description);
+      throw new ValidationError(isoError.description);
     }
 
-    throw new TypeError(dinError.description);
+    throw new ValidationError(dinError.description);
   },
 
   // ISO is tried first, then DIN; a failure carries both reasons since neither format is implied.
@@ -247,7 +247,7 @@ export const EvseId = {
   parseStrict(raw: string): EvseId {
     const result = EvseId.tryParse(raw);
     if (!result.ok) {
-      throw new TypeError(result.error);
+      throw new ValidationError(result.error);
     }
 
     return result.value;

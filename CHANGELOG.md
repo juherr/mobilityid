@@ -12,7 +12,9 @@ which requires a dated section for the version below and a matching file in
 
 - **TypeScript:** `tryParse` on every identifier and in `MobilityIdParsers`, returning a
   `ParseResult<T>` (`{ ok: true, value }` or `{ ok: false, error }`) so callers get the failure
-  reason without exceptions; `parse` and `parseStrict` are unchanged.
+  reason without exceptions.
+- **TypeScript:** `ValidationError`, thrown by every strict factory and parser on invalid input.
+  It extends `TypeError`, so existing `instanceof TypeError` checks still hold.
 
 ### Fixed
 
@@ -29,6 +31,11 @@ which requires a dated section for the version below and a matching file in
   `LICENSE` is only the short header or `NOTICE` lacks the copyright line.
 - **Repository:** root `LICENSE` is the full Apache 2.0 text; the workspace list and which
   copyright notice applies to each move to `NOTICE`.
+- **TypeScript:** `parse` is now derived from `tryParse`: it returns `null` for a
+  `ValidationError` only, so an unexpected exception inside a parser (a bug) propagates instead
+  of being reported as an invalid input. `EvseId.parseStrict` and `EvseId.tryParse` report both
+  reasons when a value is neither ISO nor DIN (`Invalid EVSE ID: … (ISO: …; DIN: …)`), where
+  `parseStrict` used to say only `Invalid EVSE ID: …`.
 - **TypeScript:** ESM-only package resolved through `exports` alone (the legacy `main`/`types`
   fields are gone; Node >= 22 was already required); the published shape is checked by
   `publint --strict` and Are The Types Wrong; stricter `tsconfig` (`verbatimModuleSyntax`,

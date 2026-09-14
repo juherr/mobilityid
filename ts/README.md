@@ -43,7 +43,9 @@ same test fixtures, written for TypeScript.
 ## API design
 
 - Tolerant parsing methods return `T | null`.
-- Strict factories/parsers throw `TypeError` when inputs are invalid.
+- Strict factories/parsers throw `ValidationError` when inputs are invalid. It extends
+  `TypeError`, so `catch (e) { if (e instanceof TypeError) … }` keeps working; `instanceof
+  ValidationError` is the precise check.
 - `tryParse` returns a `ParseResult<T>`, a frozen discriminated union carrying either the value or
   the message the strict parser would throw, so callers get the reason without exceptions:
 
@@ -59,7 +61,9 @@ same test fixtures, written for TypeScript.
   MobilityIdParsers.tryParseEvseId("NL*TNM*840*6487").ok; // false, with both ISO and DIN reasons
   ```
 
-  `parse` is derived from `tryParse`, so the three entry points share one validation path.
+  `parse` is derived from `tryParse`, so the three entry points share one validation path. Only
+  `ValidationError` is turned into a failure or `null`: any other exception (a plain `TypeError`
+  from a programming mistake included) is a bug and propagates through all three entry points.
 - Domain objects are immutable (`readonly` and frozen instances).
 - Canonical rendering is preserved (`toString()`, compact rendering helpers).
 

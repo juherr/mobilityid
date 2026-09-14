@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Thrown by the strict factories and parsers when the input is not a valid identifier. It extends
+ * `TypeError` for compatibility with callers that catch `TypeError`; `attempt` captures exactly
+ * this class so that a genuine programming `TypeError` (`undefined is not a function`) is never
+ * mistaken for an invalid input.
+ */
+export class ValidationError extends TypeError {
+  public constructor(message: string) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
 
 /**
  * Outcome of a `tryParse` call: the parsed value, or the reason the strict parser would have
@@ -31,14 +45,14 @@ export function failure<T>(error: string): ParseResult<T> {
 }
 
 /**
- * Runs a strict parser and captures its `TypeError` as a failure. Any other error is a bug, not an
- * invalid input, and keeps propagating.
+ * Runs a strict parser and captures its `ValidationError` as a failure. Any other error, a plain
+ * `TypeError` included, is a bug rather than an invalid input and keeps propagating.
  */
 export function attempt<T>(parse: () => T): ParseResult<T> {
   try {
     return success(parse());
   } catch (error) {
-    if (error instanceof TypeError) {
+    if (error instanceof ValidationError) {
       return failure(error.message);
     }
     throw error;

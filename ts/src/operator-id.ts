@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { attempt, type ParseResult } from "./parse-result.js";
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 import { isValidPartyCode } from "./provider-id.js";
 
 const OPERATOR_DIN_REGEX = /^[0-9]{3,6}$/;
@@ -33,7 +33,9 @@ export class OperatorIdIso {
 
   public static from(raw: string): OperatorIdIso {
     if (!OperatorIdIso.isValid(raw)) {
-      throw new TypeError("OperatorId must have a length of 3 and be ASCII letters or digits");
+      throw new ValidationError(
+        "OperatorId must have a length of 3 and be ASCII letters or digits",
+      );
     }
 
     return new OperatorIdIso(raw.toUpperCase());
@@ -67,7 +69,7 @@ export class OperatorIdDin {
 
   public static from(raw: string): OperatorIdDin {
     if (!OperatorIdDin.isValid(raw)) {
-      throw new TypeError("OperatorId must have a length of 3-6 chars and be digits");
+      throw new ValidationError("OperatorId must have a length of 3-6 chars and be digits");
     }
 
     return new OperatorIdDin(raw.toUpperCase());

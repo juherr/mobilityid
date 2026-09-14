@@ -16,7 +16,7 @@
 
 import { CountryCode } from "./country-code.js";
 import type { OperatorIdIso } from "./operator-id.js";
-import { attempt, type ParseResult } from "./parse-result.js";
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 import { ProviderId } from "./provider-id.js";
 
 const PARTY_ID_REGEX = /^([A-Za-z]{2})[-*]?([A-Za-z0-9]{3})$/;
@@ -45,7 +45,7 @@ export class PartyId {
     const country = match?.[1];
     const party = match?.[2];
     if (country === undefined || party === undefined) {
-      throw new TypeError(`Invalid party ID: ${raw}`);
+      throw new ValidationError(`Invalid party ID: ${raw}`);
     }
 
     const countryCode = CountryCode.from(country);

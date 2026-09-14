@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +32,7 @@ import {
   PartyId,
   PhoneCountryCode,
   ProviderId,
+  ValidationError,
   type ContractIdStandard,
   type ParseResult,
 } from "../src/index.js";
@@ -307,7 +309,7 @@ describe("parse, parseStrict and tryParse agree on any input", () => {
             expect(String(result.value)).not.toBe("");
           } else {
             expect(parse(raw)).toBeNull();
-            expect(() => strict(raw)).toThrow(new TypeError(result.error));
+            expect(() => strict(raw)).toThrow(new ValidationError(result.error));
           }
         }),
       );

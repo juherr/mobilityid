@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { ValidationError } from "./parse-result.js";
+
 const values = new Map<string, number>();
 
 for (let index = 0; index <= 9; index += 1) {
@@ -29,7 +31,7 @@ export function checkDigitDin(code: string): string {
   const lookup = Array.from(normalized, (char) => {
     const value = values.get(char);
     if (value === undefined) {
-      throw new TypeError(
+      throw new ValidationError(
         `invalid character '${char}' in code '${code}'; must consist of uppercase ASCII letters and digits`,
       );
     }

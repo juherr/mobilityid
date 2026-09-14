@@ -41,9 +41,11 @@ command below from `ts/`.
 ## Code Style
 
 - Three parsing entry points per identifier, sharing one validation path: strict
-  (`from`/`parseStrict`, throws `TypeError`), `tryParse` (`ParseResult<T>`, frozen
-  `{ ok: true, value } | { ok: false, error }` with the strict message) and tolerant `parse`
-  (`T | null`, derived from `tryParse`). Mirror all three in `MobilityIdParsers`.
+  (`from`/`parseStrict`, throws `ValidationError`, a `TypeError` subclass from
+  `parse-result.ts`; never throw a bare `TypeError` for invalid input), `tryParse`
+  (`ParseResult<T>`, frozen `{ ok: true, value } | { ok: false, error }` with the strict message)
+  and tolerant `parse` (`T | null`, derived from `tryParse`). Only `ValidationError` is captured;
+  anything else propagates. Mirror all three in `MobilityIdParsers`.
 - Domain objects are immutable (`readonly`, frozen); canonical `toString()` plus compact
   rendering helpers.
 - ESM only with `.js` extensions in relative imports (`./parsers.js`).

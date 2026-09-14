@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { attempt, type ParseResult } from "./parse-result.js";
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 
 const PARTY_CODE_REGEX = /^[A-Za-z0-9]{3}$/;
 
@@ -36,7 +36,9 @@ export class ProviderId {
 
   public static from(raw: string): ProviderId {
     if (!ProviderId.isValid(raw)) {
-      throw new TypeError("OperatorId must have a length of 3 and be ASCII letters or digits");
+      throw new ValidationError(
+        "OperatorId must have a length of 3 and be ASCII letters or digits",
+      );
     }
 
     return new ProviderId(raw.toUpperCase());

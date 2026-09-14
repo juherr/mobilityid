@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { attempt, type ParseResult } from "./parse-result.js";
+import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
 
 const PHONE_COUNTRY_CODE_REGEX = /^\+?[0-9]{1,3}$/;
 
@@ -32,7 +32,7 @@ export class PhoneCountryCode {
 
   public static from(raw: string): PhoneCountryCode {
     if (!PhoneCountryCode.isValid(raw)) {
-      throw new TypeError(
+      throw new ValidationError(
         `phone Country Code must start with a '+' sign and be followed by 1-3 digits. (Was: ${raw})`,
       );
     }
