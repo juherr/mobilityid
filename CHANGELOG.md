@@ -30,4 +30,5 @@ which requires a dated section for the version below and a matching file in
   published release; isolated Java + Kotlin consumer smoke on the module path
   (`java/scripts/verify-consumer.sh`); `java/scripts/verify.sh` as the single verification entry
   point.
-- **Repository:** workflow linting (actionlint, zizmor), `CONTRIBUTING.md`, this changelog.
+- **Repository:** workflow linting (actionlint, zizmor), Codecov diff coverage on pull requests
+  (Java flag first), `CONTRIBUTING.md`, this changelog.

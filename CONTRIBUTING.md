@@ -33,6 +33,9 @@ messages, code, comments and documentation are written in English.
 - One workspace per pull request unless the change is a domain change that must land everywhere.
 - CI runs the workflow of each touched workspace plus `CI Workflows` (actionlint, zizmor) when a
   workflow changes. Keep every job green; do not merge on a red job.
+- Codecov comments the diff coverage on pull requests (flag per workspace, `codecov.yml`). It is
+  informational: the hard coverage gates live in each workspace's own check. Uploads need the
+  `CODECOV_TOKEN` repository secret (forks upload tokenless).
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes

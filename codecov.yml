@@ -1,0 +1,21 @@
+# Codecov is a reporting layer; each workspace keeps its own hard coverage gate in CI
+# (JaCoCo for java/). Flags let every port carry its own coverage.
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        target: 80%
+        informational: true
+
+flags:
+  java:
+    paths:
+      - java/src/main/
+    carryforward: true
+
+comment:
+  layout: "condensed_header, diff, flags"
+  require_changes: true

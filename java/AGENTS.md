@@ -22,6 +22,7 @@ examples are in `README.md`. Run every command below from `java/`.
   `javac -Xlint:all -Werror` (minus `exports`), `javadoc -Xdoclint:all -Werror`, reproducible jars.
   JaCoCo gates (90 % lines / 80 % branches) and japicmp against the last Maven Central release
   (skipped with a warning while nothing is published). `check` runs all of them; a new warning is a build failure.
+- Codecov (`codecov.yml`, flag `java`) receives the JaCoCo XML from the JDK 21 job for diff coverage on PRs; it is reporting only and never blocks.
 - Publishing: nmcp settings plugin (`settings.gradle.kts`) uploads to the Maven Central Portal;
   POM/signing stay in `build.gradle.kts`; version comes from `-PreleaseVersion` (defaults to `0.1.0-SNAPSHOT`).
 
