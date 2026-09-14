@@ -63,21 +63,24 @@ GitHub Release body.
 
 ## Release workflow
 
-Java (Maven Central) and TypeScript (npm) are released together by the manually dispatched
-`Release` workflow; Go is released from `go/vX.Y.Z` tags by `Release Go`.
+Java (Maven Central), TypeScript (npm) and PHP (Packagist, through a split mirror; see "PHP and
+Packagist" below) are released together by the manually dispatched `Release` workflow; Go is
+released from `go/vX.Y.Z` tags by `Release Go`.
 
 1. Open and merge a release PR that turns the `Unreleased` section into `## [X.Y.Z] - YYYY-MM-DD`
    and adds `.github/release-notes/X.Y.Z.md`.
 2. Dispatch `Release` from `main` with `version = X.Y.Z`. It validates the version with
    `scripts/validate-release-version.sh` (strict SemVer, no `v`, no build metadata, no
    SNAPSHOT: the same rules for Maven Central, npm and the git tag), then runs the preflights:
-   Java (`java/scripts/verify.sh`, also asserting the Maven Central credentials are present) and
+   Java (`java/scripts/verify.sh`, also asserting the Maven Central credentials are present),
    TypeScript (`ts/scripts/verify-package.sh`: build, `npm pack`, tarball content, publint,
-   throw-away consumer; the tarball is uploaded as an artifact). Only when **both** pass does it
-   publish, idempotently (an already published version is skipped): Java through nmcp,
-   TypeScript by publishing the exact verified tarball with OIDC trusted publishing. It then waits until Maven Central resolves the artifacts and creates
-   the signed `vX.Y.Z` tag and the GitHub Release. A failing preflight, including a missing
-   secret, leaves every registry untouched.
+   throw-away consumer; the tarball is uploaded as an artifact) and PHP (`composer check`, also
+   asserting the mirror deploy key is present). Only when **all three** pass does it publish,
+   idempotently (an already published version is skipped): Java through nmcp, TypeScript by
+   publishing the exact verified tarball with OIDC trusted publishing, PHP by pushing the
+   `php/` split to the Packagist mirror as `vX.Y.Z`. It then waits until Maven Central resolves
+   the artifacts and creates the signed `vX.Y.Z` tag and the GitHub Release. A failing
+   preflight, including a missing secret, leaves every registry untouched.
 3. Re-run a failed run with `gh run rerun <run-id> --failed` rather than dispatching again, so the
    tag still points at the commit that produced the published artifacts.
 
@@ -87,3 +90,30 @@ available from a public keyserver. The `npm` environment holds **no secret**: np
 through Trusted Publishing (OIDC) bound to `release.yml` and this environment, after a one-time
 manual first publication (`ts/README.md`, "Publishing to npm"). Never add an npm token to the
 repository secrets.
+
+### PHP and Packagist
+
+Packagist cannot index a package that lives in a sub-directory, so `php/` is published through a
+read-only split repository, `juherr/mobility-id-php`, that Packagist follows.
+
+One-time setup:
+
+1. Create the empty GitHub repository `juherr/mobility-id-php` (public, no initial commit).
+2. Generate a dedicated SSH key pair (`ssh-keygen -t ed25519 -N '' -f mobility-id-php-deploy`),
+   add the public key as a **deploy key with write access** on `juherr/mobility-id-php`, and
+   store the private key as the `PHP_MIRROR_DEPLOY_KEY` secret of the `packagist` environment of
+   this repository (the environment holds nothing else).
+3. Push a first split by hand from a checkout of `main` so the mirror has a `main` branch:
+   `git push git@github.com:juherr/mobility-id-php.git "$(git subtree split --prefix=php HEAD)":refs/heads/main`.
+4. Submit `https://github.com/juherr/mobility-id-php` on https://packagist.org/packages/submit and
+   enable the GitHub hook on the mirror (Packagist "Settings" page, or the Packagist GitHub App)
+   so every pushed tag is picked up automatically.
+
+What the `Release` workflow does for PHP: `Preflight PHP` runs `composer check` on PHP 8.4 and
+fails early when `PHP_MIRROR_DEPLOY_KEY` is missing; `Release PHP` computes
+`git subtree split --prefix=php` on the released commit and pushes the split commit to the
+mirror's `main` and as the `vX.Y.Z` tag. An existing mirror tag that already points at the same
+split commit is skipped (re-runs are idempotent); one that points elsewhere fails the run (a
+published Composer version is never moved: bump the version instead). After the run, check
+`https://packagist.org/packages/juherr/mobility-id` lists the new version; if the hook was not
+installed, click "Update" once.

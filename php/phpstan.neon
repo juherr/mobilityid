@@ -5,6 +5,8 @@ parameters:
     level: 10
     paths:
         - src
-    reportUnmatchedIgnoredErrors: false
-    ignoreErrors:
-        - '#Call to an undefined static method Locale::getISOCountries\(\)\.#'
+        - tests
+    tmpDir: .phpstan.cache
+    checkBenevolentUnionTypes: true
+    checkUninitializedProperties: true
+    reportAnyTypeWideningInVarTag: true

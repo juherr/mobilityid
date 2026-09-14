@@ -16,8 +16,19 @@ which requires a dated section for the version below and a matching file in
 - **TypeScript:** `ValidationError`, thrown by every strict factory and parser on invalid input.
   It extends `TypeError`, so existing `instanceof TypeError` checks still hold.
 
+- **Release:** the `Release` workflow now also publishes PHP: a `Preflight PHP` job runs
+  `composer check`, then `Release PHP` pushes a `git subtree split` of `php/` to the
+  `juherr/mobility-id-php` mirror as `vX.Y.Z`, the repository Packagist follows (Packagist
+  cannot index a package in a sub-directory). The package ships `LICENSE` and `NOTICE`, and
+  `composer.json` carries keywords, homepage and support links.
+- **PHP:** 400 cross-language check-digit fixtures (`tests/fixtures/check-digit-{iso,din}.csv`,
+  computed by the TypeScript port and verified by the Go port) and unit tests for the ISO
+  check-digit matrix arithmetic.
+
 ### Fixed
 
+- **PHP:** `PartyId::of()` now has a real test for the rejection of a DIN operator id longer
+  than three digits, replacing an `assertTrue(true)` placeholder.
 - **TypeScript:** `EvseIdIso.fromParts` and `EvseId.fromParts` no longer drop a leading `E` from
   the power outlet id; as in Scala and Java, `("NL", "TNM", "E840*6487")` keeps
   `powerOutletId === "E840*6487"` and renders `NL*TNM*EE840*6487`. Found by the new
@@ -25,6 +36,20 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
+- **Breaking (PHP):** PHP 8.4 is the minimum version (`php: ^8.4`, CI on 8.4 and 8.5); PHP 8.3
+  is no longer supported. Every value object is a `final readonly class` (`AbstractContractId`
+  and `AbstractEvseId` are `abstract readonly`), so their public properties can no longer be
+  assigned. Nothing had been published on Packagist before this change.
+- **PHP:** source headers and `NOTICE` credit Julien Herr only; the `README.md` states the port
+  is inspired by the Scala library, as for the TypeScript workspace.
+- **PHP:** `composer check` now chains `composer validate --strict`, `composer normalize
+  --dry-run`, `composer audit --abandoned=fail`, php-cs-fixer (`@PER-CS2.0` + `@PhpCsFixer`),
+  PHPStan level 10 with `phpstan-strict-rules`, `phpstan-deprecation-rules` and
+  `phpstan-phpunit` (the `Locale::getISOCountries()` ignore is gone), a Rector dry run
+  (`rector.php`, PHP 8.4 level set) and Infection with a 95 % minimum MSI (currently 100 %).
+  Dependencies updated: php-cs-fixer 3.95, PHPStan 2.2, PHPUnit 13.3, league/iso3166 4.5.
+- **PHP:** `CountryCode` validates through `ISO3166::alpha2()` instead of caching the whole
+  country table; the check-digit classes no longer keep lazily initialised static state.
 - **TypeScript:** source headers, `NOTICE` and the header gate credit Julien Herr only; the
   `README.md` states the port is inspired by the Scala library. The package now ships the full
   Apache 2.0 text as `LICENSE` plus a `NOTICE` file, and the release package check fails when

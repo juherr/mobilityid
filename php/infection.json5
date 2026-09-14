@@ -1,0 +1,21 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": ["src"]
+    },
+    "timeout": 20,
+    "logs": {
+        "text": ".infection/infection.log",
+        "summary": ".infection/summary.log",
+        "github": true
+    },
+    "tmpDir": ".infection",
+    "mutators": {
+        "@default": true,
+        // A library's public methods are its API; nothing in the test suite has to call them from
+        // outside, so narrowing their visibility is not a meaningful mutation here.
+        "PublicVisibility": false
+    },
+    "minMsi": 95,
+    "minCoveredMsi": 95
+}

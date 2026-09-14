@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,22 +22,21 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId\Tests;
 
-use InvalidArgumentException;
 use Juherr\MobilityId\PhoneCountryCode;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class PhoneCountryCodeTest extends TestCase
+final class PhoneCountryCodeTest extends TestCase
 {
-    #[DataProvider('provideValidPhoneCountryCodes')]
+    #[DataProvider('provideValidPhoneCountryCodesCases')]
     public function testValidPhoneCountryCodes(string $code, ?string $expectedCode = null): void
     {
         $phoneCountryCode = PhoneCountryCode::of($code);
-        $this->assertSame($expectedCode ?? $code, (string) $phoneCountryCode);
-        $this->assertTrue(PhoneCountryCode::isValid($code));
+        self::assertSame($expectedCode ?? $code, (string) $phoneCountryCode);
+        self::assertTrue(PhoneCountryCode::isValid($code));
     }
 
-    public static function provideValidPhoneCountryCodes(): array
+    public static function provideValidPhoneCountryCodesCases(): iterable
     {
         return [
             ['+1'],
@@ -52,16 +50,16 @@ class PhoneCountryCodeTest extends TestCase
         ];
     }
 
-    #[DataProvider('provideInvalidPhoneCountryCodes')]
+    #[DataProvider('provideInvalidPhoneCountryCodesCases')]
     public function testInvalidPhoneCountryCodes(string $code): void
     {
-        $this->assertFalse(PhoneCountryCode::isValid($code));
-        $this->expectException(InvalidArgumentException::class);
+        self::assertFalse(PhoneCountryCode::isValid($code));
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches("/Phone Country Code must start with a '\\+' sign and be followed by 1-3 digits\\. \\(Was: .*\\)/");
         PhoneCountryCode::of($code);
     }
 
-    public static function provideInvalidPhoneCountryCodes(): array
+    public static function provideInvalidPhoneCountryCodesCases(): iterable
     {
         return [
             ['+'],       // Only '+'

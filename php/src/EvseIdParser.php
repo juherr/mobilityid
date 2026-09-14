@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,9 +24,7 @@ namespace Juherr\MobilityId;
 
 final class EvseIdParser
 {
-    private function __construct()
-    {
-    } // Prevent instantiation
+    private function __construct() {} // Prevent instantiation
 
     // EVSE ID DIN Format
     public static function getDinCountryCodeRegex(): string
@@ -48,13 +45,13 @@ final class EvseIdParser
 
     public static function getDinEvseIdRegex(): string
     {
-        return '/^' .
-               self::getDinCountryCodeRegex() .
-               '\*' .
-               self::getDinOperatorCodeRegex() .
-               '\*' .
-               self::getDinPowerOutletIdRegex() .
-               '$/';
+        return '/^'
+               . self::getDinCountryCodeRegex()
+               . '\*'
+               . self::getDinOperatorCodeRegex()
+               . '\*'
+               . self::getDinPowerOutletIdRegex()
+               . '$/';
     }
 
     // EVSE ID ISO Format
@@ -76,13 +73,13 @@ final class EvseIdParser
 
     public static function getIsoEvseIdRegex(): string
     {
-        return '/^' .
-               self::getIsoCountryCodeRegex() .
-               '\*?' . // Separator is optional
-               self::getIsoOperatorCodeRegex() .
-               '\*?' . // Separator is optional
-               'E' . // IdType
-               self::getIsoPowerOutletIdRegex() .
-               '$/';
+        return '/^'
+               . self::getIsoCountryCodeRegex()
+               . '\*?' // Separator is optional
+               . self::getIsoOperatorCodeRegex()
+               . '\*?' // Separator is optional
+               . 'E' // IdType
+               . self::getIsoPowerOutletIdRegex()
+               . '$/';
     }
 }

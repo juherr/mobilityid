@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,15 +22,14 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId\CheckDigitIso;
 
-final class Matrix
+final readonly class Matrix
 {
     public function __construct(
         public int $m11,
         public int $m12,
         public int $m21,
         public int $m22
-    ) {
-    }
+    ) {}
 
     public function multiply(self $m): self
     {
@@ -45,9 +43,9 @@ final class Matrix
 
     public function equals(self $other): bool
     {
-        return $this->m11 === $other->m11 &&
-               $this->m12 === $other->m12 &&
-               $this->m21 === $other->m21 &&
-               $this->m22 === $other->m22;
+        return $this->m11 === $other->m11
+               && $this->m12 === $other->m12
+               && $this->m21 === $other->m21
+               && $this->m22 === $other->m22;
     }
 }

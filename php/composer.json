@@ -1,10 +1,44 @@
 {
     "name": "juherr/mobility-id",
     "description": "Mobility ID PHP Library",
+    "license": "Apache-2.0",
     "type": "library",
+    "keywords": [
+        "emsp",
+        "evse",
+        "iso-15118",
+        "din-spec-91286",
+        "emi3",
+        "e-mobility",
+        "contract-id",
+        "evse-id"
+    ],
+    "authors": [
+        {
+            "name": "Julien Herr",
+            "email": "contact@juherr.dev"
+        }
+    ],
+    "homepage": "https://github.com/juherr/mobilityid",
+    "support": {
+        "issues": "https://github.com/juherr/mobilityid/issues",
+        "source": "https://github.com/juherr/mobilityid/tree/main/php"
+    },
     "require": {
-        "php": "^8.3",
+        "php": "^8.4.1",
         "league/iso3166": "^4.4"
+    },
+    "require-dev": {
+        "ergebnis/composer-normalize": "^2.53",
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "infection/infection": "^0.35.4",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.2",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^13.3",
+        "rector/rector": "^2.6"
     },
     "autoload": {
         "psr-4": {
@@ -16,36 +50,46 @@
             "Juherr\\MobilityId\\Tests\\": "tests/"
         }
     },
-    "license": "Apache-2.0",
-    "authors": [
-        {
-            "name": "Julien Herr",
-            "email": "contact@juherr.dev"
-        }
-    ],
-    "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.0",
-        "phpstan/phpstan": "^2.1",
-        "phpunit/phpunit": "^12.0",
-        "phpstan/extension-installer": "^1.4"
-    },
     "config": {
-        "platform": {
-            "php": "8.3.0"
-        },
         "allow-plugins": {
+            "ergebnis/composer-normalize": true,
+            "infection/extension-installer": true,
             "phpstan/extension-installer": true
-        }
+        },
+        "platform": {
+            "php": "8.4.1"
+        },
+        "sort-packages": true
     },
     "scripts": {
-        "format": "./vendor/bin/php-cs-fixer fix --ansi --using-cache=no",
-        "format:check": "./vendor/bin/php-cs-fixer fix --ansi --using-cache=no --dry-run --diff",
-        "analyse": "./vendor/bin/phpstan analyse",
-        "test": "./vendor/bin/phpunit",
+        "analyse": "phpstan analyse --memory-limit=512M",
         "check": [
+            "@composer validate --strict",
+            "@composer normalize --dry-run",
+            "@composer audit --abandoned=fail",
             "@format:check",
             "@analyse",
-            "@test"
-        ]
+            "@rector:check",
+            "@test",
+            "@infection"
+        ],
+        "format": "php-cs-fixer fix --ansi --using-cache=no",
+        "format:check": "php-cs-fixer fix --ansi --using-cache=no --dry-run --diff",
+        "infection": "infection --threads=max --show-mutations --no-progress",
+        "rector": "rector process",
+        "rector:check": "rector process --dry-run --no-progress-bar",
+        "test": "phpunit",
+        "test:coverage": "phpunit --coverage-text"
+    },
+    "scripts-descriptions": {
+        "analyse": "Run PHPStan (level 10, strict rules)",
+        "check": "Full quality gate, what CI runs",
+        "format": "Apply php-cs-fixer (formatting + license headers)",
+        "format:check": "Check formatting without modifying files",
+        "infection": "Run mutation testing (requires pcov or xdebug)",
+        "rector": "Apply Rector refactorings",
+        "rector:check": "Fail if Rector would change anything",
+        "test": "Run the PHPUnit suite",
+        "test:coverage": "Run the PHPUnit suite with a text coverage report"
     }
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,22 +22,21 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId\Tests;
 
-use InvalidArgumentException;
 use Juherr\MobilityId\OperatorIdDin;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class OperatorIdDinTest extends TestCase
+final class OperatorIdDinTest extends TestCase
 {
-    #[DataProvider('provideValidOperatorIdsDin')]
+    #[DataProvider('provideValidOperatorIdsDinCases')]
     public function testValidOperatorIdsDin(string $id): void
     {
         $operatorIdDin = OperatorIdDin::of($id);
-        $this->assertSame($id, (string) $operatorIdDin);
-        $this->assertTrue(OperatorIdDin::isValid($id));
+        self::assertSame($id, (string) $operatorIdDin);
+        self::assertTrue(OperatorIdDin::isValid($id));
     }
 
-    public static function provideValidOperatorIdsDin(): array
+    public static function provideValidOperatorIdsDinCases(): iterable
     {
         return [
             ['123'],     // 3 digits
@@ -48,16 +46,16 @@ class OperatorIdDinTest extends TestCase
         ];
     }
 
-    #[DataProvider('provideInvalidOperatorIdsDin')]
+    #[DataProvider('provideInvalidOperatorIdsDinCases')]
     public function testInvalidOperatorIdsDin(string $id): void
     {
-        $this->assertFalse(OperatorIdDin::isValid($id));
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches("/Operator ID \(DIN\) must be a numeric string between 3 and 6 digits\. \(Was: .*\)/");
+        self::assertFalse(OperatorIdDin::isValid($id));
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/Operator ID \(DIN\) must be a numeric string between 3 and 6 digits\. \(Was: .*\)/');
         OperatorIdDin::of($id);
     }
 
-    public static function provideInvalidOperatorIdsDin(): array
+    public static function provideInvalidOperatorIdsDinCases(): iterable
     {
         return [
             ['12'],        // Less than 3 digits

@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,15 +22,17 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId;
 
-use InvalidArgumentException;
-
-final class PhoneCountryCode
+final readonly class PhoneCountryCode implements \Stringable
 {
-    private const REGEX = '\+?([0-9]{1,3})'; // Removed anchors
+    private const string REGEX = '\+?([0-9]{1,3})'; // Removed anchors
 
     private function __construct(
         public string $cc
-    ) {
+    ) {}
+
+    public function __toString(): string
+    {
+        return $this->cc;
     }
 
     public static function isValid(string $phoneCountryCode): bool
@@ -48,14 +49,9 @@ final class PhoneCountryCode
             return new self($formattedCountryCode);
         }
 
-        throw new InvalidArgumentException(
-            "Phone Country Code must start with a '+' sign and be followed by 1-3 digits. (Was: $phoneCountryCode)"
+        throw new \InvalidArgumentException(
+            "Phone Country Code must start with a '+' sign and be followed by 1-3 digits. (Was: {$phoneCountryCode})"
         );
-    }
-
-    public function __toString(): string
-    {
-        return $this->cc;
     }
 
     public static function getRegex(): string

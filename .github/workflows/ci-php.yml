@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.3', '8.4', '8.5']
+        php-version: ['8.4', '8.5']
 
     defaults:
       run:
@@ -44,12 +44,12 @@ jobs:
         uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: pdo_mysql gd intl
           tools: composer
-          coverage: none
+          # Infection (mutation testing, part of `composer check`) needs a coverage driver.
+          coverage: pcov
 
       - name: Install Composer Dependencies
         run: composer install --no-interaction --no-progress
 
-      - name: Run Checks (Format check, Analyse, Test)
+      - name: Run the full gate (validate, normalize, audit, format, PHPStan, Rector, PHPUnit, Infection)
         run: composer check

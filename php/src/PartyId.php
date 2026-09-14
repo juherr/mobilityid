@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,29 +22,31 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId;
 
-use InvalidArgumentException;
-
-final class PartyId
+final readonly class PartyId implements \Stringable
 {
-    private const PARTY_CODE_REGEX = '/^([A-Za-z0-9]{3})$/';
-    private const PARTY_ID_REGEX = '/^([A-Za-z]{2})[-*]?([A-Za-z0-9]{3})$/';
+    private const string PARTY_CODE_REGEX = '/^([A-Za-z0-9]{3})$/';
+    private const string PARTY_ID_REGEX = '/^([A-Za-z]{2})[-*]?([A-Za-z0-9]{3})$/';
 
     public function __construct(
-        public readonly CountryCode|PhoneCountryCode $countryCode,
-        public readonly string $partyCode
-    ) {
+        public CountryCode|PhoneCountryCode $countryCode,
+        public string $partyCode
+    ) {}
+
+    public function __toString(): string
+    {
+        return $this->toString();
     }
 
     public static function parse(string $partyIdString): ?self
     {
-        if (preg_match(self::PARTY_ID_REGEX, $partyIdString, $matches)) {
+        if (preg_match(self::PARTY_ID_REGEX, $partyIdString, $matches) === 1) {
             try {
                 $countryCode = CountryCode::of($matches[1]);
                 $partyCode = strtoupper($matches[2]);
                 if (preg_match(self::PARTY_CODE_REGEX, $partyCode) === 1) { // Validate partyCode part
                     return new self($countryCode, $partyCode);
                 }
-            } catch (InvalidArgumentException $e) {
+            } catch (\InvalidArgumentException) {
                 // CountryCode validation failed, return null
             }
         }
@@ -53,18 +54,18 @@ final class PartyId
         return null;
     }
 
-    public static function of(CountryCode|PhoneCountryCode $countryCode, ProviderId|OperatorIdIso|OperatorIdDin $identifier): self
+    public static function of(CountryCode|PhoneCountryCode $countryCode, OperatorIdDin|OperatorIdIso|ProviderId $identifier): self
     {
         // The Scala version uses pattern matching to extract the partyCode from ProviderId/OperatorIdIso.
-        // In PHP, we can directly access the 'id' property as both ProviderId and OperatorIdIso have it.
-        $partyCode = strtoupper($identifier->id);
+        // In PHP, we can directly access the 'id' property; the factories already uppercased it.
+        $partyCode = $identifier->id;
 
         if (preg_match(self::PARTY_CODE_REGEX, $partyCode) === 1) {
             return new self($countryCode, $partyCode);
         }
 
         // This case should ideally not be reached if ProviderId/OperatorIdIso are valid
-        throw new InvalidArgumentException(
+        throw new \InvalidArgumentException(
             "Invalid party code derived from identifier. (Was: {$identifier->id})"
         );
     }
@@ -77,10 +78,5 @@ final class PartyId
     public function toCompactString(): string
     {
         return $this->countryCode->cc . $this->partyCode;
-    }
-
-    public function __toString(): string
-    {
-        return $this->toString();
     }
 }

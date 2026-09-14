@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,21 +22,20 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId\Tests;
 
-use InvalidArgumentException;
 use Juherr\MobilityId\CountryCode;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class CountryCodeTest extends TestCase
+final class CountryCodeTest extends TestCase
 {
-    #[DataProvider('provideValidCountryCodes')]
+    #[DataProvider('provideValidCountryCodesCases')]
     public function testValidCountryCodes(string $code, string $expectedOutput): void
     {
         $countryCode = CountryCode::of($code);
-        $this->assertSame($expectedOutput, (string) $countryCode);
+        self::assertSame($expectedOutput, (string) $countryCode);
     }
 
-    public static function provideValidCountryCodes(): array
+    public static function provideValidCountryCodesCases(): iterable
     {
         return [
             ['NL', 'NL'],
@@ -49,15 +47,15 @@ class CountryCodeTest extends TestCase
         ];
     }
 
-    #[DataProvider('provideInvalidFormatCountryCodes')]
+    #[DataProvider('provideInvalidFormatCountryCodesCases')]
     public function testInvalidFormatCountryCodes(string $code): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/Country Code must be valid according to ISO 3166-1 alpha-2\./');
         CountryCode::of($code);
     }
 
-    public static function provideInvalidFormatCountryCodes(): array
+    public static function provideInvalidFormatCountryCodesCases(): iterable
     {
         return [
             ['NLD'], // Too long
@@ -69,15 +67,15 @@ class CountryCodeTest extends TestCase
         ];
     }
 
-    #[DataProvider('provideNonExistentCountryCodes')]
+    #[DataProvider('provideNonExistentCountryCodesCases')]
     public function testNonExistentCountryCodes(string $code): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/Country Code must be valid according to ISO 3166-1 alpha-2\./');
         CountryCode::of($code);
     }
 
-    public static function provideNonExistentCountryCodes(): array
+    public static function provideNonExistentCountryCodesCases(): iterable
     {
         return [
             ['XX'], // Not a real country code

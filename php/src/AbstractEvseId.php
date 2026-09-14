@@ -5,7 +5,6 @@ declare(strict_types=1);
 /*
  * This file is part of the Mobility ID library.
  *
- * Copyright (c) 2014 The New Motion team, and respective contributors
  * Copyright (c) 2026 Julien Herr, and respective contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,24 +22,23 @@ declare(strict_types=1);
 
 namespace Juherr\MobilityId;
 
-abstract class AbstractEvseId
+abstract readonly class AbstractEvseId implements \Stringable
 {
-    protected string $separator = '*';
+    protected const string SEPARATOR = '*';
 
     protected function __construct(
-        public readonly CountryCode|PhoneCountryCode $countryCode,
-        public readonly OperatorIdIso|OperatorIdDin $operatorId,
-        public readonly string $powerOutletId
-    ) {
-    }
-
-    public function toString(): string
-    {
-        return $this->countryCode->cc . $this->separator . $this->operatorId->id . $this->separator . $this->powerOutletId;
-    }
+        public CountryCode|PhoneCountryCode $countryCode,
+        public OperatorIdDin|OperatorIdIso $operatorId,
+        public string $powerOutletId
+    ) {}
 
     public function __toString(): string
     {
         return $this->toString();
+    }
+
+    public function toString(): string
+    {
+        return $this->countryCode->cc . self::SEPARATOR . $this->operatorId->id . self::SEPARATOR . $this->powerOutletId;
     }
 }

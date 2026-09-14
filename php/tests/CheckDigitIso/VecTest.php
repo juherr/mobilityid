@@ -20,6 +20,25 @@ declare(strict_types=1);
  * limitations under the License.
  */
 
-namespace Juherr\MobilityId\ContractIdStandard;
+namespace Juherr\MobilityId\Tests\CheckDigitIso;
 
-interface Emi3 {}
+use Juherr\MobilityId\CheckDigitIso\Matrix;
+use Juherr\MobilityId\CheckDigitIso\Vec;
+use PHPUnit\Framework\TestCase;
+
+final class VecTest extends TestCase
+{
+    public function testAddIsComponentWise(): void
+    {
+        $sum = new Vec(1, 2)->add(new Vec(10, 20));
+
+        self::assertSame([11, 22], [$sum->v1, $sum->v2]);
+    }
+
+    public function testMultiplyIsTheRowVectorByMatrixProduct(): void
+    {
+        $product = new Vec(1, 2)->multiply(new Matrix(3, 4, 5, 6));
+
+        self::assertSame([13, 16], [$product->v1, $product->v2]);
+    }
+}
