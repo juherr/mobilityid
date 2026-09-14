@@ -8,6 +8,8 @@ plugins {
   alias(libs.plugins.spotless)
   alias(libs.plugins.errorprone)
   alias(libs.plugins.dependencycheck)
+  alias(libs.plugins.japicmp)
+  jacoco
 }
 
 group = "dev.juherr.mobilityid"
@@ -42,6 +44,76 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
   useJUnitPlatform()
+  finalizedBy(tasks.jacocoTestReport)
+}
+
+jacoco {
+  toolVersion = libs.versions.jacoco.get()
+}
+
+tasks.jacocoTestReport {
+  dependsOn(tasks.test)
+  reports {
+    xml.required.set(true)
+    html.required.set(true)
+  }
+}
+
+// Coverage floor: raise it as coverage grows, never lower it silently.
+tasks.jacocoTestCoverageVerification {
+  dependsOn(tasks.test)
+  violationRules {
+    rule {
+      limit {
+        counter = "LINE"
+        minimum = "0.90".toBigDecimal()
+      }
+      limit {
+        counter = "BRANCH"
+        minimum = "0.80".toBigDecimal()
+      }
+    }
+  }
+}
+
+// Binary/source compatibility against the last release published on Maven Central.
+// Pin the baseline with -PapiBaselineVersion=X.Y.Z; `latest.release` otherwise.
+val apiBaseline = configurations.create("apiBaseline") {
+  isCanBeConsumed = false
+  isTransitive = false
+}
+
+dependencies {
+  apiBaseline(
+    "dev.juherr.mobilityid:mobilityid4j:" +
+      providers.gradleProperty("apiBaselineVersion").getOrElse("latest.release")
+  )
+}
+
+val apiBaselineJars = apiBaseline.incoming.artifactView { lenient(true) }.files
+
+val japicmp = tasks.register<me.champeau.gradle.japicmp.JapicmpTask>("japicmp") {
+  description = "Checks binary and source compatibility against the last published release."
+  group = "verification"
+  val baselineJars = apiBaselineJars
+  onlyIf("a published baseline is resolvable") {
+    val resolvable = !baselineJars.isEmpty
+    if (!resolvable) {
+      logger.warn("japicmp: no published baseline for dev.juherr.mobilityid:mobilityid4j, skipping the API compatibility check")
+    }
+    resolvable
+  }
+  oldClasspath.from(baselineJars)
+  newClasspath.from(tasks.jar)
+  onlyModified.set(true)
+  failOnSourceIncompatibility.set(true)
+  ignoreMissingClasses.set(true)
+  txtOutputFile.set(layout.buildDirectory.file("reports/japicmp/japicmp.txt"))
+  htmlOutputFile.set(layout.buildDirectory.file("reports/japicmp/japicmp.html"))
+}
+
+tasks.check {
+  dependsOn(tasks.jacocoTestCoverageVerification, japicmp)
 }
 
 tasks.withType<JavaCompile>().configureEach {
