@@ -41,7 +41,9 @@ jobs:
         run: |
           set -euo pipefail
           [[ "${GITHUB_REF}" == "refs/heads/main" ]] || { echo "Releases run from main only" >&2; exit 1; }
-          [[ "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || { echo "Invalid version: ${RELEASE_VERSION}" >&2; exit 1; }
+          # Same rules for every registry (node-semver strictness, no build metadata, no SNAPSHOT):
+          # nothing may be published to the immutable Maven Central before npm would reject the version.
+          scripts/validate-release-version.sh "${RELEASE_VERSION}"
           grep -Fq "## [${RELEASE_VERSION}] - " CHANGELOG.md || { echo "CHANGELOG.md has no dated section for ${RELEASE_VERSION}" >&2; exit 1; }
           test -s ".github/release-notes/${RELEASE_VERSION}.md" || { echo "Missing .github/release-notes/${RELEASE_VERSION}.md" >&2; exit 1; }
 
