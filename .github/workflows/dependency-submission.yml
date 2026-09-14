@@ -57,6 +57,7 @@ jobs:
         with:
           build-root-directory: java
           dependency-graph: generate-and-submit
+          dependency-resolution-task: taskThatDoesNotExist
           # No graph is produced when the configuration is loaded from the configuration cache.
           additional-arguments: --no-configuration-cache
 
