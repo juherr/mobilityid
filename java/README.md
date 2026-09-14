@@ -4,9 +4,10 @@ Java 21 port of the mobility ID domain model and validation logic.
 
 ## Layout
 
-- single-module Gradle project
-- sources in `src/main/java`
-- tests in `src/test/java`
+- single-module Gradle project, JPMS module `dev.juherr.mobilityid4j` (`src/main/java/module-info.java`)
+- sources in `src/main/java`, tests in `src/test/java` (white-box tests patched into the module by Gradle)
+- dependency and plugin versions in `gradle/libs.versions.toml` (Gradle version catalog)
+- Gradle runs with the configuration cache and build cache enabled (`gradle.properties`)
 
 ## Build and test
 
@@ -32,8 +33,12 @@ The project is configured with:
 
 - Spotless + `palantir-java-format`
 - Error Prone
-- NullAway (strict)
-- JSpecify (`@NullMarked` packages)
+- NullAway (strict, JSpecify mode)
+- JSpecify (`@NullMarked` packages, `requires static org.jspecify` in the module descriptor)
+- `javac -Xlint:all -Werror` (the `exports` lint is disabled: it flags JSpecify annotations in
+  public signatures even though `requires static` is the recommended way to depend on them)
+- `javadoc -Xdoclint:all -Werror`
+- reproducible jars (no timestamps, stable entry order)
 
 Useful commands:
 
@@ -41,6 +46,13 @@ Useful commands:
 ./gradlew spotlessApply
 ./gradlew spotlessCheck
 ```
+
+## Tests
+
+- JUnit Jupiter + AssertJ for example-based suites (`*Test`).
+- jqwik for property-based suites (`*PropertyTest`): check-digit invariants (alphabet, case
+  insensitivity, single-substitution detection for ISO) and contract-id round trips/conversions
+  over generated inputs. jqwik runs on the JUnit Platform, no extra wiring.
 
 ## API choices
 
@@ -89,25 +101,48 @@ if (maybeEvse.isPresent()) {
 }
 ```
 
+## Using from Kotlin
+
+The library is annotated for Kotlin interop out of the box:
+
+- Nullability is declared with JSpecify (`@NullMarked` module and packages, `@Nullable` on the
+  tolerant parser parameters), so Kotlin sees platform-free types: `String` parameters are
+  non-null, `parse(raw: String?)` accepts null. If your Kotlin version does not treat JSpecify as
+  strict by default, add `-Xjspecify-annotations=strict` to `freeCompilerArgs`.
+- Tolerant parsers return `Optional<T>`; use `ContractId.parse(ContractIdStandard.ISO, raw).getOrNull()`
+  (`kotlin.jvm.optionals`).
+- `EvseId` and `OperatorId` are Java sealed interfaces: `when (evse) { is EvseIdIso -> ...; is EvseIdDin -> ... }`
+  is exhaustive without an `else` branch.
+- Domain types are Java records: components are accessed as functions (`countryCode.value()`),
+  not as properties.
+- No checked exceptions; invalid input throws `IllegalArgumentException`.
+
 ## Publishing (Maven Central Portal)
 
-The build is ready for publication metadata/signing and local dry runs.
+Publication goes through the [nmcp](https://gradleup.com/nmcp/) settings plugin
+(`settings.gradle.kts`), which uploads a signed bundle to the Central Portal publisher API and
+publishes it automatically once validated.
 
 Configured publication coordinates:
 
 - `groupId`: `dev.juherr.mobilityid`
 - `artifactId`: `mobilityid4j`
 
-Publishing credentials are read from Gradle properties or environment variables:
+Inputs are read from Gradle properties or environment variables:
 
-- `mavenCentralPortalUrl` / `MAVEN_CENTRAL_PORTAL_URL`
-- `mavenCentralUsername` / `MAVEN_CENTRAL_USERNAME`
-- `mavenCentralPassword` / `MAVEN_CENTRAL_PASSWORD`
+- `mavenCentralUsername` / `MAVEN_CENTRAL_USERNAME` and `mavenCentralPassword` /
+  `MAVEN_CENTRAL_PASSWORD`: a Central Portal user token
+- `signingKey` / `SIGNING_KEY` and `signingPassword` / `SIGNING_PASSWORD`: in-memory PGP key
+- `releaseVersion`: the version to publish (`0.1.0-SNAPSHOT` when absent)
 
-Signing keys are read from:
+Commands:
 
-- `signingKey` / `SIGNING_KEY`
-- `signingPassword` / `SIGNING_PASSWORD`
+```bash
+./gradlew -PreleaseVersion=X.Y.Z check javadocJar sourcesJar publishToMavenLocal   # dry run
+./gradlew -PreleaseVersion=X.Y.Z publishAggregationToCentralPortal                  # upload + publish
+```
+
+`verifyRelease` runs before any upload and refuses a `-SNAPSHOT` version or missing signing inputs.
 
 Global release tags:
 

@@ -144,7 +144,7 @@ Before finalizing a change, an agent should:
 
 The project uses simplified version formats in `mise.toml`:
 - **Java/Node**: major only (`21`, `24`)
-- **sbt/gradle/php/go**: major.minor (`1.12`, `8.9`, `8.5`, `1.26`)
+- **sbt/gradle/php/go**: major.minor (`1.12`, `9.7`, `8.3`, `1.26`)
 
 This is enforced via `extractVersionTemplate` and `autoReplaceStringTemplate` in the customManager configuration in `.github/renovate.json`:
 
