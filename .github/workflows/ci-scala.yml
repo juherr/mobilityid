@@ -37,6 +37,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6

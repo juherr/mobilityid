@@ -1,28 +1,83 @@
 name: Release
 
+# Manually dispatched from main with the version as input. Publishes Java (Maven Central) and
+# TypeScript (npm), then creates the signed `vX.Y.Z` tag and the GitHub Release only once every
+# registry has accepted the artifacts. Re-run a failed run (`gh run rerun <id> --failed`) instead
+# of dispatching again: every job is idempotent and keeps the original commit.
+# Go is released separately from `go/vX.Y.Z` tags (release-go.yml).
+
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (X.Y.Z or X.Y.Z-prerelease)
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
+env:
+  RELEASE_VERSION: ${{ inputs.version }}
+
 jobs:
+  validate:
+    name: Validate release inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate version, changelog and release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_REF}" == "refs/heads/main" ]] || { echo "Releases run from main only" >&2; exit 1; }
+          [[ "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || { echo "Invalid version: ${RELEASE_VERSION}" >&2; exit 1; }
+          grep -Fq "## [${RELEASE_VERSION}] - " CHANGELOG.md || { echo "CHANGELOG.md has no dated section for ${RELEASE_VERSION}" >&2; exit 1; }
+          test -s ".github/release-notes/${RELEASE_VERSION}.md" || { echo "Missing .github/release-notes/${RELEASE_VERSION}.md" >&2; exit 1; }
+
+      - name: Check existing tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v${RELEASE_VERSION}"
+          remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}^{}" | awk '{print $1}')
+          if [[ -z "${remote_tag}" ]]; then
+            remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}" | awk '{print $1}')
+          fi
+          if [[ -n "${remote_tag}" && "${remote_tag}" != "${GITHUB_SHA}" ]]; then
+            echo "Tag ${tag} already points to ${remote_tag}, not ${GITHUB_SHA}." >&2
+            exit 1
+          fi
+
   release-java:
     name: Release Java to Maven Central
+    needs: validate
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: maven-central
     defaults:
       run:
         working-directory: java
-    permissions:
-      contents: read
-
+    env:
+      MAVEN_CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+      MAVEN_CENTRAL_PASSWORD: ${{ secrets.CENTRAL_TOKEN }}
+      SIGNING_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      SIGNING_PASSWORD: ${{ secrets.GPG_PASSPHRASE }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
@@ -35,94 +90,173 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
+        with:
+          # No cache in a publishing workflow (zizmor cache-poisoning).
+          cache-disabled: true
 
-      - name: Resolve release version from tag
+      - name: Check release inputs
         shell: bash
         run: |
-          TAG_NAME="${GITHUB_REF_NAME}"
-          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid global release tag: $TAG_NAME"
-            exit 1
+          set -euo pipefail
+          test -n "${MAVEN_CENTRAL_USERNAME}"
+          test -n "${MAVEN_CENTRAL_PASSWORD}"
+          test -n "${SIGNING_KEY}"
+          test -n "${SIGNING_PASSWORD}"
+
+      - name: Verify project
+        run: scripts/verify.sh
+
+      - name: Publish to Maven Central
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          ../scripts/check-central-release.sh "${RELEASE_VERSION}" || status=$?
+          if [[ "${status}" -eq 0 ]]; then
+            echo "Release ${RELEASE_VERSION} is already available from Maven Central; skipping upload."
+            exit 0
           fi
-          RELEASE_VERSION="${TAG_NAME#v}"
-          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
+          if [[ "${status}" -ne 1 ]]; then
+            echo "Could not determine whether ${RELEASE_VERSION} is published; refusing to upload." >&2
+            exit "${status}"
+          fi
+          ./gradlew -PreleaseVersion="${RELEASE_VERSION}" publishAggregationToCentralPortal
 
-      - name: Pre-release checks
+      - name: Wait for Maven Central resolution
+        shell: bash
         run: |
-          test -n "${{ secrets.MAVEN_CENTRAL_USERNAME }}"
-          test -n "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
-          test -n "${{ secrets.SIGNING_KEY }}"
-          test -n "${{ secrets.SIGNING_PASSWORD }}"
-
-      - name: Verify release build
-        env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-        run: |
-          ./gradlew \
-            -PreleaseVersion="${RELEASE_VERSION}" \
-            clean check javadocJar sourcesJar publishToMavenLocal
-
-      - name: Publish release to Maven Central
-        env:
-          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-        run: |
-          ./gradlew \
-            -PreleaseVersion="${RELEASE_VERSION}" \
-            publishAggregationToCentralPortal
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            status=0
+            ../scripts/check-central-release.sh "${RELEASE_VERSION}" || status=$?
+            if [[ "${status}" -eq 0 ]]; then
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "Release did not become resolvable from Maven Central in time." >&2
+          echo "Check https://central.sonatype.com/publishing/deployments, then re-run this failed job." >&2
+          exit 1
 
   release-ts:
     name: Release TypeScript to npm
+    needs: validate
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
     defaults:
       run:
         working-directory: ts
-    permissions:
-      contents: read
-
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Setup Vite+ and Node 24
         uses: voidzero-dev/setup-vp@237a7eda494c3466dcb53e9f067142b9218d64a1 # v1
         with:
           node-version: "24"
-          cache: true
+          # No cache in a publishing workflow (zizmor cache-poisoning).
+          cache: false
           working-directory: ts
           registry-url: "https://registry.npmjs.org"
 
-      - name: Resolve release version from tag
+      - name: Check release inputs
         shell: bash
-        run: |
-          TAG_NAME="${GITHUB_REF_NAME}"
-          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid global release tag: $TAG_NAME"
-            exit 1
-          fi
-          RELEASE_VERSION="${TAG_NAME#v}"
-          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
-
-      - name: Pre-release checks
-        run: test -n "${{ secrets.NPM_TOKEN }}"
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: test -n "${NPM_TOKEN}"
 
       - name: Validate package
         run: vp exec bun run check
 
-      - name: Set release version
-        run: vp exec bun pm pkg set version="${RELEASE_VERSION}"
-
-      - name: Publish release
+      - name: Publish to npm
         shell: bash
-        run: |
-          if [[ "${RELEASE_VERSION}" == *-* ]]; then
-            NPM_TAG="next"
-          else
-            NPM_TAG="latest"
-          fi
-          vp exec bun publish --access public --tag "${NPM_TAG}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if npm view "@juherr/mobilityid@${RELEASE_VERSION}" version >/dev/null 2>&1; then
+            echo "@juherr/mobilityid@${RELEASE_VERSION} is already on npm; skipping publish."
+            exit 0
+          fi
+          vp exec bun pm pkg set version="${RELEASE_VERSION}"
+          if [[ "${RELEASE_VERSION}" == *-* ]]; then
+            npm_tag="next"
+          else
+            npm_tag="latest"
+          fi
+          vp exec bun publish --access public --tag "${npm_tag}"
+
+  finalize:
+    name: Tag and create GitHub Release
+    needs: [release-java, release-ts]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: maven-central
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+    steps:
+      - name: Checkout published commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Import signing key
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
+
+      - name: Create or verify signed tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v${RELEASE_VERSION}"
+          signing_key=$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "sec" { print $5; exit }')
+          test -n "${signing_key}"
+          umask 077
+          GPG_PASSPHRASE_FILE="${RUNNER_TEMP}/mobilityid-gpg-passphrase"
+          printf '%s' "${GPG_PASSPHRASE}" > "${GPG_PASSPHRASE_FILE}"
+          export GPG_PASSPHRASE_FILE
+          git config user.name "mobilityid release workflow"
+          git config user.email "actions@users.noreply.github.com"
+          git config user.signingkey "${signing_key}"
+          git config gpg.program "$(pwd)/scripts/git-gpg-wrapper.sh"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            git fetch --force origin "refs/tags/${tag}:refs/tags/${tag}"
+            tagged_commit=$(git rev-list -n 1 "${tag}")
+            [[ "${tagged_commit}" == "${GITHUB_SHA}" ]]
+            git tag --verify "${tag}"
+          else
+            git tag --sign --message "mobilityid ${RELEASE_VERSION}" "${tag}" "${GITHUB_SHA}"
+            git tag --verify "${tag}"
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${tag}"
+          fi
+
+      - name: Create or verify GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v${RELEASE_VERSION}"
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            existing_tag=$(gh release view "${tag}" --json tagName --jq .tagName)
+            [[ "${existing_tag}" == "${tag}" ]]
+          else
+            extra=()
+            if [[ "${RELEASE_VERSION}" == *-* ]]; then
+              extra+=(--prerelease)
+            fi
+            gh release create "${tag}" \
+              --title "mobilityid ${RELEASE_VERSION}" \
+              --notes-file ".github/release-notes/${RELEASE_VERSION}.md" \
+              --verify-tag "${extra[@]}"
+          fi
