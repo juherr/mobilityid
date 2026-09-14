@@ -41,11 +41,16 @@ messages, code, comments and documentation are written in English.
   (job `Dependency review`). GitHub parses the npm, Composer, Go and Actions manifests itself; the
   Java graph (direct and transitive, tests and build plugins included) is submitted by the first
   job of that workflow for the pull request head and every commit of `main`, and the review job
-  only starts once the submission is done. Pull requests from
-  forks and from Dependabot cannot submit a graph (`GITHUB_TOKEN` is read-only there): their Java
-  dependency changes are not reviewed before merge; the push to `main` submits the merged graph
-  and Dependabot alerts report anything vulnerable. Do not merge such a pull request that changes
-  `java/gradle/libs.versions.toml` without checking the advisories of the new versions by hand.
+  only starts once the submission is done, and fails when that submission failed (a skipped job
+  would satisfy a required check). `Dependency review` is the check to require on `main`.
+- Pull requests from forks and from Dependabot get no Java graph: `GITHUB_TOKEN` is read-only
+  there, and the `workflow_run` download-and-submit pattern documented by `gradle/actions` is
+  deliberately not used because the privileged job submits the uploaded artifact verbatim
+  (`sha`, `ref` and content unchecked), so a fork could submit a forged snapshot for `main`.
+  Their Java dependency changes are therefore reviewed on the manifest ecosystems only before
+  merge; the push to `main` submits the merged graph and Dependabot alerts report anything
+  vulnerable. Do not merge such a pull request that changes `java/gradle/libs.versions.toml`
+  without checking the advisories of the new versions by hand.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes

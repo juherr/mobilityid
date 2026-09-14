@@ -173,8 +173,9 @@ signing inputs required, `verifyRelease` scheduled before the nmcp upload task.
   dependencies (`opentest4j` via JUnit, Guava via Error Prone), so a graph reduced to declared
   coordinates fails the job.
 - Pull requests run dependency review in the same workflow (job `Dependency review`, high+, every
-  scope) after that submission job, so the review never runs against a graph without Java. Fork and Dependabot pull requests get no snapshot, hence
-  no Java review before merge (see `CONTRIBUTING.md`).
+  scope) after that submission job and fails when it failed, so the review never vouches for a
+  graph without Java. Fork and Dependabot pull requests get no snapshot, hence
+  no Java review before merge, by choice (see `CONTRIBUTING.md`).
 - OWASP Dependency-Check runs weekly on `main` and on `workflow_dispatch` in
   `.github/workflows/security.yml`, failing on CVSS >= 7.0 (same bar as the PR gate). The NVD
   database is cached between runs under `~/.gradle/dependency-check-data`. Locally:
