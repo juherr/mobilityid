@@ -24,8 +24,6 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -55,7 +53,8 @@
     "format:check": "vp fmt --check",
     "typecheck": "vp check",
     "test": "vp test",
-    "check": "vp check && vp test && vp pack"
+    "check": "vp check && vp test && vp pack && publint --strict && attw --pack . --profile esm-only",
+    "check:package": "scripts/verify-package.sh"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",

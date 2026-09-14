@@ -30,8 +30,11 @@ vp exec bun run check
 npm pack --silent --pack-destination "${out_dir}"
 "${repo_root}/scripts/verify-npm-package.sh" "${tarball}" "${version}"
 
-# publint (pinned devDependency, run from the lockfile): exports/main/types consistency of the packed package.
-node_modules/.bin/publint "${tarball}"
+# publint and Are The Types Wrong (pinned devDependencies, run from the lockfile) on the tarball that
+# ships: `exports` consistency, and type resolution from every module system consumers may use
+# (the package is ESM-only, so the CommonJS failures are expected and ignored by the profile).
+node_modules/.bin/publint --strict "${tarball}"
+node_modules/.bin/attw --profile esm-only "${tarball}"
 
 cat > "${consumer}/package.json" <<JSON
 { "name": "mobilityid-consumer-smoke", "private": true, "type": "module" }
