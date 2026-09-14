@@ -26,8 +26,9 @@ repositories {
 }
 
 dependencies {
-  compileOnly(libs.jspecify)
-  testCompileOnly(libs.jspecify)
+  // JSpecify annotations are part of the public API (runtime retention, read by Kotlin and
+  // static analyzers on the consumer side), hence `api` as recommended by JSpecify.
+  api(libs.jspecify)
 
   errorprone(libs.errorprone.core)
   errorprone(libs.nullaway)
@@ -46,9 +47,7 @@ tasks.withType<Test>().configureEach {
 tasks.withType<JavaCompile>().configureEach {
   options.release.set(21)
   options.encoding = "UTF-8"
-  // -exports: javac flags JSpecify annotations in public signatures although `requires static`
-  // is the recommended way to depend on a nullness annotation library.
-  options.compilerArgs.addAll(listOf("-Xlint:all,-exports", "-Werror"))
+  options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror"))
 
   options.errorprone {
     check("EqualsGetClass", CheckSeverity.ERROR)
