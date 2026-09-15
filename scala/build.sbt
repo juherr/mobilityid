@@ -1,6 +1,6 @@
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport._
 
-ThisBuild / scalaVersion := "3.3.7"
+ThisBuild / scalaVersion := "3.3.8"
 ThisBuild / crossScalaVersions := Seq("2.12.21", "2.13.18", "3.3.7", "3.8.1")
 
 val commonSettings = Seq(
