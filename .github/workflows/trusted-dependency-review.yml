@@ -44,8 +44,50 @@ env:
   # Job correlator gradle/actions derives from the triggering workflow and job names
   # (`Dependency Submission` / `java-graph`); the artifact is named after it.
   CORRELATOR: dependency_submission-java-graph
+  # Pull requests the triggering run knows it belongs to: populated for same-repository and
+  # Dependabot runs, empty for forks (GitHub does not fill it for them). Several open pull
+  # requests can share one head; when the run knows its own, everything below is bound to them.
+  TRUSTED_PULLS: ${{ join(github.event.workflow_run.pull_requests.*.number, ',') }}
 
 jobs:
+  pulls:
+    name: Open pull requests of the head
+    # The commit status is per commit, so it must vouch for every open pull request whose head
+    # is this commit: each of their bases is reviewed below (matrix). Restricted to the pull
+    # requests of the triggering run when it knows them.
+    if: >-
+      github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      matrix: ${{ steps.list.outputs.pulls }}
+
+    steps:
+      - name: List them with their base
+        id: list
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/pulls?head=${HEAD_OWNER}:${HEAD_BRANCH}&state=open" > pulls.json
+          pulls=$(jq -c --arg sha "$HEAD_SHA" --arg repo "$HEAD_REPO" --arg trusted "$TRUSTED_PULLS" '
+            [.[] | select(.head.sha == $sha and .head.repo.full_name == $repo)
+                 | (.number | tostring) as $n
+                 | select($trusted == "" or (($trusted | split(",")) | index($n)) != null)
+                 | {number, base: .base.sha}]' pulls.json)
+          if [[ "${pulls}" == "[]" ]]; then
+            echo "::error::no open pull request with head ${HEAD_SHA} on ${HEAD_OWNER}:${HEAD_BRANCH} (run knows: '${TRUSTED_PULLS}')"
+            exit 1
+          fi
+          echo "Reviewing against: ${pulls}"
+          echo "pulls=${pulls}" >> "$GITHUB_OUTPUT"
+
   submit:
     name: Submit the Java dependency graph
     # Same-repository pull requests submitted their graph themselves; cancelled runs left no
@@ -110,7 +152,7 @@ jobs:
           HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
         run: |
           scripts/validate-dependency-graph-provenance.sh \
-            "$SNAPSHOT" pulls.json "$HEAD_SHA" "$RUN_ID" "$CORRELATOR" "$HEAD_REPO"
+            "$SNAPSHOT" pulls.json "$HEAD_SHA" "$RUN_ID" "$CORRELATOR" "$HEAD_REPO" "$TRUSTED_PULLS"
 
       - name: Verify the snapshot carries the resolved transitive dependencies
         env:
@@ -134,43 +176,32 @@ jobs:
           fi
 
   review:
-    name: Trusted dependency review
-    # Every pull request: same thresholds as `Dependency review` in dependency-submission.yml
-    # (keep them in sync), on the graph submitted by the pull request run or by `submit` above.
-    # Separate job so the review action never holds `contents: write`.
-    needs: submit
+    name: Trusted dependency review (#${{ matrix.pull.number }})
+    # One leg per open pull request of the head, against its own base: same thresholds as
+    # `Dependency review` in dependency-submission.yml (keep them in sync), on the graph submitted
+    # by the pull request run or by `submit` above. Separate job so the review action never
+    # holds `contents: write`.
+    needs:
+      - pulls
+      - submit
     if: >-
       always()
-      && github.event.workflow_run.event == 'pull_request'
-      && github.event.workflow_run.conclusion != 'cancelled'
+      && needs.pulls.result == 'success'
       && (needs.submit.result == 'success' || needs.submit.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
-      pull-requests: read
+    strategy:
+      fail-fast: false
+      matrix:
+        pull: ${{ fromJSON(needs.pulls.outputs.matrix) }}
 
     steps:
-      - name: Find the pull request base
-        id: base
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          gh api "repos/$GITHUB_REPOSITORY/pulls?head=${HEAD_OWNER}:${HEAD_BRANCH}&state=open" > pulls.json
-          base_sha=$(jq -r --arg sha "$HEAD_SHA" '[.[] | select(.head.sha == $sha)] | first | .base.sha // empty' pulls.json)
-          if [[ -z "${base_sha}" ]]; then
-            echo "::error::no open pull request with head ${HEAD_SHA} on ${HEAD_OWNER}:${HEAD_BRANCH}"
-            exit 1
-          fi
-          echo "sha=${base_sha}" >> "$GITHUB_OUTPUT"
-
       - name: Dependency Review
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
-          base-ref: ${{ steps.base.outputs.sha }}
+          base-ref: ${{ matrix.pull.base }}
           head-ref: ${{ github.event.workflow_run.head_sha }}
           fail-on-severity: high
           fail-on-scopes: runtime, development, unknown
@@ -180,10 +211,12 @@ jobs:
   status:
     name: Report the trusted dependency review status
     # Publishes the outcome on the pull request head commit whatever happened above, so that a
-    # required `Trusted dependency review` status never stays pending on a failure. The App key
+    # required `Trusted dependency review` status never stays pending on a failure: success only
+    # when every review leg (one per open pull request of that head) passed. The App key
     # is an environment secret: the `trusted-review` environment only accepts `main`, which a
     # `pull_request` run never is, so no pull request can mint this token.
     needs:
+      - pulls
       - submit
       - review
     if: >-
