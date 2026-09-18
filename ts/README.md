@@ -70,7 +70,9 @@ same test fixtures, written for TypeScript.
   only the factory can produce. There is no wrapper object, so `===`, `JSON.stringify`, template
   literals and `Map`/`Set` keys work on the value itself, while `const cc: CountryCode = "NL"` is a
   compile error. The brand widens to `string` for free; the reverse only goes through `from`,
-  `parse` or `tryParse`. `src/string-id.ts` holds the `StringId` type and the `defineStringId`
+  `parse` or `tryParse`: there is no runtime `instanceof`, and `isValid` only answers whether
+  `from` would accept the input (`isValid("nl")` is `true`) without narrowing it, so parse and
+  use the returned value where a `CountryCode` is required. `src/string-id.ts` holds the `StringId` type and the `defineStringId`
   helper that builds the four entry points once for every such identifier.
 - Composite identifiers (`PartyId`, `ContractId`, `EvseIdIso`, `EvseIdDin`) are immutable classes
   (`readonly` and frozen instances) holding branded strings.

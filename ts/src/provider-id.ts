@@ -23,7 +23,12 @@ import {
 
 const PARTY_CODE_REGEX = /^[A-Za-z0-9]{3}$/;
 
-/** Shared by `ProviderId` and `OperatorIdIso`: both are the 3-character party code of a party id. */
+/**
+ * Shared by `ProviderId` and `OperatorIdIso`: both are the 3-character party code of a party id.
+ * The message names `OperatorId` for both on purpose: it is the wording of the Scala reference
+ * (`PartyCode` in `basicIdentifiers.scala`, also shared by its two identifiers) and of the Java
+ * port, kept for cross-port parity of the error contract.
+ */
 export const partyCodeSpec: StringIdSpec = {
   isValid: (raw) => PARTY_CODE_REGEX.test(raw),
   message: () => "OperatorId must have a length of 3 and be ASCII letters or digits",

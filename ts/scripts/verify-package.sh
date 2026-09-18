@@ -68,6 +68,8 @@ import {
   ContractId,
   ContractIdStandards,
   CountryCode,
+  OperatorIdIso,
+  ProviderId,
   type ContractIdStandard,
   type ParseResult,
 } from "@juherr/mobilityid";
@@ -85,7 +87,11 @@ const country: CountryCode = CountryCode.from("NL");
 const widened: string = country;
 // @ts-expect-error only `CountryCode.from` produces a CountryCode
 const unbranded: CountryCode = "NL";
-export { strict, tolerant, notNull, outcome, widened, unbranded };
+// Brands stay distinct through the packed declarations, even between identifiers that accept
+// the same values.
+// @ts-expect-error a ProviderId is not an OperatorIdIso
+const crossed: OperatorIdIso = ProviderId.from("TNM");
+export { strict, tolerant, notNull, outcome, widened, unbranded, crossed };
 TS
 cat > "${consumer}/tsconfig.json" <<'JSON'
 { "compilerOptions": { "module": "NodeNext", "moduleResolution": "NodeNext", "strict": true, "noEmit": true, "skipLibCheck": false, "types": [] }, "files": ["smoke.ts"] }
