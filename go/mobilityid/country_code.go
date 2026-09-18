@@ -20,8 +20,6 @@ package mobilityid
 import (
 	"fmt"
 	"strings"
-
-	"golang.org/x/text/language"
 )
 
 // CountryCode represents a two-letter country code as defined by ISO 3166-1 alpha-2.
@@ -49,13 +47,9 @@ func (cc *CountryCode) Value() string {
 	return cc.value
 }
 
+// isValidCountryCode expects an upper-cased value and checks it against the ISO 3166-1
+// alpha-2 list shared with the Scala reference (see iso3166_alpha2.go).
 func isValidCountryCode(code string) bool {
-	if len(code) != 2 {
-		return false
-	}
-	region, err := language.ParseRegion(code)
-	if err != nil {
-		return false
-	}
-	return region.IsCountry()
+	_, ok := iso3166Alpha2[code]
+	return ok
 }

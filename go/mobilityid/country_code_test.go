@@ -32,6 +32,21 @@ func TestNewCountryCode(t *testing.T) {
 		{name: "invalid too short", input: "U", wantErr: true},
 		{name: "invalid too long", input: "USA", wantErr: true},
 		{name: "invalid unknown", input: "ZZ", wantErr: true},
+		// Assigned in ISO 3166-1 but easy to get wrong.
+		{name: "valid Aland Islands", input: "AX", want: "AX"},
+		{name: "valid Caribbean Netherlands", input: "BQ", want: "BQ"},
+		{name: "valid Curacao", input: "CW", want: "CW"},
+		{name: "valid South Sudan", input: "SS", want: "SS"},
+		{name: "valid United Kingdom", input: "GB", want: "GB"},
+		// Region codes that CLDR knows but ISO 3166-1 does not assign; the Scala, Java, PHP and
+		// TypeScript ports reject them.
+		{name: "invalid exceptional reservation UK", input: "UK", wantErr: true},
+		{name: "invalid exceptional reservation EU", input: "EU", wantErr: true},
+		{name: "invalid user-assigned XK", input: "XK", wantErr: true},
+		{name: "invalid transitional AN", input: "AN", wantErr: true},
+		{name: "invalid formerly used SU", input: "SU", wantErr: true},
+		{name: "invalid formerly used DD", input: "DD", wantErr: true},
+		{name: "invalid formerly used YU", input: "YU", wantErr: true},
 	}
 
 	for _, tt := range tests {
@@ -44,5 +59,17 @@ func TestNewCountryCode(t *testing.T) {
 				t.Fatalf("NewCountryCode() got = %v, want %v", cc.String(), tt.want)
 			}
 		})
+	}
+}
+
+func TestISO3166Alpha2Matches(t *testing.T) {
+	// Locale.getISOCountries() in the Java reference lists 249 codes.
+	if got := len(iso3166Alpha2); got != 249 {
+		t.Fatalf("len(iso3166Alpha2) = %d, want 249", got)
+	}
+	for code := range iso3166Alpha2 {
+		if len(code) != 2 || code[0] < 'A' || code[0] > 'Z' || code[1] < 'A' || code[1] > 'Z' {
+			t.Errorf("iso3166Alpha2 contains %q, want two uppercase letters", code)
+		}
 	}
 }
