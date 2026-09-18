@@ -75,7 +75,7 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 		return nil, fmt.Errorf("invalid provider ID '%s' in ContractID '%s': %w", providerIDPartStr, id, err)
 	}
 
-	if err := parser.ValidateInstanceValue(instanceValueStr); err != nil {
+	if err = parser.ValidateInstanceValue(instanceValueStr); err != nil {
 		return nil, err
 	}
 

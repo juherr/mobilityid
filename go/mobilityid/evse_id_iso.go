@@ -23,8 +23,10 @@ import (
 	"strings"
 )
 
-var evseIDISORegex = regexp.MustCompile(`^([A-Z]{2})\*?([A-Z0-9]{3})\*?E([A-Z0-9*]{1,31})$`)
-var evseIDISOFromPartsPowerOutletRegex = regexp.MustCompile(`^[A-Z0-9*]{1,31}$`)
+var (
+	evseIDISORegex                     = regexp.MustCompile(`^([A-Z]{2})\*?([A-Z0-9]{3})\*?E([A-Z0-9*]{1,31})$`)
+	evseIDISOFromPartsPowerOutletRegex = regexp.MustCompile(`^[A-Z0-9*]{1,31}$`)
+)
 
 // EvseIDISO represents an EVSE identifier in ISO format.
 type EvseIDISO struct {

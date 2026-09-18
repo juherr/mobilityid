@@ -23,8 +23,10 @@ import (
 	"strings"
 )
 
-var evseIDDINRegex = regexp.MustCompile(`^(\+?[0-9]{1,3})\*([0-9]{3,6})\*([0-9*]{1,32})$`)
-var evseIDDINFromPartsPowerOutletRegex = regexp.MustCompile(`^[0-9*]{1,32}$`)
+var (
+	evseIDDINRegex                     = regexp.MustCompile(`^(\+?[0-9]{1,3})\*([0-9]{3,6})\*([0-9*]{1,32})$`)
+	evseIDDINFromPartsPowerOutletRegex = regexp.MustCompile(`^[0-9*]{1,32}$`)
+)
 
 // EvseIDDIN represents an EVSE identifier in DIN format.
 type EvseIDDIN struct {
