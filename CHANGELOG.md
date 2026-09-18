@@ -74,6 +74,11 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
+- **TypeScript:** toolchain updated to Vite+ 0.3.3 (Oxlint 1.83, Oxfmt 0.68, Vite 8.3,
+  Rolldown 1.2.9, tsdown 0.23; Vitest stays 4.1.11) and Bun 1.4.2 (`packageManager`;
+  `engines.bun` unchanged). `@vitest/coverage-v8` stays on the Vitest version Vite+ bundles and
+  is excluded from Renovate. TypeScript 6 remains the supported baseline; CI adds a TypeScript 7
+  compatibility job (type-check, build, declarations, package verification).
 - **Breaking (Scala):** the artifacts move to `dev.juherr.mobilityid:mobilityid` and
   `dev.juherr.mobilityid:mobilityid-interpolators` (the `com.thenewmotion` coordinates were
   never on Maven Central; the package stays `com.thenewmotion.mobilityid`). Scala 2.12 and

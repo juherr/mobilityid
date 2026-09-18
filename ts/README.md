@@ -13,13 +13,17 @@ same test fixtures, written for TypeScript.
 ## Tooling
 
 - Node.js: 24 LTS primary target (CI also checks 22 and 25); `engines.node >= 22`
-- Package manager: Bun, via `vp install`
+- Package manager: Bun, via `vp install` (`packageManager` pins the version the toolchain runs,
+  `engines.bun` is the minimum a consumer needs)
 - Unified toolchain: Vite+ (`vp`): `vp check` runs the formatter, Oxlint (type-aware) and the
   type checker; `vp test` is Vitest; `vp pack` is tsdown
-- TypeScript is an explicit devDependency (6.x, the range Vite+ supports): Vite+ does not ship
-  `tsc`, and `scripts/verify-package.sh` compiles a consumer project with it
+- TypeScript is an explicit devDependency (6.x, the supported baseline): Vite+ does not ship
+  `tsc`, and `scripts/verify-package.sh` compiles a consumer project with it. TypeScript 7 is
+  not the baseline yet: CI (`ts-next` job) type-checks the sources and the packed declarations
+  with the latest 7.x as an early-compatibility check, without imposing it on consumers
 - Property-based tests: fast-check (`test/properties.test.ts`)
-- Coverage: `@vitest/coverage-v8`, thresholds in `vite.config.ts` (statements, functions and lines
+- Coverage: `@vitest/coverage-v8`, pinned to the Vitest version Vite+ bundles (Vite+ refuses a
+  mismatch at startup, so the pin moves with `vite-plus`), thresholds in `vite.config.ts` (statements, functions and lines
   90 %, branches 85 %), enforced by `vp test --coverage` (`bun run test`, `bun run check`, CI);
   a filtered run (`vp test ContractId`) skips them on purpose
 - Package shape: `publint --strict` and `@arethetypeswrong/cli` (`bun run check:shape`)
