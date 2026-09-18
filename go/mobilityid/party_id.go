@@ -65,3 +65,13 @@ func (pid *PartyID) Value() string {
 func (pid *PartyID) ToCompactString() string {
 	return pid.countryCode.Value() + pid.partyCode
 }
+
+// CountryCode returns the CountryCode part of the PartyID.
+func (pid *PartyID) CountryCode() *CountryCode {
+	return pid.countryCode
+}
+
+// PartyCode returns the three-character party code part of the PartyID.
+func (pid *PartyID) PartyCode() string {
+	return pid.partyCode
+}
