@@ -20,7 +20,7 @@ package com.thenewmotion.mobilityid
 import ContractIdStandard._
 import ContractIdParser.DINParser
 
-import scala.annotation.implicitNotFound
+import scala.annotation.{implicitNotFound, nowarn}
 import scala.util.Try
 import scala.util.matching.Regex
 
@@ -113,6 +113,9 @@ object ContractIdParser {
 sealed trait ContractIdConverter[B <: ContractIdStandard, A <: ContractIdStandard]
   extends (ContractId[B] => ContractId[A])
 
+// Scala 3 reports the deprecated ISO<->DIN converters on the enclosing object (synthesized
+// module accessors), so the deprecation is silenced here rather than on each converter.
+@nowarn("cat=deprecation")
 object ContractIdConverter {
   implicit object DINtoEMI3 extends ContractIdConverter[DIN, EMI3] {
     override def apply(b: ContractId[DIN]): ContractId[EMI3] =
