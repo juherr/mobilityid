@@ -16,7 +16,7 @@
 
 import { CountryCode } from "./country-code.js";
 import type { OperatorIdIso } from "./operator-id.js";
-import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
+import { type ParseResult, ValidationError, attempt, valueOrNull } from "./parse-result.js";
 import { ProviderId } from "./provider-id.js";
 
 const PARTY_ID_REGEX = /^([A-Za-z]{2})[-*]?([A-Za-z0-9]{3})$/;
@@ -36,8 +36,7 @@ export class PartyId {
   }
 
   public static parse(raw: string): PartyId | null {
-    const result = PartyId.tryParse(raw);
-    return result.ok ? result.value : null;
+    return valueOrNull(PartyId.tryParse(raw));
   }
 
   public static parseStrict(raw: string): PartyId {
@@ -48,27 +47,25 @@ export class PartyId {
       throw new ValidationError(`Invalid party ID: ${raw}`);
     }
 
-    const countryCode = CountryCode.from(country);
-    const partyCode = ProviderId.from(party).value;
-    return new PartyId(countryCode, partyCode);
+    return new PartyId(CountryCode.from(country), ProviderId.from(party));
   }
 
   public static fromCountryAndProvider(countryCode: CountryCode, providerId: ProviderId): PartyId {
-    return new PartyId(countryCode, providerId.value);
+    return new PartyId(countryCode, providerId);
   }
 
   public static fromCountryAndOperator(
     countryCode: CountryCode,
     operatorId: OperatorIdIso,
   ): PartyId {
-    return new PartyId(countryCode, operatorId.value);
+    return new PartyId(countryCode, operatorId);
   }
 
   public toCompactString(): string {
-    return `${this.countryCode.toString()}${this.partyCode}`;
+    return `${this.countryCode}${this.partyCode}`;
   }
 
   public toString(): string {
-    return `${this.countryCode.toString()}-${this.partyCode}`;
+    return `${this.countryCode}-${this.partyCode}`;
   }
 }

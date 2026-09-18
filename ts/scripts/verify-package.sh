@@ -55,16 +55,21 @@ try {
 }
 const evse = MobilityIdParsers.parseEvseId("+49*810*000*438");
 if (evse === null) throw new Error("expected a DIN EVSE id");
+if (strict.countryCode !== "NL") throw new Error("branded identifiers are plain strings at runtime");
 console.log("@juherr/mobilityid consumer smoke (node): OK", String(strict), String(evse));
 JS
 node "${consumer}/smoke.mjs"
 
-# Type declarations must resolve through `exports` under NodeNext; the tolerant contract is `T | null`
-# and `tryParse` is a discriminated union.
+# Type declarations must resolve through `exports` under NodeNext; the tolerant contract is `T | null`,
+# `tryParse` is a discriminated union and the simple identifiers keep their brand through the
+# packed declarations.
 cat > "${consumer}/smoke.ts" <<'TS'
 import {
   ContractId,
   ContractIdStandards,
+  CountryCode,
+  OperatorIdIso,
+  ProviderId,
   type ContractIdStandard,
   type ParseResult,
 } from "@juherr/mobilityid";
@@ -77,7 +82,16 @@ const notNull: ContractId = ContractId.parse(standard, "NL-TNM-000122045-X");
 // The result union narrows on `ok` without a cast.
 const result: ParseResult<ContractId> = ContractId.tryParse(standard, "NL-TNM-000122045-X");
 const outcome: string = result.ok ? result.value.toString() : result.error;
-export { strict, tolerant, notNull, outcome };
+// Branded string identifiers: a `CountryCode` is a string, a string is not a `CountryCode`.
+const country: CountryCode = CountryCode.from("NL");
+const widened: string = country;
+// @ts-expect-error only `CountryCode.from` produces a CountryCode
+const unbranded: CountryCode = "NL";
+// Brands stay distinct through the packed declarations, even between identifiers that accept
+// the same values.
+// @ts-expect-error a ProviderId is not an OperatorIdIso
+const crossed: OperatorIdIso = ProviderId.from("TNM");
+export { strict, tolerant, notNull, outcome, widened, unbranded, crossed };
 TS
 cat > "${consumer}/tsconfig.json" <<'JSON'
 { "compilerOptions": { "module": "NodeNext", "moduleResolution": "NodeNext", "strict": true, "noEmit": true, "skipLibCheck": false, "types": [] }, "files": ["smoke.ts"] }

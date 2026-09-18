@@ -16,7 +16,13 @@
 
 import { CountryCode } from "./country-code.js";
 import { OperatorIdDin, OperatorIdIso, type OperatorId } from "./operator-id.js";
-import { type ParseResult, ValidationError, attempt, failure } from "./parse-result.js";
+import {
+  type ParseResult,
+  ValidationError,
+  attempt,
+  failure,
+  valueOrNull,
+} from "./parse-result.js";
 import { PartyId } from "./party-id.js";
 import { PhoneCountryCode } from "./phone-country-code.js";
 
@@ -70,8 +76,7 @@ export class EvseIdIso extends EvseIdBase {
   }
 
   public static parse(raw: string): EvseIdIso | null {
-    const result = EvseIdIso.tryParse(raw);
-    return result.ok ? result.value : null;
+    return valueOrNull(EvseIdIso.tryParse(raw));
   }
 
   public static parseStrict(raw: string): EvseIdIso {
@@ -92,7 +97,7 @@ export class EvseIdIso extends EvseIdBase {
   }
 
   public toString(): string {
-    return `${this.countryCode.toString()}*${this.operatorId.toString()}*E${this.powerOutletId}`;
+    return `${this.countryCode}*${this.operatorId}*E${this.powerOutletId}`;
   }
 }
 
@@ -130,8 +135,7 @@ export class EvseIdDin extends EvseIdBase {
   }
 
   public static parse(raw: string): EvseIdDin | null {
-    const result = EvseIdDin.tryParse(raw);
-    return result.ok ? result.value : null;
+    return valueOrNull(EvseIdDin.tryParse(raw));
   }
 
   public static parseStrict(raw: string): EvseIdDin {
@@ -144,7 +148,7 @@ export class EvseIdDin extends EvseIdBase {
   }
 
   public toString(): string {
-    return `${this.countryCode.toString()}*${this.operatorId.toString()}*${this.powerOutletId}`;
+    return `${this.countryCode}*${this.operatorId}*${this.powerOutletId}`;
   }
 }
 
@@ -240,8 +244,7 @@ export const EvseId = {
   },
 
   parse(raw: string): EvseId | null {
-    const result = EvseId.tryParse(raw);
-    return result.ok ? result.value : null;
+    return valueOrNull(EvseId.tryParse(raw));
   },
 
   parseStrict(raw: string): EvseId {

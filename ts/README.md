@@ -64,7 +64,18 @@ same test fixtures, written for TypeScript.
   `parse` is derived from `tryParse`, so the three entry points share one validation path. Only
   `ValidationError` is turned into a failure or `null`: any other exception (a plain `TypeError`
   from a programming mistake included) is a bug and propagates through all three entry points.
-- Domain objects are immutable (`readonly` and frozen instances).
+- The single-valued identifiers (`CountryCode`, `PhoneCountryCode`, `ProviderId`,
+  `OperatorIdIso`, `OperatorIdDin`) are [branded strings](https://www.learningtypescript.com/articles/branded-types):
+  `CountryCode.from("nl")` returns the plain string `"NL"` typed as `CountryCode`, a type that
+  only the factory can produce. There is no wrapper object, so `===`, `JSON.stringify`, template
+  literals and `Map`/`Set` keys work on the value itself, while `const cc: CountryCode = "NL"` is a
+  compile error. The brand widens to `string` for free; the reverse only goes through `from`,
+  `parse` or `tryParse`: there is no runtime `instanceof`, and `isValid` only answers whether
+  `from` would accept the input (`isValid("nl")` is `true`) without narrowing it, so parse and
+  use the returned value where a `CountryCode` is required. `src/string-id.ts` holds the `StringId` type and the `defineStringId`
+  helper that builds the four entry points once for every such identifier.
+- Composite identifiers (`PartyId`, `ContractId`, `EvseIdIso`, `EvseIdDin`) are immutable classes
+  (`readonly` and frozen instances) holding branded strings.
 - Canonical rendering is preserved (`toString()`, compact rendering helpers).
 
 ## Commands
@@ -86,7 +97,7 @@ bun run check            # everything above, what CI runs
 
 ## Current scope
 
-- Foundational identifiers: `CountryCode`, `PhoneCountryCode`, `ProviderId`, `OperatorIdIso`, `OperatorIdDin`, `PartyId`
+- Foundational identifiers: `CountryCode`, `PhoneCountryCode`, `ProviderId`, `OperatorIdIso`, `OperatorIdDin` (branded strings), `PartyId`
 - Check digits: ISO and DIN
 - Contract model: `ContractId`, `ContractIdStandard`, format conversions
 - EVSE model: `EvseId`, `EvseIdIso`, `EvseIdDin`

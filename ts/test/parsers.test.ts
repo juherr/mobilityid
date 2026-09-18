@@ -20,8 +20,8 @@ import { MobilityIdParsers } from "../src/index.js";
 
 describe("MobilityIdParsers", () => {
   it("exposes parsing helpers", () => {
-    expect(MobilityIdParsers.parseCountryCode("NL")?.toString()).toBe("NL");
-    expect(MobilityIdParsers.parseProviderId("TNM")?.toString()).toBe("TNM");
+    expect(MobilityIdParsers.parseCountryCode("NL")).toBe("NL");
+    expect(MobilityIdParsers.parseProviderId("TNM")).toBe("TNM");
     expect(MobilityIdParsers.parseContractIdIso("NL-TNM-000122045-U")?.toString()).toBe(
       "NL-TNM-000122045-U",
     );
@@ -29,9 +29,9 @@ describe("MobilityIdParsers", () => {
   });
 
   it("covers every identifier", () => {
-    expect(MobilityIdParsers.parsePhoneCountryCode("+31")?.toString()).toBe("+31");
-    expect(MobilityIdParsers.parseOperatorIdIso("TNM")?.toString()).toBe("TNM");
-    expect(MobilityIdParsers.parseOperatorIdDin("456")?.toString()).toBe("456");
+    expect(MobilityIdParsers.parsePhoneCountryCode("+31")).toBe("+31");
+    expect(MobilityIdParsers.parseOperatorIdIso("TNM")).toBe("TNM");
+    expect(MobilityIdParsers.parseOperatorIdDin("456")).toBe("456");
     expect(MobilityIdParsers.parsePartyId("NL*TNM")?.toString()).toBe("NL-TNM");
     expect(MobilityIdParsers.parseContractIdDin("NL-TNM-722345-8")?.toString()).toBe(
       "NL-TNM-722345-8",

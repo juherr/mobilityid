@@ -18,7 +18,7 @@ import { checkDigitDin } from "./check-digit-din.js";
 import { checkDigitIso } from "./check-digit-iso.js";
 import { ContractIdStandards, type ContractIdStandard } from "./contract-id-standard.js";
 import { CountryCode } from "./country-code.js";
-import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
+import { type ParseResult, ValidationError, attempt, valueOrNull } from "./parse-result.js";
 import { PartyId } from "./party-id.js";
 import { ProviderId } from "./provider-id.js";
 
@@ -77,14 +77,14 @@ export class ContractId {
 
   public static fromParts(
     standard: ContractIdStandard,
-    countryCode: string | CountryCode,
-    providerId: string | ProviderId,
+    countryCode: string,
+    providerId: string,
     instanceValue: string,
     checkDigit?: string,
   ): ContractId {
     const parser = parsers[standard];
-    const cc = typeof countryCode === "string" ? CountryCode.from(countryCode) : countryCode;
-    const provider = typeof providerId === "string" ? ProviderId.from(providerId) : providerId;
+    const cc = CountryCode.from(countryCode);
+    const provider = ProviderId.from(providerId);
     const normalizedInstance = instanceValue.toUpperCase();
 
     if (!parser.instanceRegex.test(normalizedInstance)) {
@@ -93,9 +93,7 @@ export class ContractId {
       );
     }
 
-    const computed = parser.computeCheckDigit(
-      `${cc.toString()}${provider.toString()}${normalizedInstance}`,
-    );
+    const computed = parser.computeCheckDigit(`${cc}${provider}${normalizedInstance}`);
     if (checkDigit !== undefined && checkDigit.toUpperCase() !== computed) {
       throw new ValidationError(
         `Given check digit '${checkDigit}' is not equal to computed '${computed}'`,
@@ -110,8 +108,7 @@ export class ContractId {
   }
 
   public static parse(standard: ContractIdStandard, raw: string): ContractId | null {
-    const result = ContractId.tryParse(standard, raw);
-    return result.ok ? result.value : null;
+    return valueOrNull(ContractId.tryParse(standard, raw));
   }
 
   public static parseStrict(standard: ContractIdStandard, raw: string): ContractId {
@@ -126,11 +123,11 @@ export class ContractId {
   }
 
   public toCompactString(): string {
-    return `${this.countryCode.toString()}${this.providerId.toString()}${this.instanceValue}${this.checkDigit}`;
+    return `${this.countryCode}${this.providerId}${this.instanceValue}${this.checkDigit}`;
   }
 
   public toCompactStringWithoutCheckDigit(): string {
-    return `${this.countryCode.toString()}${this.providerId.toString()}${this.instanceValue}`;
+    return `${this.countryCode}${this.providerId}${this.instanceValue}`;
   }
 
   public get partyId(): PartyId {
@@ -222,6 +219,6 @@ export class ContractId {
   }
 
   public toString(): string {
-    return `${this.countryCode.toString()}-${this.providerId.toString()}-${this.instanceValue}-${this.checkDigit}`;
+    return `${this.countryCode}-${this.providerId}-${this.instanceValue}-${this.checkDigit}`;
   }
 }

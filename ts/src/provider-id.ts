@@ -14,46 +14,26 @@
  * limitations under the License.
  */
 
-import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
+import {
+  type StringId,
+  type StringIdCompanion,
+  type StringIdSpec,
+  defineStringId,
+} from "./string-id.js";
 
 const PARTY_CODE_REGEX = /^[A-Za-z0-9]{3}$/;
 
-export function isValidPartyCode(value: string): boolean {
-  return PARTY_CODE_REGEX.test(value);
-}
+/**
+ * Shared by `ProviderId` and `OperatorIdIso`: both are the 3-character party code of a party id.
+ * The message names `OperatorId` for both on purpose: it is the wording of the Scala reference
+ * (`PartyCode` in `basicIdentifiers.scala`, also shared by its two identifiers) and of the Java
+ * port, kept for cross-port parity of the error contract.
+ */
+export const partyCodeSpec: StringIdSpec = {
+  isValid: (raw) => PARTY_CODE_REGEX.test(raw),
+  message: () => "OperatorId must have a length of 3 and be ASCII letters or digits",
+};
 
-export class ProviderId {
-  public readonly value: string;
+export type ProviderId = StringId<"ProviderId">;
 
-  private constructor(value: string) {
-    this.value = value;
-    Object.freeze(this);
-  }
-
-  public static isValid(raw: string): boolean {
-    return isValidPartyCode(raw);
-  }
-
-  public static from(raw: string): ProviderId {
-    if (!ProviderId.isValid(raw)) {
-      throw new ValidationError(
-        "OperatorId must have a length of 3 and be ASCII letters or digits",
-      );
-    }
-
-    return new ProviderId(raw.toUpperCase());
-  }
-
-  public static tryParse(raw: string): ParseResult<ProviderId> {
-    return attempt(() => ProviderId.from(raw));
-  }
-
-  public static parse(raw: string): ProviderId | null {
-    const result = ProviderId.tryParse(raw);
-    return result.ok ? result.value : null;
-  }
-
-  public toString(): string {
-    return this.value;
-  }
-}
+export const ProviderId: StringIdCompanion<ProviderId> = defineStringId(partyCodeSpec);

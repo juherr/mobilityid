@@ -96,6 +96,15 @@ which requires a dated section for the version below and a matching file in
   the license-header gate now really runs (the v1-layout settings were silently ignored). CI
   uses `golangci-lint-action` (2.13, tracked by Renovate), `go test -race -cover` and
   `govulncheck`.
+- **Breaking (TypeScript):** `CountryCode`, `PhoneCountryCode`, `ProviderId`, `OperatorIdIso` and
+  `OperatorIdDin` are branded strings instead of wrapper classes: `CountryCode.from("nl")` returns
+  the plain string `"NL"` typed as `CountryCode`, so `===`, `JSON.stringify`, template literals and
+  `Map` keys work on the value itself. `from`, `parse`, `tryParse` and `isValid` keep their
+  signatures; the `.value` property and `instanceof` checks are gone. Replace `id.value` with `id`.
+  There is no runtime check that a string is branded: where a `CountryCode` is required, parse
+  the input (`CountryCode.parse`/`tryParse`) and use the returned value; `isValid` only answers
+  whether `from` would accept the input and does not narrow it. `ContractId.fromParts` takes
+  plain strings, a branded value being one.
 - **Breaking (PHP):** PHP 8.4 is the minimum version (`php: ^8.4`, CI on 8.4 and 8.5); PHP 8.3
   is no longer supported. Every value object is a `final readonly class` (`AbstractContractId`
   and `AbstractEvseId` are `abstract readonly`), so their public properties can no longer be
