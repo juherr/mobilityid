@@ -49,12 +49,23 @@ messages, code, comments and documentation are written in English.
   `workflow_run` that checks out nothing but `scripts/` of `main`) downloads that artifact,
   accepts it only when `scripts/validate-dependency-graph-provenance.sh` binds it to the
   triggering run and its open pull request (checks listed in that script), submits it, then
-  runs the same review as `Java dependency review`. The `download-and-submit` pattern of `gradle/actions` is not used
-  because it submits the artifact verbatim, letting a fork forge a snapshot for `main`. What
-  remains is that the fork produces the graph content, the same exposure as a same-repository
-  pull request editing the build, limited to that pull request. `Java dependency review` can be
-  required on `main` too: it is skipped, hence satisfied, for same-repository pull requests.
-  `workflow_run` workflows only run from `main`, so changes to that file take effect after merge.
+  runs the same review as `Java dependency review`. The `download-and-submit` pattern of
+  `gradle/actions` is not used because it submits the artifact verbatim, letting a fork forge a
+  snapshot for `main`. What remains is that the fork produces the graph content, the same
+  exposure as a same-repository pull request editing the build, limited to that pull request.
+  On a re-run, the artifacts of the previous attempts stay on the run: the most recently
+  created one is selected (`scripts/select-dependency-graph-artifact.sh`), so a re-run that does
+  not re-run `Java dependency graph` submits the graph of the previous attempt, for the same
+  commit.
+- The check runs of a `workflow_run` workflow are attached to the `main` commit it ran from, not
+  to the pull request, so the outcome is published as the `Java dependency review` **commit
+  status** on the pull request head (`scripts/report-java-review-status.sh`), by
+  `fork-dependency-graph.yml` for fork and Dependabot pull requests and by `Dependency
+  Submission` for same-repository ones. That status context is the one to require on `main`
+  for Java, next to `Dependency review`; enable it only after a real fork pull request has shown
+  the full path (artifact upload, provenance validation, submission, review, status on the
+  head). `workflow_run` workflows only run from `main`, so changes to that file take effect
+  after merge.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes

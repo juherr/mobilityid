@@ -9,8 +9,10 @@
 #   - `job.id` is the triggering run id and `job.correlator` the expected job correlator;
 #   - pull request <N> is in the given list (`GET /repos/{owner}/{repo}/pulls?head=<owner>:<branch>`),
 #     open, with that head sha and coming from the expected head repository;
-#   - every manifest is located under `java/`: the fork may only describe the Java graph of its
-#     own pull request, not shadow the manifests GitHub parses itself (npm, Composer, Go, Actions).
+#   - every manifest `source_location` is a canonical repository-relative path under `java/`
+#     (no `..`, `.` or `//` segment, not absolute): the fork may only describe the Java graph of
+#     its own pull request, not shadow the manifests GitHub parses itself (npm, Composer, Go,
+#     Actions) through a path such as `java/../ts/package.json`.
 # The content itself (resolved transitive dependencies) is the job of verify-dependency-graph.sh.
 # On success prints `base_sha=<sha>` on stdout (GITHUB_OUTPUT format) for the dependency review
 # that follows. Exit 0 when accepted, 1 when rejected, 2 on usage error.
@@ -31,6 +33,7 @@ done
 
 python3 - "$@" <<'PY'
 import json
+import posixpath
 import re
 import sys
 
@@ -63,8 +66,12 @@ try:
     check(job.get("correlator") == correlator, "snapshot job correlator matches", f"got {job.get('correlator')!r}")
 
     sources = [(manifest.get("file") or {}).get("source_location") for manifest in (snapshot.get("manifests") or {}).values()]
-    foreign = [source for source in sources if not (isinstance(source, str) and source.startswith("java/"))]
-    check(not foreign, "every manifest is located under java/", f"got {foreign!r}")
+    foreign = [
+        source
+        for source in sources
+        if not (isinstance(source, str) and source.startswith("java/") and posixpath.normpath(source) == source)
+    ]
+    check(not foreign, "every manifest is a canonical path under java/", f"got {foreign!r}")
 
     base_sha = None
     if match is not None:
