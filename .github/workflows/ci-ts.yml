@@ -72,3 +72,47 @@ jobs:
 
       - name: Package dry-run
         run: vp exec bun pm pack --dry-run
+
+  # Early-compatibility canary, not the baseline: the package keeps TypeScript 6 as the supported
+  # version (devDependency, release build, consumer smoke). This job swaps in the latest
+  # TypeScript 7 on the runner only and proves the sources, the emitted declarations and the
+  # packed tarball still type-check with it. `vp check` type-checks through the bundled tsgolint,
+  # so the sources are also compiled with TypeScript 7's own `tsc` here.
+  ts-next:
+    name: TypeScript 7 compatibility (Node 24)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: ts
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Vite+ and Node 24
+        uses: voidzero-dev/setup-vp@237a7eda494c3466dcb53e9f067142b9218d64a1 # v1
+        with:
+          node-version: "24"
+          cache: true
+          working-directory: ts
+
+      - name: Install the latest TypeScript 7 (runner only, the committed baseline stays 6)
+        run: |
+          set -euo pipefail
+          vp exec bun add --dev typescript@7
+          version="$(node_modules/.bin/tsc --version)"
+          echo "${version}"
+          case "${version}" in
+            "Version 7."*) ;;
+            *) echo "expected TypeScript 7, got: ${version}" >&2; exit 1 ;;
+          esac
+
+      - name: Type-check sources, tests and config with TypeScript 7 tsc
+        run: node_modules/.bin/tsc -p tsconfig.json
+
+      - name: Check, test, build, validate the package shape and consume the tarball with TypeScript 7
+        run: scripts/verify-package.sh
