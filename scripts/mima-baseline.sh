@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Prints the last release of the Scala artifacts on Maven Central (the <release> entry of the
-# mobilityid_3 maven-metadata.xml), to be passed to sbt as -Dmobilityid.mimaBaseline=<version>.
-# Exit 0: a release exists and was printed.
-# Exit 1: nothing published yet (HTTP 404); nothing is printed and MiMa has no baseline.
+# mobilityid_3 maven-metadata.xml), the MOBILITYID_MIMA_BASELINE the Scala build compares against.
+# Exit 0: the release was printed, or nothing is published yet (HTTP 404) and nothing is printed.
 # Exit 2: Central could not be questioned or answered something unexpected. Callers must not read 2
 #         as "no baseline": skipping the compatibility check on a transport failure would hide a break.
 set -euo pipefail
@@ -23,7 +22,7 @@ case "${http_code}" in
   200) ;;
   404)
     echo "No Scala release on Maven Central yet: ${url}" >&2
-    exit 1
+    exit 0
     ;;
   *)
     echo "Unexpected HTTP ${http_code} from Maven Central: ${url}" >&2

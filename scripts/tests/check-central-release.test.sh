@@ -70,7 +70,6 @@ expect 0 no-gradle-module "${base}/no-gradle-module/dev/juherr/mobilityid" --no-
 expect 1 no-gradle-module "${base}/no-gradle-module/dev/juherr/mobilityid" "${scala_artifacts[@]}"   # default expects .module
 expect 1 missing-scala-3 "${base}/missing-scala-3/dev/juherr/mobilityid" --no-module "${scala_artifacts[@]}"
 expect 0 missing-scala-3 "${base}/missing-scala-3/dev/juherr/mobilityid" --no-module mobilityid_2.13   # only the listed ids count
-expect 2 usage "${base}/ok/dev/juherr/mobilityid" --bogus-flag
 
 if (( failures > 0 )); then
   echo "${failures} failure(s)" >&2

@@ -34,7 +34,7 @@ This Scala codebase lives under `scala/` in the monorepo. Run every command from
 ```bash
 sbt --server --batch "+test"
 sbt --server --batch "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec"
-sbt --server --batch "+headerCheckAll; +scalafmtCheckAll; scalafmtSbtCheck; +scalafixAll --check; +test; +mimaReportBinaryIssues"
+sbt --server --batch "+gate"   # headers, Scalafmt, Scalafix, tests, MiMa on both Scala versions
 scripts/verify.sh   # the full gate + release guard wiring + consumer smoke, as the release preflight runs it
 ```
 
@@ -59,10 +59,10 @@ If you use `mise` from the repository root, prefix the commands with `mise exec 
   `-Wunused:imports` everywhere) and sbt-header on main and test sources.
 - **Binary compatibility.** sbt-mima-plugin compares `core` and `interpolators` with the last
   release found on Maven Central (the repository `scripts/mima-baseline.sh` reads the `mobilityid_3`
-  metadata, CI passes it as `-Dmobilityid.mimaBaseline=X.Y.Z`). Until the first release the
-  check is skipped; `scripts/verify-release-wiring.sh` proves the wiring (resolution and
-  analysis, not detection: the baseline is built from the same sources) against a locally
-  published baseline.
+  metadata, CI exports it as `MOBILITYID_MIMA_BASELINE`). Until the first release the check is
+  skipped; `scripts/verify-release-wiring.sh` proves the wiring (resolution and analysis, not
+  detection: the baseline is built from the same sources) against the locally published
+  `0.0.0-smoke` artifacts.
 - **Publishing.** sbt's built-in Central Portal support (`publishSigned` stages every Scala
   version in `target/sona-staging`, `sonaRelease` uploads the bundle) with sbt-pgp. The
   version is `RELEASE_VERSION` (set by the workflow), `0.1.0-SNAPSHOT` otherwise, and a
@@ -73,7 +73,8 @@ If you use `mise` from the repository root, prefix the commands with `mise exec 
   derives the version from an existing git tag, whereas the `Release` workflow tags after
   every registry has accepted the artifacts.
 - **Consumer smoke.** `consumer-smoke/` is a separate sbt build that resolves both modules from
-  an isolated Maven repository written by `scripts/verify-consumer.sh`, on both Scala versions.
+  `target/smoke-repo`, the isolated Maven repository the wiring proof leaves behind (or that
+  `scripts/verify-consumer.sh` publishes when run on its own), on both Scala versions.
 
 ### How to use ###
 

@@ -4,8 +4,19 @@ val scala3Lts = "3.9.0"
 scalaVersion := scala3Lts
 crossScalaVersions := Seq(scala213, scala3Lts)
 
-// The repository version, injected by the release workflow (RELEASE_VERSION); a SNAPSHOT otherwise.
-version := sys.env.get("RELEASE_VERSION").orElse(sys.props.get("releaseVersion")).getOrElse("0.1.0-SNAPSHOT")
+// The build reads three optional inputs from the environment: RELEASE_VERSION (set by the release
+// workflow, a SNAPSHOT otherwise), SMOKE_REPOSITORY (a directory: `publish` writes a Maven layout
+// there and resolves from it, for the verification scripts) and MOBILITYID_MIMA_BASELINE (the
+// release MiMa compares against; none before the first release, then set from Maven Central).
+def envValue(name: String): Option[String] = sys.env.get(name).filter(_.nonEmpty)
+version := envValue("RELEASE_VERSION").getOrElse("0.1.0-SNAPSHOT")
+mimaFailOnNoPrevious := false
+
+// The quality gate CI and scripts/verify.sh run on every Scala version (`+gate`, `++X; gate`).
+addCommandAlias(
+  "gate",
+  "headerCheckAll; scalafmtCheckAll; scalafmtSbtCheck; scalafixAll --check; test; mimaReportBinaryIssues"
+)
 
 // Release guard, mirrored from java/: refuses a SNAPSHOT and requires the Central Portal
 // credentials and a GPG secret key before anything is signed or uploaded.
@@ -26,12 +37,10 @@ val commonSettings = Seq(
   ),
   versionScheme := Some("early-semver"),
   pomIncludeRepository := { _ => false },
-  publishMavenStyle := true,
-  // Releases are staged locally and uploaded by `sonaRelease`; SMOKE_REPOSITORY (a directory)
-  // redirects `publish` to an isolated Maven layout for the consumer smoke test.
+  // Releases are staged locally and uploaded by `sonaRelease`.
   publishTo :=
-    sys.env.get("SMOKE_REPOSITORY").map(dir => MavenCache("smoke-publish", file(dir))).orElse(localStaging.value),
-  resolvers ++= sys.env.get("SMOKE_REPOSITORY").map(dir => "smoke" at file(dir).toURI.toString).toSeq,
+    envValue("SMOKE_REPOSITORY").map(dir => MavenCache("smoke-publish", file(dir))).orElse(localStaging.value),
+  resolvers ++= envValue("SMOKE_REPOSITORY").map(dir => "smoke" at file(dir).toURI.toString).toSeq,
   // Def.uncached: the guard reads the environment and the GPG keyring, which sbt 2's task
   // cache cannot see; a cached success must never stand in for a real check.
   verifyRelease := Def.uncached {
@@ -85,12 +94,8 @@ val commonSettings = Seq(
   Compile / console / scalacOptions --= Seq("-Wunused:imports", "-Xfatal-warnings", "-Werror"),
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,
-  // Binary compatibility against the last release on Maven Central. CI resolves the baseline with
-  // ../scripts/mima-baseline.sh and passes it as -Dmobilityid.mimaBaseline=X.Y.Z; without it (no
-  // release yet, or a local run) the check is skipped.
-  mimaPreviousArtifacts :=
-    sys.props.get("mobilityid.mimaBaseline").map(organization.value %% moduleName.value % _).toSet,
-  mimaFailOnNoPrevious := false,
+  // Binary compatibility against the last release (../scripts/mima-baseline.sh); skipped without one.
+  mimaPreviousArtifacts := envValue("MOBILITYID_MIMA_BASELINE").map(organization.value %% moduleName.value % _).toSet,
   Test / parallelExecution := true,
   Test / fork := true,
   run / fork := true,
@@ -130,7 +135,4 @@ lazy val root = project
   .in(file("."))
   .disablePlugins(sbtheader.HeaderPlugin)
   .aggregate(core, interpolators)
-  .settings(
-    publish / skip := true,
-    mimaFailOnNoPrevious := false
-  )
+  .settings(publish / skip := true)

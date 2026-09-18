@@ -23,8 +23,10 @@ Run every command below from `scala/`.
   Scala 3 (bare settings apply to every project, no `ThisBuild`).
 - `scalaVersion` 3.9.0, `crossScalaVersions` 2.13.18 / 3.9.0 (`build.sbt`). CI runs both
   (`.github/workflows/ci-scala.yml`). Bytecode target `-release 17`.
-- Version: `RELEASE_VERSION` env (set by the `Release` workflow) or `-DreleaseVersion`,
-  `0.1.0-SNAPSHOT` otherwise. There is no `version.sbt`.
+- The build reads three optional environment variables: `RELEASE_VERSION` (set by the `Release`
+  workflow, `0.1.0-SNAPSHOT` otherwise; there is no `version.sbt`), `SMOKE_REPOSITORY` (a
+  directory `publish` writes to and the build resolves from, for the verification scripts) and
+  `MOBILITYID_MIMA_BASELINE` (the release MiMa compares against).
 - Test framework: specs2 4.23.0 (cross 2.13/3; specs2 5 is Scala 3 only).
 - Plugins (`project/plugins.sbt`): sbt-header 5.11.0, sbt-scalafmt 2.6.2 (`.scalafmt.conf`,
   Scalafmt 3.11.5), sbt-scalafix 0.14.9 (`.scalafix.conf`), sbt-mima-plugin 1.2.1, sbt-pgp 2.3.2.
@@ -45,16 +47,19 @@ task results, run with a changed input instead.
   (`--` forwards args to specs2; `-ex <text>` includes, `-x <text>` excludes).
 - One Scala version: `sbt --server --batch "++2.13.18; test"` (same for 3.9.0).
 - Format and fix: `sbt --server --batch "scalafmtSbt; +scalafmtAll; +scalafixAll"`.
-- Full gate (what CI runs per Scala version):
-  `sbt --server --batch "+headerCheckAll; +scalafmtCheckAll; scalafmtSbtCheck; +scalafixAll --check; +test; +mimaReportBinaryIssues"`.
-  CI adds `-Dmobilityid.mimaBaseline=X.Y.Z` from the repository `scripts/mima-baseline.sh` (last Scala release on
-  Maven Central; without it MiMa is skipped).
+- Full gate: `sbt --server --batch "+gate"` (`gate` is a command alias in `build.sbt`: headers,
+  Scalafmt, Scalafix check, tests, MiMa; CI runs `"++X; gate"` per matrix leg). CI and
+  `scripts/verify.sh` first export `MOBILITYID_MIMA_BASELINE=$(../scripts/mima-baseline.sh)`
+  (last Scala release on Maven Central, empty before the first one; the script exits 2 when
+  Central cannot be questioned); without a baseline MiMa is skipped.
 - Release preflight, as `release.yml` runs it: `scripts/verify.sh` = full gate +
   `scripts/verify-release-wiring.sh` (guard refuses SNAPSHOT / missing inputs / empty keyring,
   `publishSigned` stages nothing when the guard fails, signs and stages everything with a
-  throw-away key when the inputs are present, MiMa analyzes a locally published baseline) + `scripts/verify-consumer.sh` (publishes to `target/smoke-repo` and runs
-  `consumer-smoke/` on both Scala versions); both source `scripts/artifacts.sh` (the four
-  published artifacts and the payload check). Log in `target/verification/verify.log`.
+  throw-away key when the inputs are present, then moves them to `target/smoke-repo` and lets
+  MiMa analyze them as a baseline) + `scripts/verify-consumer.sh` (runs `consumer-smoke/` on
+  both Scala versions against `target/smoke-repo`, publishing there first only when run on its
+  own); both source `scripts/artifacts.sh` (the four published artifacts, the payloads and the
+  `0.0.0-smoke` version). Log in `target/verification/verify.log`.
 - License headers: `sbt --server --batch "+headerCheckAll"` to validate,
   `sbt --server --batch "+headerCreateAll"` to apply (main and test sources).
 

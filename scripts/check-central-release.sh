@@ -4,7 +4,7 @@
 #   --no-module drops the Gradle module metadata payload (sbt artifacts do not publish one).
 # Exit 0: every payload of every artifact for <version> resolves from Maven Central.
 # Exit 1: Central answered and at least one payload is absent.
-# Exit 2: Central could not be questioned, or bad usage. Callers must not read 2 as "absent":
+# Exit 2: Central could not be questioned, or missing version. Callers must not read 2 as "absent":
 #         deploying on a transport failure would republish an already published version.
 set -euo pipefail
 
@@ -16,17 +16,11 @@ fi
 version=$1
 shift
 payloads=(.pom .jar -sources.jar -javadoc.jar .module)
-artifacts=()
-for arg in "$@"; do
-  case "${arg}" in
-    --no-module) payloads=(.pom .jar -sources.jar -javadoc.jar) ;;
-    --*)
-      echo "Unknown option: ${arg}" >&2
-      exit 2
-      ;;
-    *) artifacts+=("${arg}") ;;
-  esac
-done
+if [[ "${1:-}" == --no-module ]]; then
+  payloads=(.pom .jar -sources.jar -javadoc.jar)
+  shift
+fi
+artifacts=("$@")
 if [[ ${#artifacts[@]} -eq 0 ]]; then
   artifacts=(mobilityid4j)
 fi

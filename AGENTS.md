@@ -63,7 +63,7 @@ for single-suite and lint invocations. Full gates per workspace:
 
 | Workspace | Full gate (what CI runs) | Single suite |
 |---|---|---|
-| `scala/` | `sbt --server --batch "+headerCheckAll; +scalafmtCheckAll; scalafmtSbtCheck; +scalafixAll --check; +test; +mimaReportBinaryIssues"` (release preflight: `scripts/verify.sh`) | `sbt --server --batch "core/testOnly *ContractIdSpec"` |
+| `scala/` | `sbt --server --batch "+gate"` (release preflight: `scripts/verify.sh`) | `sbt --server --batch "core/testOnly *ContractIdSpec"` |
 | `java/` | `./gradlew check` | `./gradlew test --tests "*ContractIdTest"` |
 | `go/` | `golangci-lint run && go vet ./... && go test ./...` | `go test ./... -run TestContractID` |
 | `php/` | `composer check` (needs pcov or xdebug for Infection) | `./vendor/bin/phpunit --filter ContractIdIsoTest` |

@@ -52,26 +52,18 @@ jobs:
       - name: Setup sbt
         uses: sbt/setup-sbt@dd1ef7d7798fab5ce802a6adab3b782817b8c2d0 # v1
 
-      - name: Resolve the MiMa baseline (last Scala release on Maven Central)
+      - name: Headers, Scalafmt, Scalafix, tests and MiMa (`gate` alias in build.sbt)
         shell: bash
         run: |
           set -euo pipefail
-          status=0
-          baseline=$(../scripts/mima-baseline.sh) || status=$?
-          case "${status}" in
-            0) echo "MIMA_OPTION=-Dmobilityid.mimaBaseline=${baseline}" >> "${GITHUB_ENV}"; echo "MiMa baseline: ${baseline}" ;;
-            1) echo "MIMA_OPTION=" >> "${GITHUB_ENV}"; echo "MiMa baseline: none published yet" ;;
-            *) echo "Could not resolve the MiMa baseline (exit ${status})" >&2; exit 1 ;;
-          esac
-
-      - name: Headers, Scalafmt, Scalafix, tests and MiMa
-        shell: bash
-        run: |
-          set -euo pipefail
+          # The MiMa baseline is the last Scala release on Maven Central, empty before the first one;
+          # the script (and this step) fail when Central cannot be questioned.
+          MOBILITYID_MIMA_BASELINE=$(../scripts/mima-baseline.sh)
+          export MOBILITYID_MIMA_BASELINE
+          echo "MiMa baseline: ${MOBILITYID_MIMA_BASELINE:-none published yet}"
           # sbt 2 runs a command sequence from one quoted argument; --server --batch runs it in a
           # fresh JVM so that no long-lived server keeps a stale environment.
-          sbt --server --batch ${MIMA_OPTION:+"${MIMA_OPTION}"} \
-            "++${SCALA_VERSION}; headerCheckAll; scalafmtCheckAll; scalafmtSbtCheck; scalafixAll --check; test; mimaReportBinaryIssues"
+          sbt --server --batch "++${SCALA_VERSION}; gate"
         env:
           SCALA_VERSION: ${{ matrix.scala-version }}
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Exercises scripts/mima-baseline.sh against a local HTTP stub:
-#   metadata with a <release> -> prints it, exit 0; 404 -> nothing, exit 1;
+#   metadata with a <release> -> prints it, exit 0; 404 -> nothing printed, exit 0;
 #   5xx, unexpected code, metadata without <release> or transport failure -> 2.
 set -euo pipefail
 
@@ -72,7 +72,7 @@ expect() {
 
 base="http://127.0.0.1:${port}"
 expect 0 1.2.3 ok "${base}/ok/dev/juherr/mobilityid"
-expect 1 "" not-published "${base}/not-published/dev/juherr/mobilityid"
+expect 0 "" not-published "${base}/not-published/dev/juherr/mobilityid"
 expect 2 "" server-error "${base}/server-error/dev/juherr/mobilityid"
 expect 2 "" unexpected "${base}/unexpected/dev/juherr/mobilityid"
 expect 2 "" no-release "${base}/no-release/dev/juherr/mobilityid"

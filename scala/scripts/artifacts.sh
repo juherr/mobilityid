@@ -3,6 +3,9 @@
 # that every payload of every artifact exists under a Maven layout.
 scala_artifacts=(mobilityid_2.13 mobilityid_3 mobilityid-interpolators_2.13 mobilityid-interpolators_3)
 scala_payloads=(.pom .jar -sources.jar -javadoc.jar)
+# The version the verification scripts publish to target/smoke-repo (never to a registry).
+# shellcheck disable=SC2034  # consumed by the sourcing scripts
+smoke_version=0.0.0-smoke
 
 # require_published_payloads <repository> <version> [check]
 #   <repository> is a Maven layout root; [check] is run with the payload path as its argument
