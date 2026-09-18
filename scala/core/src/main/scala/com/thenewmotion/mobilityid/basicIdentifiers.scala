@@ -58,7 +58,8 @@ object CountryCode {
     if (isValid(countryCode)) {
       CountryCodeImpl(countryCode.toUpperCase)
     } else throw new IllegalArgumentException(
-      "Country Code must be valid according to ISO 3166-1 alpha-2")
+      "Country Code must be valid according to ISO 3166-1 alpha-2"
+    )
 
 }
 
@@ -80,7 +81,8 @@ object PhoneCountryCode {
     if (isValid(countryCode)) {
       PhoneCountryCodeImpl(countryCode.toUpperCase)
     } else throw new IllegalArgumentException(
-      s"phone Country Code must start with a '+' sign and be followed by 1-3 digits. (Was: $countryCode)")
+      s"phone Country Code must start with a '+' sign and be followed by 1-3 digits. (Was: $countryCode)"
+    )
 
 }
 
@@ -109,9 +111,9 @@ object PartyId {
 
   def apply(partyId: String): Option[PartyId] = partyId match {
     case Regex(cc, partyCode) =>
-      try {
+      try
         Some(PartyIdImpl(CountryCode(cc), PartyCode(partyCode)))
-      } catch {
+      catch {
         case e: IllegalArgumentException => None
       }
     case _ => None
@@ -129,7 +131,7 @@ object PartyId {
 /**
  * A party code is the three-letter identifier for parties in the EV market, like "TNM" for NewMotion
  */
-private sealed trait PartyCode {
+sealed private trait PartyCode {
   def id: String
 }
 
@@ -150,5 +152,6 @@ private object PartyCode {
     if (isValid(id)) {
       PartyCodeImpl(id.toUpperCase)
     } else throw new IllegalArgumentException(
-      "OperatorId must have a length of 3 and be ASCII letters or digits")
+      "OperatorId must have a length of 3 and be ASCII letters or digits"
+    )
 }

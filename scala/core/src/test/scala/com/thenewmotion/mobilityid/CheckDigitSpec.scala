@@ -30,7 +30,7 @@ class CheckDigitSpec extends mutable.Specification {
     }
   }
 
-  "Check digit DIN" should {
+  "Check digit DIN" should
     "be calculated according to the old Excel-sheet ways" >> {
 
       def calculate(instance: Int) = CheckDigitDin("INTNM" + "%06d".format(instance))
@@ -41,5 +41,4 @@ class CheckDigitSpec extends mutable.Specification {
       calculate(114) === '6'
       calculate(191) === '5'
     }
-  }
 }

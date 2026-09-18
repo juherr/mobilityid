@@ -17,12 +17,12 @@
 
 package com.thenewmotion.mobilityid
 
-import ContractIdStandard._
-import ContractIdParser.DINParser
-
 import scala.annotation.{implicitNotFound, nowarn}
 import scala.util.Try
 import scala.util.matching.Regex
+
+import ContractIdParser.DINParser
+import ContractIdStandard._
 
 sealed trait ContractIdStandard
 
@@ -109,9 +109,9 @@ object ContractIdParser {
   }
 }
 
-@implicitNotFound(msg="It is not possible to convert ${B} to ${A}")
+@implicitNotFound(msg = "It is not possible to convert ${B} to ${A}")
 sealed trait ContractIdConverter[B <: ContractIdStandard, A <: ContractIdStandard]
-  extends (ContractId[B] => ContractId[A])
+    extends (ContractId[B] => ContractId[A])
 
 // Scala 3 reports the deprecated ISO<->DIN converters on the enclosing object (synthesized
 // module accessors), so the deprecation is silenced here rather than on each converter.
@@ -177,49 +177,49 @@ object ContractId {
   private val separator = "-"
 
   private case class ContractIdImpl[T <: ContractIdStandard](
-    countryCode: CountryCode,
-    providerId: ProviderId,
-    instanceValue: String,
-    checkDigit: Char
+      countryCode: CountryCode,
+      providerId: ProviderId,
+      instanceValue: String,
+      checkDigit: Char
   ) extends ContractId[T]
 
   private def applyToUpperCase[T <: ContractIdStandard](
-    cc: CountryCode,
-    providerId: ProviderId,
-    instanceValue: String,
-    checkDigit: Option[Char]
+      cc: CountryCode,
+      providerId: ProviderId,
+      instanceValue: String,
+      checkDigit: Option[Char]
   )(implicit p: ContractIdParser[T]): ContractId[T] = {
     p.validateInstanceValue(instanceValue)
 
     val computedCheckDigit = p.computeCheckDigit(cc.toString + providerId.id + instanceValue)
-    checkDigit.foreach {c =>
-      if (c != computedCheckDigit) throw
-        new IllegalArgumentException(s"Given check digit '$c' is not equal to computed '$computedCheckDigit'")
+    checkDigit.foreach { c =>
+      if (c != computedCheckDigit)
+        throw new IllegalArgumentException(s"Given check digit '$c' is not equal to computed '$computedCheckDigit'")
     }
 
     ContractIdImpl[T](cc, providerId, instanceValue, computedCheckDigit)
   }
 
   private[mobilityid] def apply[T <: ContractIdStandard](
-    countryCode: CountryCode,
-    providerId: ProviderId,
-    instanceValue: String,
-    checkDigit: Option[Char]
+      countryCode: CountryCode,
+      providerId: ProviderId,
+      instanceValue: String,
+      checkDigit: Option[Char]
   )(implicit p: ContractIdParser[T]): ContractId[T] =
     applyToUpperCase(countryCode, providerId, instanceValue.toUpperCase, checkDigit.map(_.toUpper))
 
   def apply[T <: ContractIdStandard](
-    countryCode: String,
-    providerId: String,
-    instanceValue: String
+      countryCode: String,
+      providerId: String,
+      instanceValue: String
   )(implicit p: ContractIdParser[T]): ContractId[T] =
     apply(CountryCode(countryCode), ProviderId(providerId), instanceValue, None)
 
   def apply[T <: ContractIdStandard](
-    countryCode: String,
-    providerId: String,
-    instanceValue: String,
-    checkDigit: Char
+      countryCode: String,
+      providerId: String,
+      instanceValue: String,
+      checkDigit: Char
   )(implicit p: ContractIdParser[T]): ContractId[T] =
     apply(CountryCode(countryCode), ProviderId(providerId), instanceValue, Some(checkDigit))
 

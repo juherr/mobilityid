@@ -1,7 +1,9 @@
 package com.thenewmotion.mobilityid
 
-import com.thenewmotion.mobilityid.ContractIdStandard.{DIN, EMI3, ISO}
 import org.specs2._
+
+import com.thenewmotion.mobilityid.ContractIdStandard.{DIN, EMI3, ISO}
+
 import interpolators._
 
 class InterpolatorsSpec extends mutable.Specification {

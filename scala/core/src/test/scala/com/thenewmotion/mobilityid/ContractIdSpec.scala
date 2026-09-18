@@ -1,8 +1,10 @@
 package com.thenewmotion.mobilityid
 
-import ContractIdStandard.{DIN, EMI3, ISO}
-import org.specs2._
 import scala.annotation.nowarn
+
+import org.specs2._
+
+import ContractIdStandard.{DIN, EMI3, ISO}
 
 @nowarn("cat=deprecation")
 class ContractIdSpec extends mutable.Specification {
@@ -117,7 +119,7 @@ class ContractIdSpec extends mutable.Specification {
     }
 
     "should be unapplicable" in {
-      ContractId[ISO]("NL", "TNM","000122045") match {
+      ContractId[ISO]("NL", "TNM", "000122045") match {
         case ContractId(c, p, i, ch) =>
           c mustEqual CountryCode("NL")
           p mustEqual ProviderId("TNM")
