@@ -55,6 +55,12 @@ messages, code, comments and documentation are written in English.
   previous attempts stay on the run: the most recently created one is selected
   (`scripts/select-dependency-graph-artifact.sh`), so a re-run that does not re-run `Java
   dependency graph` submits the graph of the previous attempt, for the same commit.
+  Several open pull requests can share one head (same branch, different bases): the snapshot's
+  `refs/pull/<N>/merge` must name one of the pull requests the triggering run belongs to
+  (`workflow_run.pull_requests`, populated for same-repository and Dependabot runs); GitHub
+  leaves that list empty for fork runs, so a fork snapshot may name any open sibling of the same
+  fork on the same commit, which changes neither what it describes nor the commit it is attached
+  to (snapshots are keyed by sha, `ref` is metadata).
 - **Trust model of the required check.** The pull request author, fork or same-repository
   branch, controls the workflow files a `pull_request` run executes, the build files the graph
   is generated from, and every check or `GITHUB_TOKEN` status that run produces (all under the
@@ -62,9 +68,13 @@ messages, code, comments and documentation are written in English.
   matched by context name and, at best, by app). So `Trusted Dependency Review` recomputes the
   review for **every** pull request from `main`'s definition (`actions/dependency-review-action`
   on base...head, all ecosystems, same thresholds as `Dependency review`) and publishes it as the
-  `Trusted dependency review` commit status on the pull request head
-  (`scripts/report-trusted-review-status.sh`; check runs of a `workflow_run` workflow are attached
-  to the `main` commit, not to the pull request). The status is set by a dedicated GitHub App
+  `Trusted dependency review` commit status on the pull request head. A commit status is per
+  commit, so when several open pull requests share that head the review runs against each of
+  their bases (job `pulls` lists them, restricted to the triggering run's own pull requests when
+  it knows them; one matrix leg per base) and the status is green only when every leg passes.
+  The status is published by `scripts/report-trusted-review-status.sh` because check runs of a
+  `workflow_run` workflow are attached to the `main` commit, not to the pull request; it is set
+  by a dedicated GitHub App
   whose key is a secret of the `trusted-review` **environment**, restricted to the `main` branch:
   a repository secret would be readable by any same-repository branch adding a workflow, an
   environment secret is only handed to jobs whose run ref passes the branch policy, and a
