@@ -127,6 +127,18 @@ func TestSentinelErrors(t *testing.T) {
 			input: "not an evse id",
 		},
 		{
+			name:  "evse id with unknown country keeps the ISO cause",
+			err:   errOf(NewEvseID("ZZ*TNM*E840*6487")),
+			want:  []error{ErrInvalidEvseID, ErrInvalidCountryCode},
+			input: "ZZ*TNM*E840*6487",
+		},
+		{
+			name:  "evse id with invalid DIN operator keeps the DIN cause",
+			err:   errOf(NewEvseIDDIN("+31*AB7*840")),
+			want:  []error{ErrInvalidEvseID},
+			input: "+31*AB7*840",
+		},
+		{
 			name:  "evse id iso with unknown country",
 			err:   errOf(NewEvseIDISO("ZZ*TNM*E840*6487")),
 			want:  []error{ErrInvalidEvseID, ErrInvalidCountryCode},

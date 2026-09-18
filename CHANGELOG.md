@@ -41,9 +41,6 @@ which requires a dated section for the version below and a matching file in
   `ErrInvalidCheckDigit`, `ErrInvalidEvseID`, `ErrUnconvertibleContractID`, ...) wrapped with
   `%w` by every constructor, parser and conversion, so callers use `errors.Is`; a composite
   identifier also wraps the failing component's sentinel.
-- **Go:** `MarshalText` on every identifier (JSON encodes them as their canonical string) and
-  `UnmarshalText` on every type whose format is unambiguous (`ContractID` is decoded through
-  `NewContractID` with the expected standard); zero values refuse to marshal.
 - **Go:** `PartyID.CountryCode()` and `PartyID.PartyCode()` accessors.
 - **Go:** testable `Example*` functions for the main entry points (shown on pkg.go.dev), `Fuzz*`
   targets for the parsers, the `FromParts` builders and the check digits, and the 400
@@ -54,6 +51,11 @@ which requires a dated section for the version below and a matching file in
 - **Go:** `CountryCode` accepted 36 CLDR region codes that ISO 3166-1 does not assign (`UK`,
   `EU`, `XK`, `AN`, `SU`, `DD`, `YU`, ...), diverging from Scala, Java, PHP and TypeScript. The
   list is now generated from the JDK's `Locale.getISOCountries()`, the reference source.
+  Values that `go/v0.1.0` accepted are therefore rejected (observable change, weighed in #70).
+- **Go:** `NewEvseID` keeps both parser causes when a value is neither ISO nor DIN
+  (`invalid EVSE id: 'ZZ*TNM*E840*6487': ISO: invalid ISO 3166-1 alpha-2 country code: 'ZZ';
+  DIN: does not match the DIN format`), so `errors.Is` on the component sentinel holds through
+  the generic constructor and `EvseID.UnmarshalText`.
 - **Go:** `CalculateDIN7064ModXY` returned a negative "digit" for payloads longer than the
   11-character DIN contract id (integer overflow of the power-of-two weights); the sum is now
   reduced modulo 11 at every step. Found by the new fuzz target.
@@ -78,7 +80,12 @@ which requires a dated section for the version below and a matching file in
   the tooling decisions and `scala/AGENTS.md` the sbt 2 commands.
 - **Breaking (Go):** Go 1.26 is the minimum version (`go 1.26.0` in `go.mod`, CI on 1.26 and
   1.27); Go 1.25 is no longer supported. Error messages now start with the sentinel text
-  (`invalid contract id: 'NL' is too short`).
+  (`invalid contract id: 'NL': too short`).
+- **Breaking (Go):** every identifier implements `encoding.TextMarshaler`, so `encoding/json`
+  (and any text codec) now writes it as its canonical string (`"NL-TNM-000122045-U"`) where it
+  used to write an empty object (`{}`, the fields are unexported); a zero value fails to
+  marshal instead of producing `{}`. `UnmarshalText` is added on every type whose format is
+  unambiguous (`ContractID` is decoded through `NewContractID` with the expected standard).
 - **Go:** the module has no third-party dependency any more (`golang.org/x/text` dropped).
 - **Go:** `.golangci.yml` rewritten for the golangci-lint v2 schema with `gofumpt` and `goimports`
   as formatters and `errorlint`, `gocritic`, `copyloopvar`, `misspell` enabled;

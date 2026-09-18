@@ -18,6 +18,7 @@
 package mobilityid
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -35,11 +36,21 @@ type EvseIDDIN struct {
 	powerOutletID string
 }
 
-// NewEvseIDDIN parses a DIN EVSE ID.
+// NewEvseIDDIN parses a DIN EVSE ID. Every failure wraps ErrInvalidEvseID and the error of the
+// failing part.
 func NewEvseIDDIN(id string) (*EvseIDDIN, error) {
+	eid, err := parseEvseIDDIN(id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
+	}
+	return eid, nil
+}
+
+// parseEvseIDDIN does the work of NewEvseIDDIN and returns the bare error of the failing part.
+func parseEvseIDDIN(id string) (*EvseIDDIN, error) {
 	matches := evseIDDINRegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 4 {
-		return nil, fmt.Errorf("%w: '%s' does not match the DIN format", ErrInvalidEvseID, id)
+		return nil, errors.New("does not match the DIN format")
 	}
 
 	ccRaw := matches[1]
@@ -48,11 +59,11 @@ func NewEvseIDDIN(id string) (*EvseIDDIN, error) {
 	}
 	cc, err := NewPhoneCountryCode(ccRaw)
 	if err != nil {
-		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
+		return nil, err
 	}
 	op, err := NewOperatorIDDIN(matches[2])
 	if err != nil {
-		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
+		return nil, err
 	}
 
 	return &EvseIDDIN{

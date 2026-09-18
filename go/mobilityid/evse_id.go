@@ -25,15 +25,19 @@ type EvseID struct {
 	din *EvseIDDIN
 }
 
-// NewEvseID parses an EVSE ID and returns either its ISO or DIN representation.
+// NewEvseID parses an EVSE ID and returns either its ISO or DIN representation, trying ISO
+// first. When both fail the error wraps ErrInvalidEvseID and both causes, so a component error
+// (an unknown country in an otherwise ISO-shaped value, for example) still satisfies errors.Is.
 func NewEvseID(id string) (*EvseID, error) {
-	if iso, err := NewEvseIDISO(id); err == nil {
+	iso, isoErr := parseEvseIDISO(id)
+	if isoErr == nil {
 		return &EvseID{iso: iso}, nil
 	}
-	if din, err := NewEvseIDDIN(id); err == nil {
+	din, dinErr := parseEvseIDDIN(id)
+	if dinErr == nil {
 		return &EvseID{din: din}, nil
 	}
-	return nil, fmt.Errorf("%w: '%s' is neither a valid ISO nor a valid DIN EVSE id", ErrInvalidEvseID, id)
+	return nil, fmt.Errorf("%w: '%s': ISO: %w; DIN: %w", ErrInvalidEvseID, id, isoErr, dinErr)
 }
 
 // NewEvseIDFromParts builds an EVSE ID from components, preferring ISO when both are valid.

@@ -18,6 +18,7 @@
 package mobilityid
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -35,20 +36,30 @@ type EvseIDISO struct {
 	powerOutletID string
 }
 
-// NewEvseIDISO parses an ISO EVSE ID.
+// NewEvseIDISO parses an ISO EVSE ID. Every failure wraps ErrInvalidEvseID and the error of
+// the failing part.
 func NewEvseIDISO(id string) (*EvseIDISO, error) {
+	eid, err := parseEvseIDISO(id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
+	}
+	return eid, nil
+}
+
+// parseEvseIDISO does the work of NewEvseIDISO and returns the bare error of the failing part.
+func parseEvseIDISO(id string) (*EvseIDISO, error) {
 	matches := evseIDISORegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 4 {
-		return nil, fmt.Errorf("%w: '%s' does not match the ISO 15118 format", ErrInvalidEvseID, id)
+		return nil, errors.New("does not match the ISO 15118 format")
 	}
 
 	cc, err := NewCountryCode(matches[1])
 	if err != nil {
-		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
+		return nil, err
 	}
 	op, err := NewOperatorIDISO(matches[2])
 	if err != nil {
-		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
+		return nil, err
 	}
 
 	return &EvseIDISO{

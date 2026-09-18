@@ -61,3 +61,18 @@ func TestNewCountryCode(t *testing.T) {
 		})
 	}
 }
+
+// The table is generated (scripts/generate-iso3166.sh) and the generator does not run in CI:
+// guard its integrity against a truncated or hand-edited file. Locale.getISOCountries() lists
+// 249 codes; bump the constant with the JDK when a code is assigned or withdrawn.
+func TestISO3166Alpha2TableIntegrity(t *testing.T) {
+	const wantCount = 249
+	if got := len(iso3166Alpha2); got != wantCount {
+		t.Fatalf("len(iso3166Alpha2) = %d, want %d", got, wantCount)
+	}
+	for code := range iso3166Alpha2 {
+		if !isValidCountryCode(code) || len(code) != 2 || code[0] < 'A' || code[0] > 'Z' || code[1] < 'A' || code[1] > 'Z' {
+			t.Errorf("iso3166Alpha2 contains %q, want two uppercase letters", code)
+		}
+	}
+}
