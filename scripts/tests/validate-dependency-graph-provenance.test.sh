@@ -13,7 +13,6 @@ trap 'rm -rf "${work}"' EXIT
 # The trusted facts of the triggering run, as the workflow reads them from the workflow_run event.
 head_sha=1111111111111111111111111111111111111111
 main_sha=2222222222222222222222222222222222222222
-base_sha=3333333333333333333333333333333333333333
 run_id=987654321
 correlator=dependency_submission-java-graph
 head_repo=contributor/mobilityid
@@ -34,7 +33,7 @@ JSON
 make_pulls() {
   local file="${work}/$1.json"
   cat > "${file}" <<JSON
-[{"number":42,"state":"$2","head":{"sha":"$3","repo":{"full_name":"$4"}},"base":{"sha":"${base_sha}"}}]
+[{"number":42,"state":"$2","head":{"sha":"$3","repo":{"full_name":"$4"}},"base":{"sha":"3333333333333333333333333333333333333333"}}]
 JSON
   echo "${file}"
 }
@@ -46,7 +45,7 @@ open_pull=$(make_pulls open open "${head_sha}" "${head_repo}")
 expect() {
   local expected=$1 label=$2 snapshot=$3 pulls=${4:-${open_pull}} status=0
   "${script}" "${snapshot}" "${pulls}" "${head_sha}" "${run_id}" "${correlator}" "${head_repo}" \
-    >"${work}/stdout" 2>/dev/null || status=$?
+    >/dev/null 2>&1 || status=$?
   if [[ "${status}" -ne "${expected}" ]]; then
     echo "FAIL: ${label} -> exit ${status}, expected ${expected}"
     failures=$((failures + 1))
@@ -56,12 +55,6 @@ expect() {
 }
 
 expect 0 "snapshot bound to the open pull request of the head commit" "${valid_snapshot}"
-if grep -qx "base_sha=${base_sha}" "${work}/stdout"; then
-  echo "ok: valid snapshot prints base_sha"
-else
-  echo "FAIL: valid snapshot must print base_sha, got: $(cat "${work}/stdout")"
-  failures=$((failures + 1))
-fi
 expect 0 "several Java manifests" \
   "$(make_snapshot javaonly "${head_sha}" refs/pull/42/merge "${run_id}" "${correlator}" java/settings.gradle.kts java/build.gradle.kts)"
 

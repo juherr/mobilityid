@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Exercises scripts/report-java-review-status.sh against a fake `gh` on PATH that records its
+# Exercises scripts/report-trusted-review-status.sh against a fake `gh` on PATH that records its
 # arguments: the commit status is posted on the given sha with the shared context, the given
 # state and target URL; a bad state or missing argument is a usage error and calls nothing.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
-script=scripts/report-java-review-status.sh
+script=scripts/report-trusted-review-status.sh
 failures=0
 work=$(mktemp -d)
 trap 'rm -rf "${work}"' EXIT
@@ -49,7 +49,7 @@ recorded() {
 
 expect 0 "success status" "${sha}" success "${url}"
 recorded "success status posted on the sha with the shared context" \
-  "repos/owner/repo/statuses/${sha}" "state=success" "context=Java dependency review" "target_url=${url}"
+  "repos/owner/repo/statuses/${sha}" "state=success" "context=Trusted dependency review" "target_url=${url}"
 expect 0 "failure status" "${sha}" failure "${url}"
 recorded "failure state forwarded" "state=failure"
 expect 0 "pending status" "${sha}" pending "${url}"
@@ -60,7 +60,7 @@ expect 2 "unknown state" "${sha}" green "${url}"
 expect 2 "missing arguments" "${sha}" success
 
 if (( failures > 0 )); then
-  echo "${failures} report-java-review-status check(s) failed"
+  echo "${failures} report-trusted-review-status check(s) failed"
   exit 1
 fi
-echo "all report-java-review-status checks passed"
+echo "all report-trusted-review-status checks passed"
