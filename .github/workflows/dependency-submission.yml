@@ -31,14 +31,15 @@ jobs:
       contents: write
     env:
       # Same-repository events submit the graph here. Fork and Dependabot pull requests only
-      # upload it as a workflow artifact: `fork-dependency-graph.yml` (privileged `workflow_run`)
-      # validates its provenance, submits it and runs the Java dependency review.
-      # Duplicated in `dependency-review` below (job outputs are not reliable once this job failed).
+      # upload it as a workflow artifact: `trusted-dependency-review.yml` (privileged
+      # `workflow_run`) validates its provenance and submits it.
       GRAPH_MODE: >-
         ${{ (github.event_name != 'pull_request'
              || (github.event.pull_request.head.repo.full_name == github.repository
                  && github.actor != 'dependabot[bot]'))
             && 'generate-and-submit' || 'generate-and-upload' }}
+    outputs:
+      mode: ${{ env.GRAPH_MODE }}
 
     steps:
       - name: Checkout
@@ -80,8 +81,11 @@ jobs:
     # submission has completed (when both sides lack a snapshot GitHub raises no warning, so
     # `retry-on-snapshot-warnings` alone cannot close that race). The job runs even when the
     # submission failed and fails itself, because a skipped job satisfies a required status
-    # check. Fork and Dependabot pull requests are reviewed on the manifest ecosystems only here:
-    # their Java graph is submitted and reviewed by `fork-dependency-graph.yml` afterwards.
+    # check. This job is fast feedback inside the pull request run, which the pull request
+    # author controls: the review to require on `main` is `Trusted dependency review`
+    # (`trusted-dependency-review.yml`), computed from `main` for every pull request once this
+    # workflow completes. Fork and Dependabot pull requests are reviewed on the manifest
+    # ecosystems only here, their Java graph being submitted by that workflow.
     needs: java-graph
     if: github.event_name == 'pull_request' && !cancelled()
     runs-on: ubuntu-latest
@@ -89,12 +93,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    env:
-      # Same expression as in `java-graph`: keep both in sync.
-      GRAPH_MODE: >-
-        ${{ (github.event.pull_request.head.repo.full_name == github.repository
-             && github.actor != 'dependabot[bot]')
-            && 'generate-and-submit' || 'generate-and-upload' }}
 
     steps:
       - name: Require the Java dependency graph
@@ -120,26 +118,5 @@ jobs:
           fail-on-scopes: runtime, development, unknown
           # Second guard for the propagation delay between the submission and the compare API;
           # nothing to wait for when the graph was only uploaded.
-          retry-on-snapshot-warnings: ${{ env.GRAPH_MODE == 'generate-and-submit' }}
+          retry-on-snapshot-warnings: ${{ needs.java-graph.outputs.mode == 'generate-and-submit' }}
           retry-on-snapshot-warnings-timeout: 120
-
-      - name: Mint the status token of the Java dependency review App
-        # Same commit status, published by the same App, as `fork-dependency-graph.yml` for fork
-        # and Dependabot pull requests, so that `Java dependency review` can be required for every
-        # pull request and restricted to that App (see CONTRIBUTING.md).
-        id: app-token
-        if: always() && env.GRAPH_MODE == 'generate-and-submit' && vars.JAVA_REVIEW_APP_CLIENT_ID != ''
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.JAVA_REVIEW_APP_CLIENT_ID }}
-          private-key: ${{ secrets.JAVA_REVIEW_APP_PRIVATE_KEY }}
-          permission-statuses: write
-
-      - name: Report the Java dependency review status
-        if: always() && env.GRAPH_MODE == 'generate-and-submit' && vars.JAVA_REVIEW_APP_CLIENT_ID != ''
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: scripts/report-java-review-status.sh "$HEAD_SHA" "$STATE" "$RUN_URL"

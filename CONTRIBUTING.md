@@ -42,55 +42,57 @@ messages, code, comments and documentation are written in English.
   Java graph (direct and transitive, tests and build plugins included) is submitted by the first
   job of that workflow for the pull request head and every commit of `main`, and the review job
   only starts once the submission is done, and fails when that submission failed (a skipped job
-  would satisfy a required check). `Dependency review` is the check to require on `main`.
+  would satisfy a required check). That job is fast feedback inside the pull request run; the
+  check to require on `main` is the `Trusted dependency review` status below.
 - Pull requests from forks and from Dependabot have a read-only `GITHUB_TOKEN`, so their
   `Dependency review` only covers the manifest ecosystems and their Java graph is uploaded as a
-  workflow artifact instead. `Fork Dependency Graph` (`fork-dependency-graph.yml`, a privileged
-  `workflow_run` that checks out nothing but `scripts/` of `main`) downloads that artifact,
-  accepts it only when `scripts/validate-dependency-graph-provenance.sh` binds it to the
-  triggering run and its open pull request (checks listed in that script), submits it, then
-  runs the same review as `Java dependency review`. The `download-and-submit` pattern of
-  `gradle/actions` is not used because it submits the artifact verbatim, letting a fork forge a
-  snapshot for `main`. What remains is that the fork produces the graph content, the same
-  exposure as a same-repository pull request editing the build, limited to that pull request.
-  On a re-run, the artifacts of the previous attempts stay on the run: the most recently
-  created one is selected (`scripts/select-dependency-graph-artifact.sh`), so a re-run that does
-  not re-run `Java dependency graph` submits the graph of the previous attempt, for the same
-  commit.
-- The check runs of a `workflow_run` workflow are attached to the `main` commit it ran from, not
-  to the pull request, so the outcome is published as the `Java dependency review` **commit
-  status** on the pull request head (`scripts/report-java-review-status.sh`), by
-  `fork-dependency-graph.yml` for fork and Dependabot pull requests and by `Dependency
-  Submission` for same-repository ones. `workflow_run` workflows only run from `main`, so
-  changes to that file take effect after merge.
-- **Why that status is published by a dedicated GitHub App.** A required status check is
-  matched by context name, and the only source restriction GitHub offers is the app that set
-  it. A `pull_request` run executes the pull request's own workflow files, so a fork can add a
-  trivially green job named `Java dependency review` and rename `Dependency Submission` so the
-  `workflow_run` never fires; the check run of that job and a status set with `GITHUB_TOKEN`
-  both come from the "GitHub Actions" app, so neither the name nor that source tells them apart.
-  The status is therefore published with an installation token of a dedicated App
-  (`actions/create-github-app-token`, repository variable `JAVA_REVIEW_APP_CLIENT_ID`, secret
-  `JAVA_REVIEW_APP_PRIVATE_KEY`): secrets are unavailable to `pull_request` runs from forks and
-  to Dependabot runs, and a check with that source can only come from `main`'s workflows.
-  The same spoofing applies to every Actions-sourced required check (`Dependency review`
-  included): keep that in mind when choosing required checks, or use the ruleset rule
-  "Require workflows to pass before merging" where it is available.
-  - Setup: create a GitHub App (any name, e.g. `mobilityid-java-review`; permissions:
-    Repository → Commit statuses: Read and write, nothing else; no webhook), install it on this
-    repository only, then set the variable `JAVA_REVIEW_APP_CLIENT_ID` (App client id) and the
-    secret `JAVA_REVIEW_APP_PRIVATE_KEY` (a private key of the App, PEM). While they are unset
-    the workflows skip the status with a warning; nothing else changes.
-  - Required check: on `main`, require the status check `Java dependency review` and pick the
-    App as its source (it is offered once it has set the status at least once), next to
-    `Dependency review`. Do this only after the adversarial check below.
-  - Adversarial check, from a fork, after merge: (red) open a pull request that renames the
-    `Dependency Submission` workflow and adds a job named `Java dependency review` that just
-    succeeds — the merge box must keep showing the required check as expected/missing, the
-    forged job being listed under the GitHub Actions source; (green) open a normal fork pull
-    request — `Fork Dependency Graph` selects and downloads the artifact, validates it, submits
-    it, reviews it and the App sets `Java dependency review` on the head, which the merge box
-    accepts; re-run that workflow once to see the latest artifact selected.
+  workflow artifact instead. `Trusted Dependency Review` (`trusted-dependency-review.yml`, a
+  privileged `workflow_run` that checks out nothing but `scripts/` of `main`) downloads that
+  artifact and submits it only when `scripts/validate-dependency-graph-provenance.sh` binds it to
+  the triggering run and its open pull request (checks listed in that script). The
+  `download-and-submit` pattern of `gradle/actions` is not used because it submits the artifact
+  verbatim, letting a fork forge a snapshot for `main`. On a re-run, the artifacts of the
+  previous attempts stay on the run: the most recently created one is selected
+  (`scripts/select-dependency-graph-artifact.sh`), so a re-run that does not re-run `Java
+  dependency graph` submits the graph of the previous attempt, for the same commit.
+- **Trust model of the required check.** The pull request author, fork or same-repository
+  branch, controls the workflow files a `pull_request` run executes, the build files the graph
+  is generated from, and every check or `GITHUB_TOKEN` status that run produces (all under the
+  "GitHub Actions" source, which a required check cannot tell apart from a forged one: it is
+  matched by context name and, at best, by app). So `Trusted Dependency Review` recomputes the
+  review for **every** pull request from `main`'s definition (`actions/dependency-review-action`
+  on base...head, all ecosystems, same thresholds as `Dependency review`) and publishes it as the
+  `Trusted dependency review` commit status on the pull request head
+  (`scripts/report-trusted-review-status.sh`; check runs of a `workflow_run` workflow are attached
+  to the `main` commit, not to the pull request). The status is set by a dedicated GitHub App
+  whose key is a secret of the `trusted-review` **environment**, restricted to the `main` branch:
+  a repository secret would be readable by any same-repository branch adding a workflow, an
+  environment secret is only handed to jobs whose run ref passes the branch policy, and a
+  `pull_request` run never runs as `main` (its job would fail with "Branch ... is not allowed to
+  deploy to trusted-review"), so no pull request can mint that token. What remains under the
+  author's control is the graph content (a pull request can hide a dependency from its own
+  review by editing the build), limited to that pull request. `workflow_run` workflows only run
+  from `main`, so changes to that file take effect after merge.
+  - Setup, in this order: create the `trusted-review` environment with deployment branch policy
+    "Selected branches" = `main` (referencing a missing environment would create it without any
+    policy); create a GitHub App (any name, e.g. `mobilityid-dependency-review`; permissions:
+    Repository → Commit statuses: Read and write, nothing else; no webhook) and install it on
+    this repository only; then add to that environment the variable
+    `DEPENDENCY_REVIEW_APP_CLIENT_ID` (App client id) and the secret
+    `DEPENDENCY_REVIEW_APP_PRIVATE_KEY` (a private key of the App, PEM). While they are unset the
+    workflow skips the status with a warning; nothing else changes.
+  - Required check: on `main`, require the status check `Trusted dependency review` and pick the
+    App as its source (offered once it has set the status at least once). Do this only after the
+    checks below pass.
+  - Adversarial checks, after merge. Red, from a fork: a pull request that renames the
+    `Dependency Submission` workflow and adds a job named `Trusted dependency review` that just
+    succeeds must stay blocked, the forged job being listed under the GitHub Actions source and
+    the App status never appearing. Red, from a same-repository branch: a pull request adding a
+    workflow job with `environment: trusted-review` that reads the App secret must fail on the
+    environment protection rule before running, and a job without the environment must see the
+    secret empty. Green: a normal pull request, fork and same-repository alike, gets the App
+    status once `Trusted Dependency Review` has run (for a fork, after the artifact was selected,
+    validated and submitted); re-run that workflow once to see the latest artifact selected.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes

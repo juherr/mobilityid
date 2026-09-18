@@ -14,8 +14,7 @@
 #     its own pull request, not shadow the manifests GitHub parses itself (npm, Composer, Go,
 #     Actions) through a path such as `java/../ts/package.json`.
 # The content itself (resolved transitive dependencies) is the job of verify-dependency-graph.sh.
-# On success prints `base_sha=<sha>` on stdout (GITHUB_OUTPUT format) for the dependency review
-# that follows. Exit 0 when accepted, 1 when rejected, 2 on usage error.
+# Exit 0 when accepted, 1 when rejected, 2 on usage error.
 # Usage: validate-dependency-graph-provenance.sh <snapshot.json> <pulls.json> <head-sha> <run-id> <correlator> <head-repo>
 set -euo pipefail
 
@@ -73,7 +72,6 @@ try:
     ]
     check(not foreign, "every manifest is a canonical path under java/", f"got {foreign!r}")
 
-    base_sha = None
     if match is not None:
         number = int(match.group(1))
         pull = next((p for p in pulls if p.get("number") == number), None)
@@ -81,11 +79,9 @@ try:
         if pull is not None:
             head = pull.get("head") or {}
             repo = (head.get("repo") or {}).get("full_name")
-            base_sha = (pull.get("base") or {}).get("sha")
             check(pull.get("state") == "open", f"pull request #{number} is open", f"state {pull.get('state')!r}")
             check(head.get("sha") == head_sha, f"pull request #{number} head is the run head sha", f"got {head.get('sha')!r}")
             check(repo == head_repo, f"pull request #{number} comes from the run head repository", f"got {repo!r}")
-            check(bool(base_sha), f"pull request #{number} has a base sha", "none")
 except (ValueError, AttributeError, TypeError) as error:
     failures.append(f"malformed input ({error})")
 
@@ -93,6 +89,4 @@ if failures:
     for failure in failures:
         print(f"REJECTED: {failure}", file=sys.stderr)
     sys.exit(1)
-
-print(f"base_sha={base_sha}")
 PY

@@ -174,9 +174,10 @@ signing inputs required, `verifyRelease` scheduled before the nmcp upload task.
   coordinates fails the job.
 - Pull requests run dependency review in the same workflow (job `Dependency review`, high+, every
   scope) after that submission job and fails when it failed, so the review never vouches for a
-  graph without Java. Fork and Dependabot pull requests, whose token is read-only, get their
-  graph submitted and reviewed by `.github/workflows/fork-dependency-graph.yml` after
-  provenance validation (see `CONTRIBUTING.md`).
+  graph without Java. The check to require is the `Trusted dependency review` status, computed
+  from `main` by `.github/workflows/trusted-dependency-review.yml`, which also submits the graph
+  of fork and Dependabot pull requests (read-only token) after provenance validation (see
+  `CONTRIBUTING.md`).
 - OWASP Dependency-Check runs weekly on `main` and on `workflow_dispatch` in
   `.github/workflows/security.yml`, failing on CVSS >= 7.0 (same bar as the PR gate). The NVD
   database is cached between runs under `~/.gradle/dependency-check-data`. Locally:
