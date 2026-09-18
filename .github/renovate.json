@@ -41,6 +41,18 @@
       "groupName": "typescript-npm"
     },
     {
+      "description": "Vite+ pins the Vitest version it bundles; a coverage provider on another version is refused at startup (`vp test --coverage`). Bump @vitest/coverage-v8 by hand, in the same change as the vite-plus update that moves the bundled Vitest.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["@vitest/coverage-v8"],
+      "enabled": false
+    },
+    {
+      "description": "TypeScript 6 is the supported baseline (devDependency, release build, consumer smoke); TypeScript 7 is exercised by the `ts-next` job of ci-ts.yml only. Lift the range when the baseline moves.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    },
+    {
       "matchManagers": [
         "npm"
       ],
