@@ -8,7 +8,11 @@ cd "$(dirname "$0")/.."
 out=mobilityid/iso3166_alpha2.go
 
 codes=$(java scripts/Iso3166Codes.java)
-count=$(printf '%s\n' "$codes" | wc -l | tr -d ' ')
+count=$(printf '%s\n' "$codes" | grep -c '^[A-Z][A-Z]$' || true)
+if [ "$count" -lt 200 ] || [ "$count" -ne "$(printf '%s\n' "$codes" | wc -l | tr -d ' ')" ]; then
+  echo "unexpected generator output: $count two-letter codes" >&2
+  exit 1
+fi
 
 {
   cat <<'HEADER'
@@ -41,5 +45,8 @@ HEADER
   printf '}\n'
 } > "$out"
 
-gofmt -l "$out" >/dev/null
+if [ -n "$(gofmt -l "$out")" ]; then
+  echo "$out is not gofmt-formatted" >&2
+  exit 1
+fi
 echo "wrote $out ($count codes)"
