@@ -14,48 +14,20 @@
  * limitations under the License.
  */
 
-import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
+import { type StringId, type StringIdCompanion, defineStringId } from "./brand.js";
 
 const COUNTRY_CODE_REGEX = /^[A-Za-z]{2}$/;
 
 const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
 
-export class CountryCode {
-  public readonly value: string;
-
-  private constructor(value: string) {
-    this.value = value;
-    Object.freeze(this);
-  }
-
-  public static isValid(raw: string): boolean {
-    if (!COUNTRY_CODE_REGEX.test(raw)) {
-      return false;
-    }
-
-    const normalized = raw.toUpperCase();
-    const display = regionNames.of(normalized);
-    return display !== undefined && display !== normalized && display !== "Unknown Region";
-  }
-
-  public static from(raw: string): CountryCode {
-    if (!CountryCode.isValid(raw)) {
-      throw new ValidationError("Country Code must be valid according to ISO 3166-1 alpha-2");
-    }
-
-    return new CountryCode(raw.toUpperCase());
-  }
-
-  public static tryParse(raw: string): ParseResult<CountryCode> {
-    return attempt(() => CountryCode.from(raw));
-  }
-
-  public static parse(raw: string): CountryCode | null {
-    const result = CountryCode.tryParse(raw);
-    return result.ok ? result.value : null;
-  }
-
-  public toString(): string {
-    return this.value;
-  }
+function isKnownRegion(code: string): boolean {
+  const display = regionNames.of(code);
+  return display !== undefined && display !== code && display !== "Unknown Region";
 }
+
+export type CountryCode = StringId<"CountryCode">;
+
+export const CountryCode: StringIdCompanion<CountryCode> = defineStringId({
+  isValid: (raw) => COUNTRY_CODE_REGEX.test(raw) && isKnownRegion(raw.toUpperCase()),
+  message: () => "Country Code must be valid according to ISO 3166-1 alpha-2",
+});

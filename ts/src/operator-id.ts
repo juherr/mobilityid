@@ -14,79 +14,23 @@
  * limitations under the License.
  */
 
-import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
+import { type StringId, type StringIdCompanion, defineStringId } from "./brand.js";
 import { isValidPartyCode } from "./provider-id.js";
 
 const OPERATOR_DIN_REGEX = /^[0-9]{3,6}$/;
 
-export class OperatorIdIso {
-  public readonly value: string;
+export type OperatorIdIso = StringId<"OperatorIdIso">;
 
-  private constructor(value: string) {
-    this.value = value;
-    Object.freeze(this);
-  }
+export const OperatorIdIso: StringIdCompanion<OperatorIdIso> = defineStringId({
+  isValid: isValidPartyCode,
+  message: () => "OperatorId must have a length of 3 and be ASCII letters or digits",
+});
 
-  public static isValid(raw: string): boolean {
-    return isValidPartyCode(raw);
-  }
+export type OperatorIdDin = StringId<"OperatorIdDin">;
 
-  public static from(raw: string): OperatorIdIso {
-    if (!OperatorIdIso.isValid(raw)) {
-      throw new ValidationError(
-        "OperatorId must have a length of 3 and be ASCII letters or digits",
-      );
-    }
-
-    return new OperatorIdIso(raw.toUpperCase());
-  }
-
-  public static tryParse(raw: string): ParseResult<OperatorIdIso> {
-    return attempt(() => OperatorIdIso.from(raw));
-  }
-
-  public static parse(raw: string): OperatorIdIso | null {
-    const result = OperatorIdIso.tryParse(raw);
-    return result.ok ? result.value : null;
-  }
-
-  public toString(): string {
-    return this.value;
-  }
-}
-
-export class OperatorIdDin {
-  public readonly value: string;
-
-  private constructor(value: string) {
-    this.value = value;
-    Object.freeze(this);
-  }
-
-  public static isValid(raw: string): boolean {
-    return OPERATOR_DIN_REGEX.test(raw);
-  }
-
-  public static from(raw: string): OperatorIdDin {
-    if (!OperatorIdDin.isValid(raw)) {
-      throw new ValidationError("OperatorId must have a length of 3-6 chars and be digits");
-    }
-
-    return new OperatorIdDin(raw.toUpperCase());
-  }
-
-  public static tryParse(raw: string): ParseResult<OperatorIdDin> {
-    return attempt(() => OperatorIdDin.from(raw));
-  }
-
-  public static parse(raw: string): OperatorIdDin | null {
-    const result = OperatorIdDin.tryParse(raw);
-    return result.ok ? result.value : null;
-  }
-
-  public toString(): string {
-    return this.value;
-  }
-}
+export const OperatorIdDin: StringIdCompanion<OperatorIdDin> = defineStringId({
+  isValid: (raw) => OPERATOR_DIN_REGEX.test(raw),
+  message: () => "OperatorId must have a length of 3-6 chars and be digits",
+});
 
 export type OperatorId = OperatorIdIso | OperatorIdDin;

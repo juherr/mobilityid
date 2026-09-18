@@ -92,7 +92,7 @@ export class EvseIdIso extends EvseIdBase {
   }
 
   public toString(): string {
-    return `${this.countryCode.toString()}*${this.operatorId.toString()}*E${this.powerOutletId}`;
+    return `${this.countryCode}*${this.operatorId}*E${this.powerOutletId}`;
   }
 }
 
@@ -144,7 +144,7 @@ export class EvseIdDin extends EvseIdBase {
   }
 
   public toString(): string {
-    return `${this.countryCode.toString()}*${this.operatorId.toString()}*${this.powerOutletId}`;
+    return `${this.countryCode}*${this.operatorId}*${this.powerOutletId}`;
   }
 }
 

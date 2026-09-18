@@ -49,26 +49,25 @@ export class PartyId {
     }
 
     const countryCode = CountryCode.from(country);
-    const partyCode = ProviderId.from(party).value;
-    return new PartyId(countryCode, partyCode);
+    return new PartyId(countryCode, ProviderId.from(party));
   }
 
   public static fromCountryAndProvider(countryCode: CountryCode, providerId: ProviderId): PartyId {
-    return new PartyId(countryCode, providerId.value);
+    return new PartyId(countryCode, providerId);
   }
 
   public static fromCountryAndOperator(
     countryCode: CountryCode,
     operatorId: OperatorIdIso,
   ): PartyId {
-    return new PartyId(countryCode, operatorId.value);
+    return new PartyId(countryCode, operatorId);
   }
 
   public toCompactString(): string {
-    return `${this.countryCode.toString()}${this.partyCode}`;
+    return `${this.countryCode}${this.partyCode}`;
   }
 
   public toString(): string {
-    return `${this.countryCode.toString()}-${this.partyCode}`;
+    return `${this.countryCode}-${this.partyCode}`;
   }
 }
