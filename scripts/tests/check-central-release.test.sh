@@ -25,6 +25,10 @@ class Stub(BaseHTTPRequestHandler):
             code = 500 if self.path.endswith(".jar") else 200
         elif mode == "unexpected":
             code = 302
+        elif mode == "no-gradle-module":
+            code = 404 if self.path.endswith(".module") else 200
+        elif mode == "missing-scala-3":
+            code = 404 if "/mobilityid_3/" in self.path else 200
         else:
             code = 200
         self.send_response(code)
@@ -43,7 +47,8 @@ done
 
 expect() {
   local expected=$1 mode=$2 base=$3 status=0
-  CENTRAL_BASE_URL="${base}" "${script}" 1.2.3 >/dev/null 2>&1 || status=$?
+  shift 3
+  CENTRAL_BASE_URL="${base}" "${script}" 1.2.3 "$@" >/dev/null 2>&1 || status=$?
   if [[ "${status}" -ne "${expected}" ]]; then
     echo "FAIL: mode=${mode} base=${base} -> exit ${status}, expected ${expected}"
     failures=$((failures + 1))
@@ -58,6 +63,14 @@ expect 1 missing-javadoc "${base}/missing-javadoc/dev/juherr/mobilityid"
 expect 2 server-error "${base}/server-error/dev/juherr/mobilityid"
 expect 2 unexpected "${base}/unexpected/dev/juherr/mobilityid"
 expect 2 refused "http://127.0.0.1:1/dev/juherr/mobilityid"   # connection refused: transport failure
+
+# Scala artifacts: several artifact ids, no Gradle module metadata.
+scala_artifacts=(mobilityid_2.13 mobilityid_3 mobilityid-interpolators_2.13 mobilityid-interpolators_3)
+expect 0 no-gradle-module "${base}/no-gradle-module/dev/juherr/mobilityid" --no-module "${scala_artifacts[@]}"
+expect 1 no-gradle-module "${base}/no-gradle-module/dev/juherr/mobilityid" "${scala_artifacts[@]}"   # default expects .module
+expect 1 missing-scala-3 "${base}/missing-scala-3/dev/juherr/mobilityid" --no-module "${scala_artifacts[@]}"
+expect 0 missing-scala-3 "${base}/missing-scala-3/dev/juherr/mobilityid" --no-module mobilityid_2.13   # only the listed ids count
+expect 2 usage "${base}/ok/dev/juherr/mobilityid" --bogus-flag
 
 if (( failures > 0 )); then
   echo "${failures} failure(s)" >&2

@@ -4,9 +4,49 @@ val scala3Lts = "3.9.0"
 scalaVersion := scala3Lts
 crossScalaVersions := Seq(scala213, scala3Lts)
 
+// The repository version, injected by the release workflow (RELEASE_VERSION); a SNAPSHOT otherwise.
+version := sys.env.get("RELEASE_VERSION").orElse(sys.props.get("releaseVersion")).getOrElse("0.1.0-SNAPSHOT")
+
+// Release guard, mirrored from java/: refuses a SNAPSHOT and requires the Central Portal
+// credentials and a GPG secret key before anything is signed or uploaded.
+lazy val verifyRelease = taskKey[Unit]("Fails when the version or the signing/publishing inputs are not release-ready")
+
 val commonSettings = Seq(
-  organization := "com.thenewmotion",
+  organization := "dev.juherr.mobilityid",
+  organizationName := "Julien Herr",
+  organizationHomepage := Some(url("https://github.com/juherr")),
+  homepage := Some(url("https://github.com/juherr/mobilityid")),
+  description := "Parse, validate and convert electric mobility identifiers (ISO 15118-1, DIN SPEC 91286, EMI3)",
   licenses := List(License.Apache2),
+  scmInfo := Some(
+    ScmInfo(url("https://github.com/juherr/mobilityid"), "scm:git:git@github.com:juherr/mobilityid.git")
+  ),
+  developers := List(
+    Developer(id = "juherr", name = "Julien Herr", email = "julien@herr.fr", url = url("https://github.com/juherr"))
+  ),
+  versionScheme := Some("early-semver"),
+  pomIncludeRepository := { _ => false },
+  publishMavenStyle := true,
+  // Releases are staged locally and uploaded by `sonaRelease`; SMOKE_REPOSITORY (a directory)
+  // redirects `publish` to an isolated Maven layout for the consumer smoke test.
+  publishTo :=
+    sys.env.get("SMOKE_REPOSITORY").map(dir => MavenCache("smoke-publish", file(dir))).orElse(localStaging.value),
+  resolvers ++= sys.env.get("SMOKE_REPOSITORY").map(dir => "smoke" at file(dir).toURI.toString).toSeq,
+  // Def.uncached: the guard reads the environment and the GPG keyring, which sbt 2's task
+  // cache cannot see; a cached success must never stand in for a real check.
+  verifyRelease := Def.uncached {
+    val log = streams.value.log
+    val v = version.value
+    if (v.endsWith("-SNAPSHOT")) sys.error(s"Release publishing requires a non-SNAPSHOT version, got $v")
+    val missing = Seq("SONATYPE_USERNAME", "SONATYPE_PASSWORD", "PGP_PASSPHRASE")
+      .filterNot(k => sys.env.get(k).exists(_.nonEmpty))
+    if (missing.nonEmpty) sys.error(s"Release publishing requires ${missing.mkString(", ")} in the environment")
+    val secretKeys = scala.sys.process.Process(Seq("gpg", "--batch", "--with-colons", "--list-secret-keys")).!!
+    if (!secretKeys.linesIterator.exists(_.startsWith("sec:")))
+      sys.error("Release publishing requires a GPG secret key in the keyring")
+    log.info(s"Release inputs verified for $v")
+  },
+  PgpKeys.publishSigned := PgpKeys.publishSigned.dependsOn(verifyRelease).value,
   headerLicense := Some(HeaderLicense.Custom(
     """|Copyright (c) 2014 The New Motion team, and respective contributors
        |Copyright (c) 2026 Julien Herr, and respective contributors
@@ -47,7 +87,8 @@ val commonSettings = Seq(
   // Binary compatibility against the last release on Maven Central. CI resolves the baseline with
   // scripts/mima-baseline.sh and passes it as -Dmobilityid.mimaBaseline=X.Y.Z; without it (no
   // release yet, or a local run) the check is skipped.
-  mimaPreviousArtifacts := sys.props.get("mobilityid.mimaBaseline").map(organization.value %% moduleName.value % _).toSet,
+  mimaPreviousArtifacts :=
+    sys.props.get("mobilityid.mimaBaseline").map(organization.value %% moduleName.value % _).toSet,
   mimaFailOnNoPrevious := false,
   Test / parallelExecution := true,
   Test / fork := true,
