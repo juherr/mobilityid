@@ -45,27 +45,35 @@ env:
   # (`Dependency Submission` / `java-graph`); the artifact is named after it.
   CORRELATOR: dependency_submission-java-graph
   # Pull requests the triggering run knows it belongs to: populated for same-repository and
-  # Dependabot runs, empty for forks (GitHub does not fill it for them). Several open pull
-  # requests can share one head; when the run knows its own, everything below is bound to them.
+  # Dependabot runs, empty for forks (GitHub does not fill it for them). Only binds the snapshot
+  # provenance (job `submit`): the review set is never reduced to them, see job `pulls`.
   TRUSTED_PULLS: ${{ join(github.event.workflow_run.pull_requests.*.number, ',') }}
 
 jobs:
   pulls:
     name: Open pull requests of the head
-    # The commit status is per commit, so it must vouch for every open pull request whose head
-    # is this commit: each of their bases is reviewed below (matrix). Restricted to the pull
-    # requests of the triggering run when it knows them.
+    # The commit status is per commit and shared by every open pull request whose head is this
+    # commit (siblings with different bases included; their runs even share the concurrency
+    # group above), so each of their bases is reviewed below (matrix) and the set is the same
+    # whichever run survives: all of them, never only the triggering run's own.
     if: >-
       github.event.workflow_run.event == 'pull_request'
       && github.event.workflow_run.conclusion != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      contents: read
       pull-requests: read
     outputs:
       matrix: ${{ steps.list.outputs.pulls }}
 
     steps:
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
       - name: List them with their base
         id: list
         env:
@@ -76,16 +84,7 @@ jobs:
           HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
         run: |
           gh api "repos/$GITHUB_REPOSITORY/pulls?head=${HEAD_OWNER}:${HEAD_BRANCH}&state=open" > pulls.json
-          pulls=$(jq -c --arg sha "$HEAD_SHA" --arg repo "$HEAD_REPO" --arg trusted "$TRUSTED_PULLS" '
-            [.[] | select(.head.sha == $sha and .head.repo.full_name == $repo)
-                 | (.number | tostring) as $n
-                 | select($trusted == "" or (($trusted | split(",")) | index($n)) != null)
-                 | {number, base: .base.sha}]' pulls.json)
-          if [[ "${pulls}" == "[]" ]]; then
-            echo "::error::no open pull request with head ${HEAD_SHA} on ${HEAD_OWNER}:${HEAD_BRANCH} (run knows: '${TRUSTED_PULLS}')"
-            exit 1
-          fi
-          echo "Reviewing against: ${pulls}"
+          pulls=$(scripts/list-pull-requests-of-head.sh pulls.json "$HEAD_SHA" "$HEAD_REPO")
           echo "pulls=${pulls}" >> "$GITHUB_OUTPUT"
 
   submit:
