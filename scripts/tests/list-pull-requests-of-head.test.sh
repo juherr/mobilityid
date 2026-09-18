@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Exercises scripts/list-pull-requests-of-head.sh with synthetic pull request listings
-# (`GET /repos/{owner}/{repo}/pulls?head=<owner>:<branch>&state=open`): every open pull request
-# whose head is exactly the expected repository and sha is listed with its base, siblings
-# included, because the commit status their review feeds is shared by all of them. The script
-# deliberately takes no pull request numbers: the triggering run's own pull requests
-# (`workflow_run.pull_requests`) only bind the snapshot provenance, never the review set.
+# (`GET /repos/{owner}/{repo}/pulls?state=open`, every branch): every open pull request whose
+# head is exactly the expected repository and sha is listed with its base, siblings included,
+# whatever their head branch, because the commit status their review feeds is shared by all of
+# them. The script deliberately takes no pull request numbers nor branch: the triggering run's
+# own pull requests (`workflow_run.pull_requests`) only bind the snapshot provenance.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -17,9 +17,10 @@ head_sha=1111111111111111111111111111111111111111
 old_sha=2222222222222222222222222222222222222222
 head_repo=juherr/mobilityid
 
-# pull <number> <head-sha> <head-repo> <base-sha>
+# pull <number> <head-sha> <head-repo> <base-sha> [head-branch]
 pull() {
-  printf '{"number":%s,"state":"open","head":{"sha":"%s","repo":{"full_name":"%s"}},"base":{"sha":"%s"}}' "$@"
+  printf '{"number":%s,"state":"open","head":{"ref":"%s","sha":"%s","repo":{"full_name":"%s"}},"base":{"sha":"%s"}}' \
+    "$1" "${5:-feature}" "$2" "$3" "$4"
 }
 
 # make_listing <file-name> [pull json...]
@@ -46,11 +47,15 @@ to_main=$(pull 42 "${head_sha}" "${head_repo}" base-main)
 to_release=$(pull 43 "${head_sha}" "${head_repo}" base-release)
 stale=$(pull 44 "${old_sha}" "${head_repo}" base-main)
 foreign=$(pull 45 "${head_sha}" someone/else base-main)
+other_branch=$(pull 46 "${head_sha}" "${head_repo}" base-release other-branch)
 
 expect 0 '[{"number":42,"base":"base-main"}]' "single pull request" "$(make_listing single "${to_main}")"
 expect 0 '[{"number":42,"base":"base-main"},{"number":43,"base":"base-release"}]' \
   "siblings sharing the head with different bases are all listed" \
   "$(make_listing siblings "${to_main}" "${to_release}")"
+expect 0 '[{"number":42,"base":"base-main"},{"number":46,"base":"base-release"}]' \
+  "another head branch at the same sha with another base is listed too" \
+  "$(make_listing branches "${to_main}" "${other_branch}")"
 expect 0 '[{"number":42,"base":"base-main"}]' "pull request whose head moved is ignored" \
   "$(make_listing stale "${to_main}" "${stale}")"
 expect 0 '[{"number":42,"base":"base-main"}]' "pull request from another head repository is ignored" \
