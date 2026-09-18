@@ -55,21 +55,28 @@ trait EvseIdFormat[T <: EvseId] {
     }
   }
 
-  private[mobilityid] def validate
-    (countryCode: String, operatorId: String, powerOutletId: String): Either[Error, T] = {
+  private[mobilityid] def validate(countryCode: String, operatorId: String, powerOutletId: String): Either[Error, T] = {
 
     def parse(part: String, regex: Regex, err: => Error): Either[Error, Unit] =
       regex.unapplySeq(part).toRight(err).map(_ => ())
 
     for {
-      _ <- parse(countryCode, CountryCodeRegex,
-        Error(1, "Invalid countryCode for ISO or DIN format"))
-      _ <- parse(operatorId, OperatorCode,
-        Error(2, s"Invalid operatorId for $Description format"))
-      _ <- parse(powerOutletId, PowerOutletId,
-        Error(3, s"Invalid powerOutletId for $Description format"))
-    } yield
-      create(countryCode.toUpperCase, operatorId.toUpperCase, powerOutletId.toUpperCase)
+      _ <- parse(
+        countryCode,
+        CountryCodeRegex,
+        Error(1, "Invalid countryCode for ISO or DIN format")
+      )
+      _ <- parse(
+        operatorId,
+        OperatorCode,
+        Error(2, s"Invalid operatorId for $Description format")
+      )
+      _ <- parse(
+        powerOutletId,
+        PowerOutletId,
+        Error(3, s"Invalid powerOutletId for $Description format")
+      )
+    } yield create(countryCode.toUpperCase, operatorId.toUpperCase, powerOutletId.toUpperCase)
   }
 
   private[mobilityid] def validateAndCreate(countryCode: String, operatorId: String, powerOutletId: String): T =
@@ -80,9 +87,11 @@ trait EvseIdFormat[T <: EvseId] {
 }
 
 object EvseId {
-  def apply(countryCode: String, operatorId: String, powerOutletId: String): EvseId = {
-    (EvseIdIso.validate(countryCode, operatorId, powerOutletId),
-      EvseIdDin.validate(countryCode, operatorId, powerOutletId)) match {
+  def apply(countryCode: String, operatorId: String, powerOutletId: String): EvseId =
+    (
+      EvseIdIso.validate(countryCode, operatorId, powerOutletId),
+      EvseIdDin.validate(countryCode, operatorId, powerOutletId)
+    ) match {
       case (Right(evseId), _) => evseId
       case (_, Right(evseId)) => evseId
       case (Left(error1), Left(error2)) =>
@@ -91,15 +100,15 @@ object EvseId {
         else
           throw new IllegalArgumentException(error2.desc)
     }
-  }
 
-  def apply(evseId: String): Option[EvseId] = {
+  def apply(evseId: String): Option[EvseId] =
     evseId match {
-      case EvseIdIso.EvseIdRegex(c, o, po) => Try(EvseIdIso.create(c.toUpperCase, o.toUpperCase, po.toUpperCase)).toOption
-      case EvseIdDin.EvseIdRegex(c, o, po) => Try(EvseIdDin.create(c.toUpperCase, o.toUpperCase, po.toUpperCase)).toOption
+      case EvseIdIso.EvseIdRegex(c, o, po) =>
+        Try(EvseIdIso.create(c.toUpperCase, o.toUpperCase, po.toUpperCase)).toOption
+      case EvseIdDin.EvseIdRegex(c, o, po) =>
+        Try(EvseIdDin.create(c.toUpperCase, o.toUpperCase, po.toUpperCase)).toOption
       case _ => None
     }
-  }
 
   object AsEvseId {
     def unapply(evseId: String) = Some(EvseId(evseId))
@@ -118,7 +127,7 @@ object EvseIdDin extends EvseIdFormat[EvseIdDin] {
   def apply(cc: PhoneCountryCode, o: OperatorIdDin, powerOutletId: String): EvseIdDin =
     EvseIdDinImpl(cc, o, powerOutletId)
 
-  private[mobilityid] override def create(cc: String, operatorId: String, powerOutletId: String): EvseIdDin = {
+  override private[mobilityid] def create(cc: String, operatorId: String, powerOutletId: String): EvseIdDin = {
     val ccWithPlus = if (cc.startsWith("+")) cc else s"+$cc"
     apply(PhoneCountryCode(ccWithPlus), OperatorIdDin(operatorId), powerOutletId)
   }
@@ -127,9 +136,9 @@ object EvseIdDin extends EvseIdFormat[EvseIdDin] {
 sealed trait EvseIdDin extends EvseId
 
 private case class EvseIdDinImpl(
-  countryCode: PhoneCountryCode,
-  operatorId: OperatorIdDin,
-  powerOutletId: String
+    countryCode: PhoneCountryCode,
+    operatorId: OperatorIdDin,
+    powerOutletId: String
 ) extends EvseIdDin
 
 object EvseIdIso extends EvseIdFormat[EvseIdIso] {
@@ -143,9 +152,8 @@ object EvseIdIso extends EvseIdFormat[EvseIdIso] {
   def apply(cc: CountryCode, o: OperatorIdIso, powerOutletId: String): EvseIdIso =
     EvseIdIsoImpl(cc, o, powerOutletId)
 
-  private[mobilityid] override def create(cc: String, operatorId: String, powerOutletId: String): EvseIdIso = {
+  override private[mobilityid] def create(cc: String, operatorId: String, powerOutletId: String): EvseIdIso =
     apply(CountryCode(cc), OperatorIdIso(operatorId), powerOutletId)
-  }
 }
 
 sealed trait EvseIdIso extends EvseId {
@@ -154,10 +162,10 @@ sealed trait EvseIdIso extends EvseId {
   def partyId: PartyId
 }
 
-private case class EvseIdIsoImpl (
-  countryCode: CountryCode,
-  operatorId: OperatorIdIso,
-  powerOutletId: String
+private case class EvseIdIsoImpl(
+    countryCode: CountryCode,
+    operatorId: OperatorIdIso,
+    powerOutletId: String
 ) extends EvseIdIso {
   override def normalizedId =
     Seq(countryCode.toString, operatorId.toString, EvseIdIso.IdType + powerOutletId).mkString(separator)

@@ -1,10 +1,10 @@
 name: Release
 
 # Manually dispatched from main with the version as input. Every non-destructive check (version,
-# changelog, Java, TypeScript and PHP verification) runs before any registry is touched, then Java
-# (Maven Central), TypeScript (npm) and PHP (the `php/` split pushed to the Packagist mirror) are
-# published idempotently, and the signed `vX.Y.Z` tag and the GitHub Release are created only
-# once every registry has accepted the artifacts. Re-run a failed run (`gh run rerun <id> --failed`)
+# changelog, Java, TypeScript, PHP and Scala verification) runs before any registry is touched,
+# then Java and Scala (Maven Central), TypeScript (npm) and PHP (the `php/` split pushed to the
+# Packagist mirror) are published idempotently, and the signed `vX.Y.Z` tag and the GitHub
+# Release are created only once every registry has accepted the artifacts. Re-run a failed run (`gh run rerun <id> --failed`)
 # instead of dispatching again: every job is idempotent and keeps the original commit.
 # Go is released separately from `go/vX.Y.Z` tags (release-go.yml).
 
@@ -182,13 +182,43 @@ jobs:
       - name: Run the full gate (validate, normalize, audit, format, PHPStan, Rector, PHPUnit, Infection)
         run: composer check
 
+  preflight-scala:
+    name: Preflight Scala
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: maven-central
+    defaults:
+      run:
+        working-directory: scala
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # The Maven Central credentials and signing inputs shared with Scala are asserted by
+      # Preflight Java, which every release job also waits for.
+      - name: Setup JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@dd1ef7d7798fab5ce802a6adab3b782817b8c2d0 # v1
+
+      - name: Verify project (gates on every Scala version, release guard wiring, consumer smoke)
+        run: scripts/verify.sh
+
   release-java:
     name: Release Java to Maven Central
     # Every preflight must pass so that no registry receives the version while another
     # workspace would fail its own verification; the publish itself stays idempotent.
-    needs: [preflight-java, preflight-ts, preflight-php]
+    needs: [preflight-java, preflight-ts, preflight-php, preflight-scala]
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Build and upload, then up to two hours for repo1 to serve the release (wait-central-release.sh).
+    timeout-minutes: 150
     environment: maven-central
     defaults:
       run:
@@ -223,37 +253,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # 0: already there, 1: never published, 3: partially visible (a previous upload is still
+          # propagating: wait for it, never upload again), anything else: unknown, refuse.
           status=0
           ../scripts/check-central-release.sh "${RELEASE_VERSION}" || status=$?
-          if [[ "${status}" -eq 0 ]]; then
-            echo "Release ${RELEASE_VERSION} is already available from Maven Central; skipping upload."
-            exit 0
-          fi
-          if [[ "${status}" -ne 1 ]]; then
-            echo "Could not determine whether ${RELEASE_VERSION} is published; refusing to upload." >&2
-            exit "${status}"
-          fi
-          ./gradlew -PreleaseVersion="${RELEASE_VERSION}" publishAggregationToCentralPortal
+          case "${status}" in
+            0) echo "Release ${RELEASE_VERSION} is already available from Maven Central; skipping upload."; exit 0 ;;
+            1) ./gradlew -PreleaseVersion="${RELEASE_VERSION}" publishAggregationToCentralPortal ;;
+            3) echo "Release ${RELEASE_VERSION} is partially visible on Maven Central; waiting for propagation instead of uploading." ;;
+            *) echo "Could not determine whether ${RELEASE_VERSION} is published; refusing to upload." >&2; exit "${status}" ;;
+          esac
 
       - name: Wait for Maven Central resolution
-        shell: bash
-        run: |
-          set -euo pipefail
-          for _ in $(seq 1 60); do
-            status=0
-            ../scripts/check-central-release.sh "${RELEASE_VERSION}" || status=$?
-            if [[ "${status}" -eq 0 ]]; then
-              exit 0
-            fi
-            sleep 30
-          done
-          echo "Release did not become resolvable from Maven Central in time." >&2
-          echo "Check https://central.sonatype.com/publishing/deployments, then re-run this failed job." >&2
-          exit 1
+        run: ../scripts/wait-central-release.sh "${RELEASE_VERSION}"
 
   release-ts:
     name: Release TypeScript to npm
-    needs: [preflight-java, preflight-ts, preflight-php]
+    needs: [preflight-java, preflight-ts, preflight-php, preflight-scala]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # npm Trusted Publishing (OIDC): this job is bound on npmjs.com to this exact workflow file
@@ -307,7 +323,7 @@ jobs:
 
   release-php:
     name: Release PHP to the Packagist mirror
-    needs: [preflight-java, preflight-ts, preflight-php]
+    needs: [preflight-java, preflight-ts, preflight-php, preflight-scala]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Packagist only indexes a repository whose composer.json sits at its root, so the php/
@@ -361,9 +377,69 @@ jobs:
           git push "${mirror}" "${SPLIT_SHA}:refs/heads/main"
           git push "${mirror}" "${SPLIT_SHA}:refs/tags/${tag}"
 
+  release-scala:
+    name: Release Scala to Maven Central
+    needs: [preflight-java, preflight-ts, preflight-php, preflight-scala]
+    runs-on: ubuntu-latest
+    # Cross build without cache, sonaRelease waits for the Portal to validate the bundle, then
+    # up to two hours for repo1 to serve the release (wait-central-release.sh).
+    timeout-minutes: 170
+    environment: maven-central
+    defaults:
+      run:
+        working-directory: scala
+    env:
+      # sbt reads SONATYPE_USERNAME/SONATYPE_PASSWORD for central.sonatype.com; sbt-pgp reads
+      # PGP_PASSPHRASE for the gpg command line. The key itself is imported below.
+      SONATYPE_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+      SONATYPE_PASSWORD: ${{ secrets.CENTRAL_TOKEN }}
+      PGP_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 25 and import the signing key
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: "25"
+          # No cache in a publishing workflow (zizmor cache-poisoning).
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: PGP_PASSPHRASE
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@dd1ef7d7798fab5ce802a6adab3b782817b8c2d0 # v1
+
+      - name: Publish to Maven Central
+        shell: bash
+        run: |
+          set -euo pipefail
+          source scripts/artifacts.sh
+          # 0: already there, 1: never published, 3: partially visible (a previous upload is still
+          # propagating: wait for it, never upload again), anything else: unknown, refuse.
+          status=0
+          ../scripts/check-central-release.sh "${RELEASE_VERSION}" --no-module "${scala_artifacts[@]}" || status=$?
+          case "${status}" in
+            0) echo "Scala release ${RELEASE_VERSION} is already available from Maven Central; skipping upload."; exit 0 ;;
+            # publishSigned runs the verifyRelease guard first, stages every Scala version in
+            # target/sona-staging, and sonaRelease uploads that single bundle and releases it.
+            1) sbt --server --batch "+publishSigned; sonaRelease" ;;
+            3) echo "Scala release ${RELEASE_VERSION} is partially visible on Maven Central; waiting for propagation instead of uploading." ;;
+            *) echo "Could not determine whether the Scala ${RELEASE_VERSION} artifacts are published; refusing to upload." >&2; exit "${status}" ;;
+          esac
+
+      - name: Wait for Maven Central resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          source scripts/artifacts.sh
+          ../scripts/wait-central-release.sh "${RELEASE_VERSION}" --no-module "${scala_artifacts[@]}"
+
   finalize:
     name: Tag and create GitHub Release
-    needs: [release-java, release-ts, release-php]
+    needs: [release-java, release-ts, release-php, release-scala]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: maven-central

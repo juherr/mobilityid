@@ -7,41 +7,73 @@ Run every command below from `scala/`.
 ## Modules
 
 - `core` -> domain types, parsers, check-digit algorithms (`src/main/scala/com/thenewmotion/mobilityid`).
+  Published as `dev.juherr.mobilityid:mobilityid_{2.13,3}`.
 - `interpolators` -> compile-time checked string interpolators; version-specific sources in
   `src/main/scala-2/` (`contextual-core` macros) and `src/main/scala-3/` (inline macros with
-  `scala.quoted`), shared specs in `src/test/scala/`.
-- Root project aggregates both.
+  `scala.quoted`), picked up by sbt automatically; shared specs in `src/test/scala/`.
+  Published as `dev.juherr.mobilityid:mobilityid-interpolators_{2.13,3}`.
+- `root` aggregates both (`publish / skip`).
+- `consumer-smoke/` -> separate sbt build used by `scripts/verify-consumer.sh` only; it is not
+  part of the aggregate (so `headerCheckAll` / `scalafmtCheckAll` do not cover it: keep its
+  header and style by hand) and needs `SMOKE_REPOSITORY` + `MOBILITYID_VERSION` to load.
 
 ## Toolchain
 
-- sbt 1.12.3 (`project/build.properties`); `scalaVersion` 3.3.7, `crossScalaVersions`
-  2.12.21 / 2.13.18 / 3.3.7 / 3.8.1 (`build.sbt`). CI runs all four (`.github/workflows/ci-scala.yml`).
-- Test framework: specs2 4.14.1-cross (cross-compatible 2.12/2.13/3.x).
-- No Scalafmt/Scalafix/Scalastyle config is checked in; `sbt compile` and `sbt test` are the
-  guaranteed checks. Discover extra plugin tasks with `sbt tasks`.
+- sbt 2.0.9 (`project/build.properties`, `mise.toml` `sbt = "2.0"`); the build definition is
+  Scala 3 (bare settings apply to every project, no `ThisBuild`).
+- `scalaVersion` 3.9.0, `crossScalaVersions` 2.13.18 / 3.9.0 (`build.sbt`). CI runs both
+  (`.github/workflows/ci-scala.yml`). Bytecode target `-release 17`.
+- The build reads three optional environment variables: `RELEASE_VERSION` (set by the `Release`
+  workflow, `0.1.0-SNAPSHOT` otherwise; there is no `version.sbt`), `SMOKE_REPOSITORY` (a
+  directory `publish` writes to and the build resolves from, for the verification scripts) and
+  `MOBILITYID_MIMA_BASELINE` (the release MiMa compares against).
+- Test framework: specs2 4.23.0 (cross 2.13/3; specs2 5 is Scala 3 only).
+- Plugins (`project/plugins.sbt`): sbt-header 5.11.0, sbt-scalafmt 2.6.2 (`.scalafmt.conf`,
+  Scalafmt 3.11.5), sbt-scalafix 0.14.9 (`.scalafix.conf`), sbt-mima-plugin 1.2.1, sbt-pgp 2.3.2.
 
 ## Commands
 
-- Compile / test everything: `sbt compile`, `sbt test`, `sbt clean test` (CI-like).
-- One module: `sbt core/test`, `sbt interpolators/test`.
-- One suite: `sbt "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec"`,
-  `sbt "interpolators/testOnly com.thenewmotion.mobilityid.InterpolatorsSpec"`, pattern form
-  `sbt "core/testOnly *EvseIdSpec"`.
-- One specs2 example: `sbt "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec -- -ex 'render a contract id in the normalized form with dashes and check digit'"`
+Always pass sbt commands as one quoted, `;`-separated argument (sbt 2). Prefer
+`sbt --server --batch "..."`: it runs in a fresh JVM, so environment variables are always the
+current ones (the default thin client reuses a background server that keeps its initial
+environment). Never rely on `sbt clean` to see compiler warnings again: sbt 2 replays cached
+task results, run with a changed input instead.
+
+- Compile / test everything: `sbt --server --batch "+compile"`, `sbt --server --batch "+test"`.
+- One module: `sbt --server --batch "core/test"`, `sbt --server --batch "interpolators/test"`.
+- One suite: `sbt --server --batch "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec"`,
+  pattern form `sbt --server --batch "core/testOnly *EvseIdSpec"`.
+- One specs2 example: `sbt --server --batch "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec -- -ex 'render a contract id in the normalized form with dashes and check digit'"`
   (`--` forwards args to specs2; `-ex <text>` includes, `-x <text>` excludes).
-- One Scala version: `sbt ++2.12.21 test` (same for 2.13.18, 3.3.7, 3.8.1); all versions: `sbt +test`.
-- Dependency refresh: `sbt update compile`.
-- License headers (sbt-header 5.10.0): `sbt headerCheck` to validate, `sbt headerCreate` to apply;
-  CI runs `headerCheck` before tests.
+- One Scala version: `sbt --server --batch "++2.13.18; test"` (same for 3.9.0).
+- Format and fix: `sbt --server --batch "scalafmtSbt; +scalafmtAll; +scalafixAll"`.
+- Full gate: `sbt --server --batch "+gate"` (`gate` is a command alias in `build.sbt`: headers,
+  Scalafmt, Scalafix check, tests, MiMa; CI runs `"++X; gate"` per matrix leg). CI and
+  `scripts/verify.sh` first export `MOBILITYID_MIMA_BASELINE=$(../scripts/mima-baseline.sh)`
+  (last Scala release on Maven Central, empty before the first one; the script exits 2 when
+  Central cannot be questioned); without a baseline MiMa is skipped.
+- Release preflight, as `release.yml` runs it: `scripts/verify.sh` = full gate +
+  `scripts/verify-release-wiring.sh` (guard refuses SNAPSHOT / missing inputs / empty keyring,
+  `publishSigned` stages nothing when the guard fails, signs and stages everything with a
+  throw-away key when the inputs are present, then moves them to `target/smoke-repo` and lets
+  MiMa analyze them as a baseline) + `scripts/verify-consumer.sh` (runs `consumer-smoke/` on
+  both Scala versions against `target/smoke-repo`, publishing there first only when run on its
+  own); both source `scripts/artifacts.sh` (the four published artifacts, the payloads and the
+  `0.0.0-smoke` version). Log in `target/verification/verify.log`.
+- License headers: `sbt --server --batch "+headerCheckAll"` to validate,
+  `sbt --server --batch "+headerCreateAll"` to apply (main and test sources).
 
 ## Code Style
 
-Core code must compile on Scala 2.12, 2.13 and 3.x; keep it cross-compatible.
+Core code must compile on Scala 2.13 and 3.9; keep it cross-compatible (Scala 2 syntax,
+`_` wildcards: Scalafix `targetDialect = Scala2`).
 
-- 2-space indentation, moderate line length, braces for multi-line blocks, small explicit helpers
-  over clever chaining; keep domain types next to their companion objects.
-- Explicit imports grouped Scala/JDK, third-party, project-local; remove unused imports
-  (`-Wunused:imports` is on); alias only on collision.
+- Scalafmt owns layout (2 spaces, 120 columns, no vertical alignment); Scalafix owns imports
+  (`OrganizeImports`: Scala/JDK, third-party, then `com.thenewmotion` project imports, merged
+  selectors) and removes unused symbols. Run both before opening a PR.
+- Warnings are errors on both versions; silence a warning only with a targeted `@nowarn(...)`
+  and a comment (see `ContractIdConverter`: Scala 3 reports the deprecated converters on the
+  enclosing object; `-Wconf:cat=unused-nowarn:s` keeps 2.13 from rejecting that annotation).
 - Types/traits `PascalCase`, objects/vals/defs `camelCase`; `PascalCase` vals only where the file
   already does it (parser regex fields like `FullRegex`). Suites end with `Spec`. Established domain
   abbreviations (ISO, DIN, EMI3, EVSE) are fine, others are not.
@@ -54,6 +86,8 @@ Core code must compile on Scala 2.12, 2.13 and 3.x; keep it cross-compatible.
   candidate parsers; do not swallow exceptions except when intentionally converting to `Option`/`Either`.
 - Comments only for non-obvious intent (algorithm details, standards mapping); concise
   domain-oriented ScalaDoc.
+- Public API changes are checked by MiMa against the last release: a binary-incompatible change
+  needs a `mimaBinaryIssueFilters` entry with a justification and a major/minor bump.
 
 ## Testing (specs2)
 
@@ -64,23 +98,29 @@ Core code must compile on Scala 2.12, 2.13 and 3.x; keep it cross-compatible.
 
 ## Scala LTS Version Policy
 
-`scalaVersion` follows the Scala LTS line and `crossScalaVersions` carries LTS plus the latest
-branch. Scala 3.9 is the current LTS (announced 2026); the build still sits on the previous LTS
-3.3.7, and the migration is tracked in the Scala state-of-the-art issue. Enforced in
+`scalaVersion` follows the Scala 3 LTS line (3.9 since September 2026) and `crossScalaVersions`
+carries exactly one Scala 3 version next to 2.13: the `mobilityid_3` artifact is built with the
+LTS, and a second 3.x version would publish the same artifact twice. Enforced in
 `.github/renovate.json`:
 
 ```json
 {
   "matchManagers": ["sbt"],
   "matchPackageNames": ["scala"],
-  "allowedVersions": "/^(2\\.|3\\.3\\.|3\\.([89]|[1-9][0-9])\\.)/"
+  "allowedVersions": "/^(2\\.13\\.|3\\.9\\.)/"
 }
 ```
 
-Allowed: 2.x, 3.3.x, 3.8+. Blocked: 3.4–3.7 (non-LTS). To move to a new LTS: make sure its
-branch matches the pattern, migrate `scalaVersion` in `build.sbt`, then optionally drop the old LTS.
+To move to the next LTS: widen the pattern to the new branch, migrate `scalaVersion` and
+`crossScalaVersions` in `build.sbt` (and `consumer-smoke/build.sbt`), then narrow the pattern
+again. Publishing for a newer LTS is a minor-version decision: consumers on the previous LTS
+cannot read the new TASTy.
 
 ## Notes
 
 - The archived `sbt-build-seed` plugin is gone; its settings live directly in `build.sbt`.
-- Keep `README.md` (usage examples) current when the public API changes.
+- Keep `README.md` (usage examples, design decisions) current when the public API or the
+  tooling changes.
+- `publishTo` is sbt's `localStaging` (Central Portal bundle); `SMOKE_REPOSITORY=<dir>`
+  redirects `publish` to a local Maven layout and adds it as a resolver (consumer smoke and
+  MiMa wiring proof).

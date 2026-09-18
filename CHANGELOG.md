@@ -10,6 +10,19 @@ which requires a dated section for the version below and a matching file in
 
 ### Added
 
+- **Scala:** quality gates: Scalafmt (`.scalafmt.conf`), Scalafix (`OrganizeImports`,
+  `RemoveUnused`), fatal compiler warnings on both Scala versions, license headers on test
+  sources too, and MiMa binary-compatibility checks of `core` and `interpolators` against the
+  last release on Maven Central (skipped until the first one).
+- **Release:** the Maven Central jobs (Java and Scala) distinguish a version that is fully
+  visible (skipped), never published (uploaded), partially visible (a previous upload still
+  propagating: waited for, never uploaded again) or unknown (refused), and wait up to two
+  hours for repo1 to serve a release instead of thirty minutes (`scripts/wait-central-release.sh`).
+- **Release:** the `Release` workflow now also publishes Scala to Maven Central: a `Preflight
+  Scala` job runs `scala/scripts/verify.sh` (full gate on Scala 2.13 and 3, release guard
+  wiring proof, consumer smoke from an isolated repository), then `Release Scala` stages both
+  Scala versions with `publishSigned` and releases the bundle with `sonaRelease`, idempotently.
+
 - **TypeScript:** `tryParse` on every identifier and in `MobilityIdParsers`, returning a
   `ParseResult<T>` (`{ ok: true, value }` or `{ ok: false, error }`) so callers get the failure
   reason without exceptions.
@@ -36,6 +49,14 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
+- **Breaking (Scala):** the artifacts move to `dev.juherr.mobilityid:mobilityid` and
+  `dev.juherr.mobilityid:mobilityid-interpolators` (the `com.thenewmotion` coordinates were
+  never on Maven Central; the package stays `com.thenewmotion.mobilityid`). Scala 2.12 and
+  3.3 are dropped: the library is built for Scala 2.13.18 and the 3.9.0 LTS, so the Scala 3
+  artifact requires a 3.9+ compiler, and the bytecode baseline is JDK 17 (was 1.8).
+- **Scala:** sbt 2.0.9 (`mise.toml` `sbt = "2.0"`), specs2 4.23.0, sbt-header 5.11.0; the
+  version comes from the release workflow (`version.sbt` removed); `scala/README.md` records
+  the tooling decisions and `scala/AGENTS.md` the sbt 2 commands.
 - **Breaking (PHP):** PHP 8.4 is the minimum version (`php: ^8.4`, CI on 8.4 and 8.5); PHP 8.3
   is no longer supported. Every value object is a `final readonly class` (`AbstractContractId`
   and `AbstractEvseId` are `abstract readonly`), so their public properties can no longer be

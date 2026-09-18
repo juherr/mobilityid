@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Exercises scripts/check-central-release.sh against a local HTTP stub:
-#   every payload 200 -> 0; a 404 on any payload -> 1; 5xx, unexpected code or transport failure -> 2.
+#   every payload 200 -> 0; every payload 404 -> 1; some 200 and some 404 -> 3 (never "publish");
+#   5xx, unexpected code or transport failure -> 2.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -19,12 +20,20 @@ class Stub(BaseHTTPRequestHandler):
         mode = self.path.split("/")[1]
         if mode == "ok":
             code = 200
+        elif mode == "absent":
+            code = 404
         elif mode == "missing-javadoc":
             code = 404 if self.path.endswith("-javadoc.jar") else 200
+        elif mode == "missing-pom":
+            code = 404 if self.path.endswith(".pom") else 200
         elif mode == "server-error":
             code = 500 if self.path.endswith(".jar") else 200
         elif mode == "unexpected":
             code = 302
+        elif mode == "no-gradle-module":
+            code = 404 if self.path.endswith(".module") else 200
+        elif mode == "missing-scala-3":
+            code = 404 if "/mobilityid_3/" in self.path else 200
         else:
             code = 200
         self.send_response(code)
@@ -43,7 +52,8 @@ done
 
 expect() {
   local expected=$1 mode=$2 base=$3 status=0
-  CENTRAL_BASE_URL="${base}" "${script}" 1.2.3 >/dev/null 2>&1 || status=$?
+  shift 3
+  CENTRAL_BASE_URL="${base}" "${script}" 1.2.3 "$@" >/dev/null 2>&1 || status=$?
   if [[ "${status}" -ne "${expected}" ]]; then
     echo "FAIL: mode=${mode} base=${base} -> exit ${status}, expected ${expected}"
     failures=$((failures + 1))
@@ -54,10 +64,22 @@ expect() {
 
 base="http://127.0.0.1:${port}"
 expect 0 ok "${base}/ok/dev/juherr/mobilityid"
-expect 1 missing-javadoc "${base}/missing-javadoc/dev/juherr/mobilityid"
+expect 1 absent "${base}/absent/dev/juherr/mobilityid"
+# Partial visibility (propagation in progress, or a previous upload): whether the missing payload
+# comes after present ones (javadoc) or before them (pom, the first one checked), never 1.
+expect 3 missing-javadoc "${base}/missing-javadoc/dev/juherr/mobilityid"
+expect 3 missing-pom "${base}/missing-pom/dev/juherr/mobilityid"
 expect 2 server-error "${base}/server-error/dev/juherr/mobilityid"
 expect 2 unexpected "${base}/unexpected/dev/juherr/mobilityid"
 expect 2 refused "http://127.0.0.1:1/dev/juherr/mobilityid"   # connection refused: transport failure
+
+# Scala artifacts: several artifact ids, no Gradle module metadata.
+scala_artifacts=(mobilityid_2.13 mobilityid_3 mobilityid-interpolators_2.13 mobilityid-interpolators_3)
+expect 0 no-gradle-module "${base}/no-gradle-module/dev/juherr/mobilityid" --no-module "${scala_artifacts[@]}"
+expect 3 no-gradle-module "${base}/no-gradle-module/dev/juherr/mobilityid" "${scala_artifacts[@]}"   # default expects .module
+expect 3 missing-scala-3 "${base}/missing-scala-3/dev/juherr/mobilityid" --no-module "${scala_artifacts[@]}"   # one artifact of four
+expect 1 absent "${base}/absent/dev/juherr/mobilityid" --no-module "${scala_artifacts[@]}"
+expect 0 missing-scala-3 "${base}/missing-scala-3/dev/juherr/mobilityid" --no-module mobilityid_2.13   # only the listed ids count
 
 if (( failures > 0 )); then
   echo "${failures} failure(s)" >&2

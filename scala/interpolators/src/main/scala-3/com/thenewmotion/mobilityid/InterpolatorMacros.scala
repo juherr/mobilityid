@@ -17,7 +17,7 @@
 
 package com.thenewmotion.mobilityid
 
-import scala.quoted.*
+import scala.quoted._
 
 private[mobilityid] object InterpolatorMacros {
 
@@ -25,7 +25,7 @@ private[mobilityid] object InterpolatorMacros {
     val str = sc.valueOrAbort.parts.mkString
     EvseId(str) match {
       case None => quotes.reflect.report.errorAndAbort(s"not a valid EvseId: $str")
-      case _    => '{ EvseId(${ Expr(str) }).get }
+      case _ => '{ EvseId(${ Expr(str) }).get }
     }
   }
 
@@ -33,7 +33,7 @@ private[mobilityid] object InterpolatorMacros {
     val str = sc.valueOrAbort.parts.mkString
     EvseIdIso(str) match {
       case None => quotes.reflect.report.errorAndAbort(s"not a valid EvseIdIso: $str")
-      case _    => '{ EvseIdIso(${ Expr(str) }).get }
+      case _ => '{ EvseIdIso(${ Expr(str) }).get }
     }
   }
 
@@ -41,7 +41,7 @@ private[mobilityid] object InterpolatorMacros {
     val str = sc.valueOrAbort.parts.mkString
     EvseIdDin(str) match {
       case None => quotes.reflect.report.errorAndAbort(s"not a valid EvseIdDin: $str")
-      case _    => '{ EvseIdDin(${ Expr(str) }).get }
+      case _ => '{ EvseIdDin(${ Expr(str) }).get }
     }
   }
 
@@ -49,7 +49,7 @@ private[mobilityid] object InterpolatorMacros {
     val str = sc.valueOrAbort.parts.mkString
     scala.util.Try(ContractId[ContractIdStandard.ISO](str)) match {
       case scala.util.Failure(ex) => quotes.reflect.report.errorAndAbort(ex.getMessage)
-      case _                      => '{ ContractId[ContractIdStandard.ISO](${ Expr(str) }) }
+      case _ => '{ ContractId[ContractIdStandard.ISO](${ Expr(str) }) }
     }
   }
 
@@ -57,7 +57,7 @@ private[mobilityid] object InterpolatorMacros {
     val str = sc.valueOrAbort.parts.mkString
     scala.util.Try(ContractId[ContractIdStandard.DIN](str)) match {
       case scala.util.Failure(ex) => quotes.reflect.report.errorAndAbort(ex.getMessage)
-      case _                      => '{ ContractId[ContractIdStandard.DIN](${ Expr(str) }) }
+      case _ => '{ ContractId[ContractIdStandard.DIN](${ Expr(str) }) }
     }
   }
 
@@ -65,7 +65,7 @@ private[mobilityid] object InterpolatorMacros {
     val str = sc.valueOrAbort.parts.mkString
     scala.util.Try(ContractId[ContractIdStandard.EMI3](str)) match {
       case scala.util.Failure(ex) => quotes.reflect.report.errorAndAbort(ex.getMessage)
-      case _                      => '{ ContractId[ContractIdStandard.EMI3](${ Expr(str) }) }
+      case _ => '{ ContractId[ContractIdStandard.EMI3](${ Expr(str) }) }
     }
   }
 

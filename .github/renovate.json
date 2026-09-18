@@ -21,7 +21,7 @@
     {
       "matchManagers": ["sbt"],
       "matchPackageNames": ["scala"],
-      "allowedVersions": "/^(2\\.|3\\.3\\.|3\\.([89]|[1-9][0-9])\\.)/"
+      "allowedVersions": "/^(2\\.13\\.|3\\.9\\.)/"
     },
     {
       "matchManagers": ["sbt"],

@@ -1,43 +1,80 @@
 ## Mobility ID Utils
 
-[![CI](https://github.com/juherr/mobilityid/actions/workflows/ci.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci.yml)
+[![CI Scala](https://github.com/juherr/mobilityid/actions/workflows/ci-scala.yml/badge.svg)](https://github.com/juherr/mobilityid/actions/workflows/ci-scala.yml)
 
 ### About the library ###
 
 Scala utils to parse, validate and convert electric mobility account
 identifier strings according to the ISO 15118-1, DIN SPEC 91286 & EMI3 standards.
 
-### Development notes ###
-
-This Scala codebase now lives under `scala/` in the monorepo.
-
-- Build tool: sbt `1.12.3` (`project/build.properties`)
-- Scala versions: `2.13.18`, `2.12.21`, `3.3.7` and `3.8.1` (`build.sbt`)
-- The archived `sbt-build-seed` plugin has been removed; equivalent build settings are defined directly in `build.sbt`.
-
-Run commands from `scala/`:
-
-```bash
-sbt test
-sbt "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec"
-sbt "interpolators/testOnly com.thenewmotion.mobilityid.InterpolatorsSpec"
-```
-
-If you use `mise` from the repository root, you can run:
-
-```bash
-mise exec -- sbt test
-```
-
 ### Where to get it ###
 
-To get the latest version of the library, publish the library to a repository and add the following to your SBT build:
-
-And use the following library dependency:
+The artifacts are published to Maven Central by the repository `Release` workflow, for Scala
+2.13 and Scala 3 (built with the 3.9 LTS, so a Scala 3.9+ compiler is required):
 
 ``` scala
-libraryDependencies += "com.thenewmotion" %% "mobilityid" % "1.0.0"
+libraryDependencies += "dev.juherr.mobilityid" %% "mobilityid" % "X.Y.Z"
+// compile-time checked interpolators (optional)
+libraryDependencies += "dev.juherr.mobilityid" %% "mobilityid-interpolators" % "X.Y.Z"
 ```
+
+The package stays `com.thenewmotion.mobilityid`: the code is the New Motion library, only the
+Maven coordinates moved to the `dev.juherr.mobilityid` group shared with `mobilityid4j`.
+
+### Development notes ###
+
+This Scala codebase lives under `scala/` in the monorepo. Run every command from `scala/`.
+
+- Build tool: sbt `2.0.9` (`project/build.properties`, `mise.toml`). sbt 2 runs a command
+  sequence from one quoted argument (`sbt "a; b"`); the scripts use `sbt --server --batch` so
+  that every invocation runs in a fresh JVM and sees the current environment.
+- Scala versions: `2.13.18` and `3.9.0` (`build.sbt`); `sbt +test` runs both.
+- Bytecode target: `-release 17` (Scala and javac).
+
+```bash
+sbt --server --batch "+test"
+sbt --server --batch "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec"
+sbt --server --batch "+gate"   # headers, Scalafmt, Scalafix, tests, MiMa on both Scala versions
+scripts/verify.sh   # the full gate + release guard wiring + consumer smoke, as the release preflight runs it
+```
+
+Format and fix in place with `sbt --server --batch "scalafmtSbt; +scalafmtAll; +scalafixAll"`.
+
+If you use `mise` from the repository root, prefix the commands with `mise exec --`.
+
+### Design and tooling decisions ###
+
+- **Scala 2.13 + 3.9 LTS only.** Scala 3.9.0 (September 2026) is the LTS line library authors are
+  expected to build on; it needs JDK 17+ to compile and run. Scala 2.12 and the previous 3.3 LTS
+  were dropped before the first Maven Central release, so nothing published ever depended on
+  them. `crossScalaVersions` carries exactly one Scala 3 version: two would publish the same
+  `mobilityid_3` artifact.
+- **JVM 17 baseline.** `-release 17` is the lowest target consistent with Scala 3.9; the
+  Java port targets 21 but a Scala consumer on JDK 17 can still use this library.
+- **specs2 4.x.** specs2 5 is Scala 3 only and the specs are shared between 2.13 and 3, so the
+  build stays on the cross-published 4.x line (4.23.0).
+- **Quality gates.** Scalafmt (`.scalafmt.conf`, no alignment, imports left to Scalafix),
+  Scalafix (`.scalafix.conf`: `OrganizeImports` groups Scala/JDK, third-party, then project
+  imports; `RemoveUnused` for imports, the only `-Wunused` category enabled), fatal warnings (`-Xfatal-warnings` / `-Werror`, `-Xlint` on 2.13,
+  `-Wunused:imports` everywhere) and sbt-header on main and test sources.
+- **Binary compatibility.** sbt-mima-plugin compares `core` and `interpolators` with the last
+  release found on Maven Central (the repository `scripts/mima-baseline.sh` reads the `mobilityid_3`
+  metadata, CI exports it as `MOBILITYID_MIMA_BASELINE`). Until the first release the check is
+  skipped; `scripts/verify-release-wiring.sh` proves the wiring (resolution and analysis, not
+  detection: the baseline is built from the same sources) against the locally published
+  `0.0.0-smoke` artifacts.
+- **Publishing.** sbt's built-in Central Portal support (`publishSigned` stages every Scala
+  version in `target/sona-staging`, `sonaRelease` uploads the bundle) with sbt-pgp. The
+  version is `RELEASE_VERSION` (set by the workflow), `0.1.0-SNAPSHOT` otherwise, and a
+  `verifyRelease` guard refuses to sign a SNAPSHOT or to run without `SONATYPE_USERNAME`,
+  `SONATYPE_PASSWORD`, `PGP_PASSPHRASE` and a GPG secret key; `scripts/verify-release-wiring.sh`
+  also signs and stages a throw-away version with a temporary key to prove that path without
+  uploading anything. sbt-ci-release was not used: it
+  derives the version from an existing git tag, whereas the `Release` workflow tags after
+  every registry has accepted the artifacts.
+- **Consumer smoke.** `consumer-smoke/` is a separate sbt build that resolves both modules from
+  `target/smoke-repo`, the isolated Maven repository the wiring proof leaves behind (or that
+  `scripts/verify-consumer.sh` publishes when run on its own), on both Scala versions.
 
 ### How to use ###
 
@@ -52,8 +89,8 @@ You can create an Contract Id object from a string in any of the 3 formats.  If 
 validated.  If it is not supplied, it will be calculated.
 
 ``` scala
-mobilityid> project core
-mobilityid> console
+root> project core
+core> console
 scala> import com.thenewmotion.mobilityid._
 import ContractIdStandard._
 
@@ -297,7 +334,7 @@ res5: Boolean = false
 Can be imported with this dependency
 
 ``` scala
-libraryDependencies += "com.thenewmotion" %% "mobilityid-interpolators" % "1.0.0"
+libraryDependencies += "dev.juherr.mobilityid" %% "mobilityid-interpolators" % "X.Y.Z"
 ```
 
 then it can be used like this:

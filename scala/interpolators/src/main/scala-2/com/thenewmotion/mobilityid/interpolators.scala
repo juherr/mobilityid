@@ -17,9 +17,11 @@
 
 package com.thenewmotion.mobilityid
 
-import ContractIdStandard.{DIN, EMI3, ISO}
+import scala.util.{Failure, Try}
+
 import contextual.{Interpolator, Macros}
-import scala.util.{Try, Failure}
+
+import ContractIdStandard.{DIN, EMI3, ISO}
 import language.experimental.macros
 
 object EvseIdInterpolator extends Interpolator {
@@ -27,7 +29,7 @@ object EvseIdInterpolator extends Interpolator {
   type Output = EvseId
 
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, evseIdString) = (interpolation.parts.head: @unchecked)
+    val lit @ Literal(_, evseIdString) = interpolation.parts.head: @unchecked
     EvseId(evseIdString) match {
       case None => interpolation.abort(lit, 0, "not a valid EvseId")
       case _ =>
@@ -45,7 +47,7 @@ object EvseIdIsoInterpolator extends Interpolator {
   type Output = EvseIdIso
 
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, evseIdString) = (interpolation.parts.head: @unchecked)
+    val lit @ Literal(_, evseIdString) = interpolation.parts.head: @unchecked
     EvseIdIso(evseIdString) match {
       case None => interpolation.abort(lit, 0, "not a valid EvseIdIso")
       case _ =>
@@ -63,7 +65,7 @@ object EvseIdDinInterpolator extends Interpolator {
   type Output = EvseIdDin
 
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, evseIdString) = (interpolation.parts.head: @unchecked)
+    val lit @ Literal(_, evseIdString) = interpolation.parts.head: @unchecked
     EvseIdDin(evseIdString) match {
       case None => interpolation.abort(lit, 0, "not a valid EvseIdDin")
       case _ =>
@@ -79,7 +81,7 @@ object EvseIdDinInterpolator extends Interpolator {
 class ContractIdInterpolator[T <: ContractIdStandard](implicit p: ContractIdParser[T]) extends Interpolator {
 
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, emaIdString) = (interpolation.parts.head: @unchecked)
+    val lit @ Literal(_, emaIdString) = interpolation.parts.head: @unchecked
     Try(ContractId[T](emaIdString)) match {
       case Failure(ex) => interpolation.abort(lit, 0, ex.getMessage)
       case _ =>
@@ -107,7 +109,7 @@ object ProviderIdInterpolator extends Interpolator {
   type Output = ProviderId
 
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, providerIdString) = (interpolation.parts.head: @unchecked)
+    val lit @ Literal(_, providerIdString) = interpolation.parts.head: @unchecked
     if (!ProviderId.isValid(providerIdString)) interpolation.abort(lit, 0, "not a valid ProviderId")
     Nil
   }
@@ -121,7 +123,7 @@ object CountryCodeInterpolator extends Interpolator {
   type Output = CountryCode
 
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, countryCodeString) = (interpolation.parts.head: @unchecked)
+    val lit @ Literal(_, countryCodeString) = interpolation.parts.head: @unchecked
     if (!CountryCode.isValid(countryCodeString)) interpolation.abort(lit, 0, "not a valid CountryCode")
     Nil
   }
@@ -135,7 +137,7 @@ object PhoneCountryCodeInterpolator extends Interpolator {
   type Output = PhoneCountryCode
 
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, phoneCountryCodeString) = (interpolation.parts.head: @unchecked)
+    val lit @ Literal(_, phoneCountryCodeString) = interpolation.parts.head: @unchecked
     if (!PhoneCountryCode.isValid(phoneCountryCodeString)) interpolation.abort(lit, 0, "not a valid PhoneCountryCode")
     Nil
   }
@@ -149,7 +151,7 @@ object OperatorIdIsoInterpolator extends Interpolator {
   type Output = OperatorIdIso
 
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, operatorIdIso) = (interpolation.parts.head: @unchecked)
+    val lit @ Literal(_, operatorIdIso) = interpolation.parts.head: @unchecked
     if (!OperatorIdIso.isValid(operatorIdIso)) interpolation.abort(lit, 0, "not a valid OperatorIdIso")
     Nil
   }
@@ -163,7 +165,7 @@ object OperatorIdDinInterpolator extends Interpolator {
   type Output = OperatorIdDin
 
   def contextualize(interpolation: StaticInterpolation) = {
-    val lit@Literal(_, operatorIdDin) = (interpolation.parts.head: @unchecked)
+    val lit @ Literal(_, operatorIdDin) = interpolation.parts.head: @unchecked
     if (!OperatorIdDin.isValid(operatorIdDin)) interpolation.abort(lit, 0, "not a valid OperatorIdDin")
     Nil
   }
@@ -174,27 +176,39 @@ object OperatorIdDinInterpolator extends Interpolator {
 
 object interpolators {
   implicit class MobilityIdStringContext(sc: StringContext) {
-    def evseId(expressions: Interpolator.Embedded[EvseIdInterpolator.Input, EvseIdInterpolator.type]*):
-        EvseIdInterpolator.Output = macro Macros.contextual[EvseIdInterpolator.type]
-    def evseIdIso(expressions: Interpolator.Embedded[EvseIdIsoInterpolator.Input, EvseIdIsoInterpolator.type]*):
-        EvseIdIsoInterpolator.Output = macro Macros.contextual[EvseIdIsoInterpolator.type]
-    def evseIdDin(expressions: Interpolator.Embedded[EvseIdDinInterpolator.Input, EvseIdDinInterpolator.type]*):
-        EvseIdDinInterpolator.Output = macro Macros.contextual[EvseIdDinInterpolator.type]
-    def contractIdISO(expressions: Interpolator.Embedded[ContractIdIsoInterpolator.Input, ContractIdIsoInterpolator.type]*):
-        ContractIdIsoInterpolator.Output = macro Macros.contextual[ContractIdIsoInterpolator.type]
-    def contractIdDIN(expressions: Interpolator.Embedded[ContractIdDinInterpolator.Input, ContractIdDinInterpolator.type]*):
-        ContractIdDinInterpolator.Output = macro Macros.contextual[ContractIdDinInterpolator.type]
-    def contractIdEMI3(expressions: Interpolator.Embedded[ContractIdEmi3Interpolator.Input, ContractIdEmi3Interpolator.type]*):
-        ContractIdEmi3Interpolator.Output = macro Macros.contextual[ContractIdEmi3Interpolator.type]
-    def providerId(expressions: Interpolator.Embedded[ProviderIdInterpolator.Input, ProviderIdInterpolator.type]*):
-        ProviderIdInterpolator.Output = macro Macros.contextual[ProviderIdInterpolator.type]
-    def countryCode(expressions: Interpolator.Embedded[CountryCodeInterpolator.Input, CountryCodeInterpolator.type]*):
-        CountryCodeInterpolator.Output = macro Macros.contextual[CountryCodeInterpolator.type]
-    def phoneCountryCode(expressions: Interpolator.Embedded[PhoneCountryCodeInterpolator.Input, PhoneCountryCodeInterpolator.type]*):
-        PhoneCountryCodeInterpolator.Output = macro Macros.contextual[PhoneCountryCodeInterpolator.type]
-    def operatorIdIso(expressions: Interpolator.Embedded[OperatorIdIsoInterpolator.Input, OperatorIdIsoInterpolator.type]*):
-        OperatorIdIsoInterpolator.Output = macro Macros.contextual[OperatorIdIsoInterpolator.type]
-    def operatorIdDin(expressions: Interpolator.Embedded[OperatorIdDinInterpolator.Input, OperatorIdDinInterpolator.type]*):
-        OperatorIdDinInterpolator.Output = macro Macros.contextual[OperatorIdDinInterpolator.type]
+    def evseId(expressions: Interpolator.Embedded[EvseIdInterpolator.Input, EvseIdInterpolator.type]*)
+        : EvseIdInterpolator.Output = macro Macros.contextual[EvseIdInterpolator.type]
+    def evseIdIso(expressions: Interpolator.Embedded[EvseIdIsoInterpolator.Input, EvseIdIsoInterpolator.type]*)
+        : EvseIdIsoInterpolator.Output = macro Macros.contextual[EvseIdIsoInterpolator.type]
+    def evseIdDin(expressions: Interpolator.Embedded[EvseIdDinInterpolator.Input, EvseIdDinInterpolator.type]*)
+        : EvseIdDinInterpolator.Output = macro Macros.contextual[EvseIdDinInterpolator.type]
+    def contractIdISO(expressions: Interpolator.Embedded[
+      ContractIdIsoInterpolator.Input,
+      ContractIdIsoInterpolator.type
+    ]*): ContractIdIsoInterpolator.Output = macro Macros.contextual[ContractIdIsoInterpolator.type]
+    def contractIdDIN(expressions: Interpolator.Embedded[
+      ContractIdDinInterpolator.Input,
+      ContractIdDinInterpolator.type
+    ]*): ContractIdDinInterpolator.Output = macro Macros.contextual[ContractIdDinInterpolator.type]
+    def contractIdEMI3(expressions: Interpolator.Embedded[
+      ContractIdEmi3Interpolator.Input,
+      ContractIdEmi3Interpolator.type
+    ]*): ContractIdEmi3Interpolator.Output = macro Macros.contextual[ContractIdEmi3Interpolator.type]
+    def providerId(expressions: Interpolator.Embedded[ProviderIdInterpolator.Input, ProviderIdInterpolator.type]*)
+        : ProviderIdInterpolator.Output = macro Macros.contextual[ProviderIdInterpolator.type]
+    def countryCode(expressions: Interpolator.Embedded[CountryCodeInterpolator.Input, CountryCodeInterpolator.type]*)
+        : CountryCodeInterpolator.Output = macro Macros.contextual[CountryCodeInterpolator.type]
+    def phoneCountryCode(expressions: Interpolator.Embedded[
+      PhoneCountryCodeInterpolator.Input,
+      PhoneCountryCodeInterpolator.type
+    ]*): PhoneCountryCodeInterpolator.Output = macro Macros.contextual[PhoneCountryCodeInterpolator.type]
+    def operatorIdIso(expressions: Interpolator.Embedded[
+      OperatorIdIsoInterpolator.Input,
+      OperatorIdIsoInterpolator.type
+    ]*): OperatorIdIsoInterpolator.Output = macro Macros.contextual[OperatorIdIsoInterpolator.type]
+    def operatorIdDin(expressions: Interpolator.Embedded[
+      OperatorIdDinInterpolator.Input,
+      OperatorIdDinInterpolator.type
+    ]*): OperatorIdDinInterpolator.Output = macro Macros.contextual[OperatorIdDinInterpolator.type]
   }
 }

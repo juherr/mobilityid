@@ -7,10 +7,12 @@ on:
       - master
     paths:
       - 'scala/**'
+      - 'scripts/mima-baseline.sh'
       - '.github/workflows/ci-scala.yml'
   pull_request:
     paths:
       - 'scala/**'
+      - 'scripts/mima-baseline.sh'
       - '.github/workflows/ci-scala.yml'
 
 permissions:
@@ -22,13 +24,13 @@ concurrency:
 
 jobs:
   scala:
-    name: Scala (JDK 21, Scala ${{ matrix.scala-version }})
+    name: Scala (JDK 25, Scala ${{ matrix.scala-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        scala-version: [2.12.21, 2.13.18, 3.3.7, 3.8.1]
+        scala-version: [2.13.18, 3.9.0]
 
     defaults:
       run:
@@ -40,10 +42,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Validate Gradle Wrapper
-        uses: gradle/actions/wrapper-validation@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
-
-      - name: Setup JDK 21
+      - name: Setup JDK 25
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
           distribution: temurin
@@ -53,8 +52,48 @@ jobs:
       - name: Setup sbt
         uses: sbt/setup-sbt@dd1ef7d7798fab5ce802a6adab3b782817b8c2d0 # v1
 
-      - name: Validate License Headers
-        run: sbt ++${{ matrix.scala-version }} headerCheck
+      - name: Headers, Scalafmt, Scalafix, tests and MiMa (`gate` alias in build.sbt)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The MiMa baseline is the last Scala release on Maven Central, empty before the first one;
+          # the script (and this step) fail when Central cannot be questioned.
+          MOBILITYID_MIMA_BASELINE=$(../scripts/mima-baseline.sh)
+          export MOBILITYID_MIMA_BASELINE
+          echo "MiMa baseline: ${MOBILITYID_MIMA_BASELINE:-none published yet}"
+          # sbt 2 runs a command sequence from one quoted argument; --server --batch runs it in a
+          # fresh JVM so that no long-lived server keeps a stale environment.
+          sbt --server --batch "++${SCALA_VERSION}; gate"
+        env:
+          SCALA_VERSION: ${{ matrix.scala-version }}
 
-      - name: Test
-        run: sbt ++${{ matrix.scala-version }} clean test
+  release-wiring:
+    name: Release guard and consumer smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    defaults:
+      run:
+        working-directory: scala
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: sbt
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@dd1ef7d7798fab5ce802a6adab3b782817b8c2d0 # v1
+
+      - name: Verify the release guard wiring (SNAPSHOT, credentials, GPG key, MiMa baseline)
+        run: scripts/verify-release-wiring.sh
+
+      - name: Publish to an isolated repository and consume it from consumer-smoke/
+        run: scripts/verify-consumer.sh

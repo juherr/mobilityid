@@ -9,7 +9,7 @@
 
 This repository contains multiple implementations of the same mobility ID domain:
 
-- `scala/`: original Scala implementation (sbt + specs2)
+- `scala/`: original Scala implementation (`dev.juherr.mobilityid:mobilityid`, sbt 2, Scala 2.13 + 3.9 LTS, specs2)
 - `java/`: Java 21 port (`mobilityid4j`, Gradle)
 - `go/`: Go port (`mobilityid.juherr.dev/go`)
 - `php/`: PHP port (`juherr/mobility-id`, PHP 8.4+)
@@ -21,14 +21,14 @@ This repository contains multiple implementations of the same mobility ID domain
 
 ```bash
 cd scala
-sbt test
+sbt --server --batch "+test"
 ```
 
 Run a single Scala suite:
 
 ```bash
 cd scala
-sbt "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec"
+sbt --server --batch "core/testOnly com.thenewmotion.mobilityid.ContractIdSpec"
 ```
 
 ### Java workspace
@@ -71,7 +71,7 @@ vp test ContractId
 ## Dependency updates
 
 - Renovate manages GitHub Actions, Gradle, npm, sbt/Scala, and `mise.toml` tool versions (`.github/renovate.json`).
-- `mise.toml` uses simplified version formats: major.minor for sbt/gradle (e.g., `1.12`, `9.7`), major only for Java/Node (e.g., `21`, `24`). See `AGENTS.md` for configuration details.
+- `mise.toml` uses simplified version formats: major.minor for sbt/gradle (e.g., `2.0`, `9.7`), major only for Java/Node (e.g., `21`, `24`). See `AGENTS.md` for configuration details.
 - CI validates Gradle Wrapper integrity on every run (`gradle/actions/wrapper-validation`).
 - Gradle distribution integrity is pinned with `distributionSha256Sum` in `java/gradle/wrapper/gradle-wrapper.properties`.
 - `.github/workflows/dependency-submission.yml` submits the resolved Gradle dependency graph (transitive dependencies and build plugins included) to GitHub on `main` and on same-repository pull requests; GitHub parses the npm, Composer, Go and Actions manifests itself.

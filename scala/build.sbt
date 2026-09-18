@@ -1,11 +1,62 @@
-import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport._
+val scala213 = "2.13.18"
+val scala3Lts = "3.9.0"
 
-ThisBuild / scalaVersion := "3.3.7"
-ThisBuild / crossScalaVersions := Seq("2.12.21", "2.13.18", "3.3.7", "3.8.1")
+scalaVersion := scala3Lts
+crossScalaVersions := Seq(scala213, scala3Lts)
+
+// The build reads three optional inputs from the environment: RELEASE_VERSION (set by the release
+// workflow, a SNAPSHOT otherwise), SMOKE_REPOSITORY (a directory: `publish` writes a Maven layout
+// there and resolves from it, for the verification scripts) and MOBILITYID_MIMA_BASELINE (the
+// release MiMa compares against; none before the first release, then set from Maven Central).
+def envValue(name: String): Option[String] = sys.env.get(name).filter(_.nonEmpty)
+version := envValue("RELEASE_VERSION").getOrElse("0.1.0-SNAPSHOT")
+mimaFailOnNoPrevious := false
+
+// The quality gate CI and scripts/verify.sh run on every Scala version (`+gate`, `++X; gate`).
+addCommandAlias(
+  "gate",
+  "headerCheckAll; scalafmtCheckAll; scalafmtSbtCheck; scalafixAll --check; test; mimaReportBinaryIssues"
+)
+
+// Release guard, mirrored from java/: refuses a SNAPSHOT and requires the Central Portal
+// credentials and a GPG secret key before anything is signed or uploaded.
+lazy val verifyRelease = taskKey[Unit]("Fails when the version or the signing/publishing inputs are not release-ready")
 
 val commonSettings = Seq(
-  organization := "com.thenewmotion",
-  licenses += ("Apache License, Version 2.0", url("http://www.apache.org/licenses/LICENSE-2.0")),
+  organization := "dev.juherr.mobilityid",
+  organizationName := "Julien Herr",
+  organizationHomepage := Some(url("https://github.com/juherr")),
+  homepage := Some(url("https://github.com/juherr/mobilityid")),
+  description := "Parse, validate and convert electric mobility identifiers (ISO 15118-1, DIN SPEC 91286, EMI3)",
+  licenses := List(License.Apache2),
+  scmInfo := Some(
+    ScmInfo(url("https://github.com/juherr/mobilityid"), "scm:git:git@github.com:juherr/mobilityid.git")
+  ),
+  developers := List(
+    Developer(id = "juherr", name = "Julien Herr", email = "julien@herr.fr", url = url("https://github.com/juherr"))
+  ),
+  versionScheme := Some("early-semver"),
+  pomIncludeRepository := { _ => false },
+  // Releases are staged locally and uploaded by `sonaRelease`.
+  publishTo :=
+    envValue("SMOKE_REPOSITORY").map(dir => MavenCache("smoke-publish", file(dir))).orElse(localStaging.value),
+  resolvers ++= envValue("SMOKE_REPOSITORY").map(dir => "smoke" at file(dir).toURI.toString).toSeq,
+  // Def.uncached: the guard reads the environment and the GPG keyring, which sbt 2's task
+  // cache cannot see; a cached success must never stand in for a real check.
+  verifyRelease := Def.uncached {
+    val log = streams.value.log
+    val releaseVersion = version.value
+    if (releaseVersion.endsWith("-SNAPSHOT"))
+      sys.error(s"Release publishing requires a non-SNAPSHOT version, got $releaseVersion")
+    val missing = Seq("SONATYPE_USERNAME", "SONATYPE_PASSWORD", "PGP_PASSPHRASE")
+      .filterNot(k => sys.env.get(k).exists(_.nonEmpty))
+    if (missing.nonEmpty) sys.error(s"Release publishing requires ${missing.mkString(", ")} in the environment")
+    val secretKeys = scala.sys.process.Process(Seq("gpg", "--batch", "--with-colons", "--list-secret-keys")).!!
+    if (!secretKeys.linesIterator.exists(_.startsWith("sec:")))
+      sys.error("Release publishing requires a GPG secret key in the keyring")
+    log.info(s"Release inputs verified for $releaseVersion")
+  },
+  PgpKeys.publishSigned := PgpKeys.publishSigned.dependsOn(verifyRelease).value,
   headerLicense := Some(HeaderLicense.Custom(
     """|Copyright (c) 2014 The New Motion team, and respective contributors
        |Copyright (c) 2026 Julien Herr, and respective contributors
@@ -22,77 +73,66 @@ val commonSettings = Seq(
        |See the License for the specific language governing permissions and
        |limitations under the License.""".stripMargin
   )),
-  javacOptions ++= Seq(
-    "-source",
-    "1.8",
-    "-target",
-    "1.8"
-  ),
-  Compile / doc / javacOptions ++= Seq("-source", "1.8"),
+  // JDK 17 is the bytecode baseline: Scala 3.9 LTS needs JDK 17+ to compile and run anyway.
+  javacOptions ++= Seq("--release", "17"),
   scalacOptions ++= Seq(
     "-encoding",
     "UTF-8",
     "-unchecked",
     "-deprecation",
-    "-feature"
+    "-feature",
+    "-release",
+    "17"
   ) ++ {
     scalaBinaryVersion.value match {
-      case "2.12" => Seq("-Xlog-reflective-calls", "-Xlint", "-Ywarn-value-discard",
-                         "-Ywarn-unused-import", "-target:jvm-1.8")
-      case "2.13" => Seq("-Xlog-reflective-calls", "-Xlint", "-Ywarn-value-discard",
-                         "-Ywarn-unused:imports", "-target:jvm-1.8")
-      case _      => Seq("-Wvalue-discard", "-Wunused:imports")
+      // unused-nowarn is silenced: a @nowarn needed by Scala 3 only would be reported here.
+      case "2.13" =>
+        Seq("-Xlint", "-Wvalue-discard", "-Wunused:imports", "-Wconf:cat=unused-nowarn:s", "-Xfatal-warnings")
+      case _ => Seq("-Wvalue-discard", "-Wunused:imports", "-Werror")
     }
   },
-  Compile / console / scalacOptions --= Seq("-Ywarn-unused-import", "-Ywarn-unused:imports", "-Wunused:imports"),
+  Compile / console / scalacOptions --= Seq("-Wunused:imports", "-Xfatal-warnings", "-Werror"),
+  semanticdbEnabled := true,
+  semanticdbVersion := scalafixSemanticdb.revision,
+  // Binary compatibility against the last release (../scripts/mima-baseline.sh); skipped without one.
+  mimaPreviousArtifacts := envValue("MOBILITYID_MIMA_BASELINE").map(organization.value %% moduleName.value % _).toSet,
   Test / parallelExecution := true,
   Test / fork := true,
   run / fork := true,
   Global / cancelable := true
 )
 
-val specs2Version = "4.14.1-cross"  // Cross-compatible Scala 2.12/2.13/3.x
+val specs2Version = "4.23.0" // 5.x is Scala 3 only; the shared specs must also run on 2.13.
 
-val `core` = project
+lazy val core = project
   .settings(
     name := "mobilityid",
     commonSettings,
     Compile / console / initialCommands := "import com.thenewmotion.mobilityid._, ContractIdStandard._",
     libraryDependencies ++= Seq(
-      "org.specs2" %% "specs2-core" % specs2Version % "test"
+      "org.specs2" %% "specs2-core" % specs2Version % Test
     )
   )
 
-val `interpolators` = project
-  .dependsOn(`core`)
+lazy val interpolators = project
+  .dependsOn(core)
   .settings(
     name := "mobilityid-interpolators",
     commonSettings,
-    Compile / unmanagedSourceDirectories ++= {
-      val base = (Compile / sourceDirectory).value
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) => Seq(base / "scala-2")
-        case Some((3, _)) => Seq(base / "scala-3")
-        case _            => Seq.empty
-      }
-    },
+    // src/main/scala-2 (contextual-core macros) and scala-3 (inline macros) are picked up by sbt.
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, _)) => Seq("com.propensive" %% "contextual-core" % "3.0.1")
-        case _            => Seq.empty
+        case _ => Seq.empty
       }
     },
     libraryDependencies ++= Seq(
-      "org.specs2" %% "specs2-core" % specs2Version % "test"
+      "org.specs2" %% "specs2-core" % specs2Version % Test
     )
   )
 
-val `mobilityid` =
-  project.in(file("."))
-    .disablePlugins(de.heikoseeberger.sbtheader.HeaderPlugin)
-    .aggregate(
-      `core`,
-      `interpolators`)
-    .settings(
-      publish := {}
-    )
+lazy val root = project
+  .in(file("."))
+  .disablePlugins(sbtheader.HeaderPlugin)
+  .aggregate(core, interpolators)
+  .settings(publish / skip := true)
