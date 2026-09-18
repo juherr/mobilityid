@@ -11,6 +11,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scala/scripts/artifacts.sh
+source scripts/artifacts.sh
 
 expect_failure() {
   local message="$1"; shift
@@ -52,19 +54,24 @@ fi
 echo "ok: publishSigned runs verifyRelease before staging anything"
 
 # Green proof of the signing/staging path, with a throw-away key in an isolated keyring.
-gpg --batch --quiet --homedir "${empty_keyring}" --pinentry-mode loopback --passphrase throw-away 2>/dev/null \
-  --quick-generate-key "mobilityid smoke <smoke@example.invalid>" ed25519 sign never
-env RELEASE_VERSION=0.0.0-signed SONATYPE_USERNAME=dry SONATYPE_PASSWORD=run PGP_PASSPHRASE=throw-away \
-  GNUPGHOME="${empty_keyring}" sbt --server --batch "+publishSigned" >/dev/null
-for artifact in mobilityid_2.13 mobilityid_3 mobilityid-interpolators_2.13 mobilityid-interpolators_3; do
-  base="${staging}/dev/juherr/mobilityid/${artifact}/0.0.0-signed/${artifact}-0.0.0-signed"
-  for payload in .pom .jar -sources.jar -javadoc.jar; do
-    test -f "${base}${payload}" || { echo "not staged: ${base}${payload}" >&2; exit 1; }
-    test -f "${base}${payload}.asc" || { echo "not signed: ${base}${payload}.asc" >&2; exit 1; }
-    gpg --batch --quiet --homedir "${empty_keyring}" --verify "${base}${payload}.asc" "${base}${payload}" 2>/dev/null \
-      || { echo "invalid signature: ${base}${payload}.asc" >&2; exit 1; }
-  done
-done
+signed_version=0.0.0-signed
+generate_throw_away_key() {
+  gpg --batch --quiet --homedir "${empty_keyring}" --pinentry-mode loopback --passphrase throw-away 2>/dev/null \
+    --quick-generate-key "mobilityid smoke <smoke@example.invalid>" ed25519 sign never
+}
+publish_signed_to_staging() {
+  env RELEASE_VERSION="${signed_version}" SONATYPE_USERNAME=dry SONATYPE_PASSWORD=run PGP_PASSPHRASE=throw-away \
+    GNUPGHOME="${empty_keyring}" sbt --server --batch "+publishSigned" >/dev/null
+}
+require_valid_signature() {
+  local payload=$1
+  test -f "${payload}.asc" || { echo "not signed: ${payload}.asc" >&2; return 1; }
+  gpg --batch --quiet --homedir "${empty_keyring}" --verify "${payload}.asc" "${payload}" 2>/dev/null \
+    || { echo "invalid signature: ${payload}.asc" >&2; return 1; }
+}
+generate_throw_away_key
+publish_signed_to_staging
+require_published_payloads "${staging}" "${signed_version}" require_valid_signature
 rm -rf "${staging}"
 echo "ok: publishSigned signs and stages both modules for both Scala versions in target/sona-staging"
 
@@ -77,7 +84,7 @@ SMOKE_REPOSITORY="${baseline_repository}" RELEASE_VERSION=0.0.0-mima sbt --serve
 # the "Found N incompatibilities" log line does not survive a cache hit.
 output=$(SMOKE_REPOSITORY="${baseline_repository}" sbt --server --batch -Dmobilityid.mimaBaseline=0.0.0-mima \
   "+show core/mimaFindBinaryIssues; +show interpolators/mimaFindBinaryIssues" 2>&1)
-for artifact in mobilityid_2.13 mobilityid-interpolators_2.13 mobilityid_3 mobilityid-interpolators_3; do
+for artifact in "${scala_artifacts[@]}"; do
   if ! grep -Fq "dev.juherr.mobilityid:${artifact}:0.0.0-mima -> (List(),List())" <<<"${output}"; then
     echo "MiMa did not analyze ${artifact} against the 0.0.0-mima baseline:" >&2
     echo "${output}" >&2

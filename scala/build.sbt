@@ -36,15 +36,16 @@ val commonSettings = Seq(
   // cache cannot see; a cached success must never stand in for a real check.
   verifyRelease := Def.uncached {
     val log = streams.value.log
-    val v = version.value
-    if (v.endsWith("-SNAPSHOT")) sys.error(s"Release publishing requires a non-SNAPSHOT version, got $v")
+    val releaseVersion = version.value
+    if (releaseVersion.endsWith("-SNAPSHOT"))
+      sys.error(s"Release publishing requires a non-SNAPSHOT version, got $releaseVersion")
     val missing = Seq("SONATYPE_USERNAME", "SONATYPE_PASSWORD", "PGP_PASSPHRASE")
       .filterNot(k => sys.env.get(k).exists(_.nonEmpty))
     if (missing.nonEmpty) sys.error(s"Release publishing requires ${missing.mkString(", ")} in the environment")
     val secretKeys = scala.sys.process.Process(Seq("gpg", "--batch", "--with-colons", "--list-secret-keys")).!!
     if (!secretKeys.linesIterator.exists(_.startsWith("sec:")))
       sys.error("Release publishing requires a GPG secret key in the keyring")
-    log.info(s"Release inputs verified for $v")
+    log.info(s"Release inputs verified for $releaseVersion")
   },
   PgpKeys.publishSigned := PgpKeys.publishSigned.dependsOn(verifyRelease).value,
   headerLicense := Some(HeaderLicense.Custom(

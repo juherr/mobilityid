@@ -53,7 +53,8 @@ task results, run with a changed input instead.
   `scripts/verify-release-wiring.sh` (guard refuses SNAPSHOT / missing inputs / empty keyring,
   `publishSigned` stages nothing when the guard fails, signs and stages everything with a
   throw-away key when the inputs are present, MiMa analyzes a locally published baseline) + `scripts/verify-consumer.sh` (publishes to `target/smoke-repo` and runs
-  `consumer-smoke/` on both Scala versions). Log in `target/verification/verify.log`.
+  `consumer-smoke/` on both Scala versions); both source `scripts/artifacts.sh` (the four
+  published artifacts and the payload check). Log in `target/verification/verify.log`.
 - License headers: `sbt --server --batch "+headerCheckAll"` to validate,
   `sbt --server --batch "+headerCreateAll"` to apply (main and test sources).
 
