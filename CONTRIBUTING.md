@@ -69,9 +69,11 @@ messages, code, comments and documentation are written in English.
   review for **every** pull request from `main`'s definition (`actions/dependency-review-action`
   on base...head, all ecosystems, same thresholds as `Dependency review`) and publishes it as the
   `Trusted dependency review` commit status on the pull request head. A commit status is per
-  commit, so when several open pull requests share that head the review runs against each of
-  their bases (job `pulls` lists them, restricted to the triggering run's own pull requests when
-  it knows them; one matrix leg per base) and the status is green only when every leg passes.
+  commit and shared by every open pull request having that head (siblings with different bases
+  included, whose runs also share one concurrency group), so the review runs against each of
+  their bases (job `pulls`, `scripts/list-pull-requests-of-head.sh`: every open pull request with
+  exactly that head repository and sha, never only the triggering run's own; one matrix leg per
+  base) and the status is green only when every leg passes.
   The status is published by `scripts/report-trusted-review-status.sh` because check runs of a
   `workflow_run` workflow are attached to the `main` commit, not to the pull request; it is set
   by a dedicated GitHub App
@@ -103,6 +105,9 @@ messages, code, comments and documentation are written in English.
     secret empty. Green: a normal pull request, fork and same-repository alike, gets the App
     status once `Trusted Dependency Review` has run (for a fork, after the artifact was selected,
     validated and submitted); re-run that workflow once to see the latest artifact selected.
+    Siblings: open two same-repository pull requests from one branch (same head sha) towards
+    `main` and another base — whichever run survives the concurrency group must show two
+    `Trusted dependency review (#N)` legs, one per base, and a single status on the commit.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes
