@@ -37,9 +37,28 @@ which requires a dated section for the version below and a matching file in
 - **PHP:** 400 cross-language check-digit fixtures (`tests/fixtures/check-digit-{iso,din}.csv`,
   computed by the TypeScript port and verified by the Go port) and unit tests for the ISO
   check-digit matrix arithmetic.
+- **Go:** typed sentinel errors (`ErrInvalidCountryCode`, `ErrInvalidContractID`,
+  `ErrInvalidCheckDigit`, `ErrInvalidEvseID`, `ErrUnconvertibleContractID`, ...) wrapped with
+  `%w` by every constructor, parser and conversion, so callers use `errors.Is`; a composite
+  identifier also wraps the failing component's sentinel.
+- **Go:** `MarshalText` on every identifier (JSON encodes them as their canonical string) and
+  `UnmarshalText` on every type whose format is unambiguous (`ContractID` is decoded through
+  `NewContractID` with the expected standard); zero values refuse to marshal.
+- **Go:** `PartyID.CountryCode()` and `PartyID.PartyCode()` accessors.
+- **Go:** testable `Example*` functions for the main entry points (shown on pkg.go.dev), `Fuzz*`
+  targets for the parsers, the `FromParts` builders and the check digits, and the 400
+  cross-language check-digit fixtures in `mobilityid/testdata/`.
 
 ### Fixed
 
+- **Go:** `CountryCode` accepted 36 CLDR region codes that ISO 3166-1 does not assign (`UK`,
+  `EU`, `XK`, `AN`, `SU`, `DD`, `YU`, ...), diverging from Scala, Java, PHP and TypeScript. The
+  list is now generated from the JDK's `Locale.getISOCountries()`, the reference source.
+- **Go:** `CalculateDIN7064ModXY` returned a negative "digit" for payloads longer than the
+  11-character DIN contract id (integer overflow of the power-of-two weights); the sum is now
+  reduced modulo 11 at every step. Found by the new fuzz target.
+- **Go:** component errors inside `NewEvseIDISO` and `NewEvseIDDIN` (unknown country, invalid
+  operator) are now wrapped as EVSE id errors instead of being returned bare.
 - **PHP:** `PartyId::of()` now has a real test for the rejection of a DIN operator id longer
   than three digits, replacing an `assertTrue(true)` placeholder.
 - **TypeScript:** `EvseIdIso.fromParts` and `EvseId.fromParts` no longer drop a leading `E` from
@@ -57,6 +76,15 @@ which requires a dated section for the version below and a matching file in
 - **Scala:** sbt 2.0.9 (`mise.toml` `sbt = "2.0"`), specs2 4.23.0, sbt-header 5.11.0; the
   version comes from the release workflow (`version.sbt` removed); `scala/README.md` records
   the tooling decisions and `scala/AGENTS.md` the sbt 2 commands.
+- **Breaking (Go):** Go 1.26 is the minimum version (`go 1.26.0` in `go.mod`, CI on 1.26 and
+  1.27); Go 1.25 is no longer supported. Error messages now start with the sentinel text
+  (`invalid contract id: 'NL' is too short`).
+- **Go:** the module has no third-party dependency any more (`golang.org/x/text` dropped).
+- **Go:** `.golangci.yml` rewritten for the golangci-lint v2 schema with `gofmt`, `gofumpt` and
+  `goimports` as formatters and `errorlint`, `gocritic`, `copyloopvar`, `misspell` enabled;
+  the license-header gate now really runs (the v1-layout settings were silently ignored). CI
+  uses `golangci-lint-action` (2.13, tracked by Renovate), `go test -race -cover` and
+  `govulncheck`.
 - **Breaking (PHP):** PHP 8.4 is the minimum version (`php: ^8.4`, CI on 8.4 and 8.5); PHP 8.3
   is no longer supported. Every value object is a `final readonly class` (`AbstractContractId`
   and `AbstractEvseId` are `abstract readonly`), so their public properties can no longer be
