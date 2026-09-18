@@ -76,6 +76,7 @@ vp test ContractId
 - Gradle distribution integrity is pinned with `distributionSha256Sum` in `java/gradle/wrapper/gradle-wrapper.properties`.
 - `.github/workflows/dependency-submission.yml` submits the resolved Gradle dependency graph (transitive dependencies and build plugins included) to GitHub on `main` and on same-repository pull requests; GitHub parses the npm, Composer, Go and Actions manifests itself.
 - Pull requests run a dependency review gate (`actions/dependency-review-action`, high+ in any scope) in the same workflow, after the Java submission; Dependabot alerts cover `main` continuously.
+- Fork and Dependabot pull requests get their Java graph submitted and reviewed by `.github/workflows/fork-dependency-graph.yml` after provenance validation (see `CONTRIBUTING.md`).
 - OWASP Dependency-Check scans the full Java dependency set weekly on `main` (and on demand) in `.github/workflows/security.yml`; it is not a pull request gate.
 
 ## Java release checks

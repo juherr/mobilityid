@@ -29,6 +29,10 @@ which requires a dated section for the version below and a matching file in
 - **TypeScript:** `ValidationError`, thrown by every strict factory and parser on invalid input.
   It extends `TypeError`, so existing `instanceof TypeError` checks still hold.
 
+- **Repository:** fork and Dependabot pull requests now get their Java dependency graph submitted
+  and reviewed before merge: the `Fork Dependency Graph` workflow (`workflow_run`) validates the
+  provenance of the uploaded snapshot (bound to the triggering run and its pull request) before
+  submitting it and running `Java dependency review`.
 - **Release:** the `Release` workflow now also publishes PHP: a `Preflight PHP` job runs
   `composer check`, then `Release PHP` pushes a `git subtree split` of `php/` to the
   `juherr/mobility-id-php` mirror as `vX.Y.Z`, the repository Packagist follows (Packagist

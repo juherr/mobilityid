@@ -43,14 +43,18 @@ messages, code, comments and documentation are written in English.
   job of that workflow for the pull request head and every commit of `main`, and the review job
   only starts once the submission is done, and fails when that submission failed (a skipped job
   would satisfy a required check). `Dependency review` is the check to require on `main`.
-- Pull requests from forks and from Dependabot get no Java graph: `GITHUB_TOKEN` is read-only
-  there, and the `workflow_run` download-and-submit pattern documented by `gradle/actions` is
-  deliberately not used because the privileged job submits the uploaded artifact verbatim
-  (`sha`, `ref` and content unchecked), so a fork could submit a forged snapshot for `main`.
-  Their Java dependency changes are therefore reviewed on the manifest ecosystems only before
-  merge; the push to `main` submits the merged graph and Dependabot alerts report anything
-  vulnerable. Do not merge such a pull request that changes `java/gradle/libs.versions.toml`
-  without checking the advisories of the new versions by hand.
+- Pull requests from forks and from Dependabot have a read-only `GITHUB_TOKEN`, so their
+  `Dependency review` only covers the manifest ecosystems and their Java graph is uploaded as a
+  workflow artifact instead. `Fork Dependency Graph` (`fork-dependency-graph.yml`, a privileged
+  `workflow_run` that checks out nothing but `scripts/` of `main`) downloads that artifact,
+  accepts it only when `scripts/validate-dependency-graph-provenance.sh` binds it to the
+  triggering run and its open pull request (checks listed in that script), submits it, then
+  runs the same review as `Java dependency review`. The `download-and-submit` pattern of `gradle/actions` is not used
+  because it submits the artifact verbatim, letting a fork forge a snapshot for `main`. What
+  remains is that the fork produces the graph content, the same exposure as a same-repository
+  pull request editing the build, limited to that pull request. `Java dependency review` can be
+  required on `main` too: it is skipped, hence satisfied, for same-repository pull requests.
+  `workflow_run` workflows only run from `main`, so changes to that file take effect after merge.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes
