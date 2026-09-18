@@ -23,18 +23,23 @@ concurrency:
 jobs:
   java-graph:
     name: Java dependency graph
-    # The Dependency Submission API needs `contents: write`, which GITHUB_TOKEN never has for a
-    # pull request from a fork (or from Dependabot). Those pull requests are skipped here and get
-    # no Java dependency review (see CONTRIBUTING.md); the push to `main` after merge submits
-    # their graph and Dependabot alerts take over.
-    if: >-
-      github.event_name != 'pull_request'
-      || (github.event.pull_request.head.repo.full_name == github.repository
-          && github.actor != 'dependabot[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The Dependency Submission API needs `contents: write`, which GITHUB_TOKEN never has for a
+    # pull request from a fork or from Dependabot (the grant below is silently read-only there).
     permissions:
       contents: write
+    env:
+      # Same-repository events submit the graph here. Fork and Dependabot pull requests only
+      # upload it as a workflow artifact: `trusted-dependency-review.yml` (privileged
+      # `workflow_run`) validates its provenance and submits it.
+      GRAPH_MODE: >-
+        ${{ (github.event_name != 'pull_request'
+             || (github.event.pull_request.head.repo.full_name == github.repository
+                 && github.actor != 'dependabot[bot]'))
+            && 'generate-and-submit' || 'generate-and-upload' }}
+    outputs:
+      mode: ${{ env.GRAPH_MODE }}
 
     steps:
       - name: Checkout
@@ -56,7 +61,9 @@ jobs:
         uses: gradle/actions/dependency-submission@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
         with:
           build-root-directory: java
-          dependency-graph: generate-and-submit
+          dependency-graph: ${{ env.GRAPH_MODE }}
+          # The uploaded graph only has to outlive the `workflow_run` hop.
+          artifact-retention-days: 1
           # No graph is produced when the configuration is loaded from the configuration cache.
           additional-arguments: --no-configuration-cache
 
@@ -74,8 +81,11 @@ jobs:
     # submission has completed (when both sides lack a snapshot GitHub raises no warning, so
     # `retry-on-snapshot-warnings` alone cannot close that race). The job runs even when the
     # submission failed and fails itself, because a skipped job satisfies a required status
-    # check. Fork and Dependabot pull requests have the submission skipped and are reviewed on
-    # the manifest ecosystems only.
+    # check. This job is fast feedback inside the pull request run, which the pull request
+    # author controls: the review to require on `main` is `Trusted dependency review`
+    # (`trusted-dependency-review.yml`), computed from `main` for every pull request once this
+    # workflow completes. Fork and Dependabot pull requests are reviewed on the manifest
+    # ecosystems only here, their Java graph being submitted by that workflow.
     needs: java-graph
     if: github.event_name == 'pull_request' && !cancelled()
     runs-on: ubuntu-latest
@@ -86,7 +96,6 @@ jobs:
 
     steps:
       - name: Require the Java dependency graph
-        if: needs.java-graph.result != 'skipped'
         env:
           RESULT: ${{ needs.java-graph.result }}
         run: |
@@ -107,6 +116,7 @@ jobs:
           # Test and build-plugin dependencies count too: Java test/plugin classpaths, npm
           # devDependencies and Composer require-dev are all "development" scope.
           fail-on-scopes: runtime, development, unknown
-          # Second guard for the propagation delay between the submission and the compare API.
-          retry-on-snapshot-warnings: ${{ needs.java-graph.result == 'success' }}
+          # Second guard for the propagation delay between the submission and the compare API;
+          # nothing to wait for when the graph was only uploaded.
+          retry-on-snapshot-warnings: ${{ needs.java-graph.outputs.mode == 'generate-and-submit' }}
           retry-on-snapshot-warnings-timeout: 120

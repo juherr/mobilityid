@@ -42,15 +42,85 @@ messages, code, comments and documentation are written in English.
   Java graph (direct and transitive, tests and build plugins included) is submitted by the first
   job of that workflow for the pull request head and every commit of `main`, and the review job
   only starts once the submission is done, and fails when that submission failed (a skipped job
-  would satisfy a required check). `Dependency review` is the check to require on `main`.
-- Pull requests from forks and from Dependabot get no Java graph: `GITHUB_TOKEN` is read-only
-  there, and the `workflow_run` download-and-submit pattern documented by `gradle/actions` is
-  deliberately not used because the privileged job submits the uploaded artifact verbatim
-  (`sha`, `ref` and content unchecked), so a fork could submit a forged snapshot for `main`.
-  Their Java dependency changes are therefore reviewed on the manifest ecosystems only before
-  merge; the push to `main` submits the merged graph and Dependabot alerts report anything
-  vulnerable. Do not merge such a pull request that changes `java/gradle/libs.versions.toml`
-  without checking the advisories of the new versions by hand.
+  would satisfy a required check). That job is fast feedback inside the pull request run; the
+  check to require on `main` is the `Trusted dependency review` status below.
+- Pull requests from forks and from Dependabot have a read-only `GITHUB_TOKEN`, so their
+  `Dependency review` only covers the manifest ecosystems and their Java graph is uploaded as a
+  workflow artifact instead. `Trusted Dependency Review` (`trusted-dependency-review.yml`, a
+  privileged `workflow_run` that checks out nothing but `scripts/` of `main`) downloads that
+  artifact and submits it only when `scripts/validate-dependency-graph-provenance.sh` binds it to
+  the triggering run and its open pull request (checks listed in that script). The
+  `download-and-submit` pattern of `gradle/actions` is not used because it submits the artifact
+  verbatim, letting a fork forge a snapshot for `main`. On a re-run, the artifacts of the
+  previous attempts stay on the run: the most recently created one is selected
+  (`scripts/select-dependency-graph-artifact.sh`), so a re-run that does not re-run `Java
+  dependency graph` submits the graph of the previous attempt, for the same commit.
+  Several open pull requests can share one head (same branch, different bases): the snapshot's
+  `refs/pull/<N>/merge` must name one of the pull requests the triggering run belongs to
+  (`workflow_run.pull_requests`, populated for same-repository and Dependabot runs); GitHub
+  leaves that list empty for fork runs, so a fork snapshot may name any open sibling of the same
+  fork on the same commit, which changes neither what it describes nor the commit it is attached
+  to (snapshots are keyed by sha, `ref` is metadata).
+- **Trust model of the required check.** The pull request author, fork or same-repository
+  branch, controls the workflow files a `pull_request` run executes, the build files the graph
+  is generated from, and every check or `GITHUB_TOKEN` status that run produces (all under the
+  "GitHub Actions" source, which a required check cannot tell apart from a forged one: it is
+  matched by context name and, at best, by app). So `Trusted Dependency Review` recomputes the
+  review for **every** pull request from `main`'s definition (`actions/dependency-review-action`
+  on base...head, all ecosystems, same thresholds as `Dependency review`) and publishes it as the
+  `Trusted dependency review` commit status on the pull request head. A commit status is per
+  commit and shared by every open pull request having that head (siblings with different bases
+  or head branches included; their runs share one concurrency group keyed by head repository
+  and sha), so the review runs against each of their bases (job `pulls`,
+  `scripts/list-pull-requests-of-head.sh` over every open pull request of the repository:
+  exactly that head repository and sha, whatever the branch, never only the triggering run's
+  own; one matrix leg per base) and the status is green only when every leg passes. Per-commit
+  also means that a pull request opened later on a commit already carrying a success (another
+  pull request, another base) would inherit it until recomputed, as any GitHub check does: the
+  `requested` `workflow_run` event, fired as soon as `Dependency Submission` is requested for
+  that pull request, resets the status to `pending` from `main` with the App (job `pending`,
+  no pull request code involved), and the `completed` event publishes the recomputed result.
+  What remains is the few seconds before that `pending` lands; merging in that window needs a
+  human or auto-merge with every other required check already green on that commit, so keep
+  a required approval on `main` (a new pull request has none) and do not rely on auto-merge
+  alone.
+  The status is published by `scripts/report-trusted-review-status.sh` because check runs of a
+  `workflow_run` workflow are attached to the `main` commit, not to the pull request; it is set
+  by a dedicated GitHub App
+  whose key is a secret of the `trusted-review` **environment**, restricted to the `main` branch:
+  a repository secret would be readable by any same-repository branch adding a workflow, an
+  environment secret is only handed to jobs whose run ref passes the branch policy, and a
+  `pull_request` run never runs as `main` (its job would fail with "Branch ... is not allowed to
+  deploy to trusted-review"), so no pull request can mint that token. What remains under the
+  author's control is the graph content (a pull request can hide a dependency from its own
+  review by editing the build), limited to that pull request. `workflow_run` workflows only run
+  from `main`, so changes to that file take effect after merge.
+  - Setup, in this order: create the `trusted-review` environment with deployment branch policy
+    "Selected branches" = `main` (referencing a missing environment would create it without any
+    policy); create a GitHub App (any name, e.g. `mobilityid-dependency-review`; permissions:
+    Repository → Commit statuses: Read and write, nothing else; no webhook) and install it on
+    this repository only; then add to that environment the variable
+    `DEPENDENCY_REVIEW_APP_CLIENT_ID` (App client id) and the secret
+    `DEPENDENCY_REVIEW_APP_PRIVATE_KEY` (a private key of the App, PEM). While they are unset the
+    workflow skips the status with a warning; nothing else changes.
+  - Required check: on `main`, require the status check `Trusted dependency review` and pick the
+    App as its source (offered once it has set the status at least once). Do this only after the
+    checks below pass.
+  - Adversarial checks, after merge. Red, from a fork: a pull request that renames the
+    `Dependency Submission` workflow and adds a job named `Trusted dependency review` that just
+    succeeds must stay blocked, the forged job being listed under the GitHub Actions source and
+    the App status never appearing. Red, from a same-repository branch: a pull request adding a
+    workflow job with `environment: trusted-review` that reads the App secret must fail on the
+    environment protection rule before running, and a job without the environment must see the
+    secret empty. Green: a normal pull request, fork and same-repository alike, gets the App
+    status once `Trusted Dependency Review` has run (for a fork, after the artifact was selected,
+    validated and submitted); re-run that workflow once to see the latest artifact selected.
+    Siblings: open two same-repository pull requests from one branch (same head sha) towards
+    `main` and another base, then a third one from another branch pointing at the same sha —
+    whichever run survives the concurrency group must show one `Trusted dependency review (#N)`
+    leg per pull request, and a single status on the commit. Stale success: on a commit whose
+    status is already green, open a new pull request towards another base — the status must
+    turn `pending` within seconds (the `requested` run), then reflect the recomputed reviews.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes

@@ -1,0 +1,304 @@
+name: Trusted Dependency Review
+
+# The dependency review that can be required on `main`: computed by this workflow, which only
+# runs from the default branch, and published as the `Trusted dependency review` commit status
+# on the pull request head by a dedicated GitHub App whose key lives in the `trusted-review`
+# environment (deployment branch policy: `main` only).
+#
+# Why not the `Dependency review` job of dependency-submission.yml: a `pull_request` run executes
+# the pull request's own workflow files, so any pull request author (fork or same-repository
+# branch) can rename or neuter that job, and every check or GITHUB_TOKEN status it produces
+# comes from the "GitHub Actions" source, which a required check cannot tell apart from a forged
+# one. Here the review runs from `main`'s definition for every pull request, and the App key is
+# out of reach of `pull_request` runs: repository secrets would be readable by any same-repository
+# branch, environment secrets only by jobs whose run ref matches the environment's branch policy.
+#
+# Fork and Dependabot pull requests additionally get their Java graph submitted here (job
+# `submit`): their read-only GITHUB_TOKEN cannot call the Dependency Submission API, so
+# dependency-submission.yml uploads the graph as an artifact and this workflow submits it once
+# scripts/validate-dependency-graph-provenance.sh has bound it to the triggering run and its pull
+# request (checks and threat model documented there, policy in CONTRIBUTING.md). No pull request
+# code runs here: the checkout is a sparse checkout of the default branch limited to `scripts/`,
+# and the only untrusted input is that JSON file, whose size is not bounded before download
+# (worst case: the job's `timeout-minutes`). The graph content itself is produced by the pull
+# request, which can hide a dependency from its own review, the same exposure as editing the
+# build files, limited to that pull request.
+#
+# The check runs of a `workflow_run` workflow are attached to the default-branch commit, not to
+# the pull request, hence the commit status (job `status`, run even on failure). A commit status
+# is per commit: a pull request opened later on a commit that already carries a success would
+# inherit it until the review is recomputed, so the `requested` event (fired as soon as
+# `Dependency Submission` is requested for the pull request) resets the status to `pending`
+# first (job `pending`), and the review set covers every open pull request of that commit
+# whatever its branch (job `pulls`). A `workflow_run` workflow only triggers from the default
+# branch, so changes to this file take effect once merged.
+on:
+  workflow_run: # zizmor: ignore[dangerous-triggers] no checkout of the triggering ref; the artifact is validated before use
+    workflows:
+      - Dependency Submission
+    types:
+      - requested
+      - completed
+
+permissions: {}
+
+# Per commit, like the status: sibling runs (several pull requests, several branches at the same
+# sha) supersede each other and the survivor reviews every pull request of that commit.
+concurrency:
+  group: trusted-dependency-review-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+env:
+  # Job correlator gradle/actions derives from the triggering workflow and job names
+  # (`Dependency Submission` / `java-graph`); the artifact is named after it.
+  CORRELATOR: dependency_submission-java-graph
+  # Pull requests the triggering run knows it belongs to: populated for same-repository and
+  # Dependabot runs, empty for forks (GitHub does not fill it for them). Only binds the snapshot
+  # provenance (job `submit`): the review set is never reduced to them, see job `pulls`.
+  TRUSTED_PULLS: ${{ join(github.event.workflow_run.pull_requests.*.number, ',') }}
+
+jobs:
+  pending:
+    name: Reset the trusted dependency review status
+    # As soon as the pull request run is requested: a previous success on that commit (another
+    # pull request, another base) must not be inherited while the review is being recomputed.
+    if: >-
+      github.event.action == 'requested'
+      && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: trusted-review
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Mint the status token of the dependency review App
+        id: app-token
+        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.DEPENDENCY_REVIEW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPENDENCY_REVIEW_APP_PRIVATE_KEY }}
+          permission-statuses: write
+
+      - name: Report the pending status
+        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: scripts/report-trusted-review-status.sh "$HEAD_SHA" pending "$RUN_URL"
+
+  pulls:
+    name: Open pull requests of the head
+    # The commit status is per commit and shared by every open pull request whose head is this
+    # commit (siblings with different bases or branches included; their runs even share the
+    # concurrency group above), so each of their bases is reviewed below (matrix) and the set is
+    # the same whichever run survives: all of them, never only the triggering run's own.
+    if: >-
+      github.event.action == 'completed'
+      && github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      matrix: ${{ steps.list.outputs.pulls }}
+
+    steps:
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: List them with their base
+        id: list
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        run: |
+          # Every open pull request, whatever its head branch: filtered on head repository + sha.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > pulls.json
+          pulls=$(scripts/list-pull-requests-of-head.sh pulls.json "$HEAD_SHA" "$HEAD_REPO")
+          echo "pulls=${pulls}" >> "$GITHUB_OUTPUT"
+
+  submit:
+    name: Submit the Java dependency graph
+    # Same-repository pull requests submitted their graph themselves; cancelled runs left no
+    # artifact (the concurrency group of the triggering workflow supersedes them).
+    if: >-
+      github.event.action == 'completed'
+      && github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion != 'cancelled'
+      && (github.event.workflow_run.head_repository.full_name != github.repository
+          || github.event.workflow_run.actor.login == 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Download the uploaded graph
+        id: download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          # A re-run keeps the artifacts of the previous attempts on the same run id, so the
+          # artifact is selected explicitly (latest non-expired one of that name for that head)
+          # instead of relying on `gh run download --name`.
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?name=dependency-graph_${CORRELATOR}.json" \
+            > artifacts.json
+          artifact_id=$(scripts/select-dependency-graph-artifact.sh artifacts.json \
+            "dependency-graph_${CORRELATOR}.json" "$HEAD_SHA")
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/${artifact_id}/zip" > artifact.zip
+          unzip -q artifact.zip -d snapshot
+          # The artifact keeps the workspace-relative path of the report (gradle/actions default
+          # `dependency-graph-report-dir`); anything else packed into it is ignored.
+          snapshot="snapshot/dependency-graph-reports/${CORRELATOR}.json"
+          if [[ ! -f "${snapshot}" ]]; then
+            echo "::error::${snapshot} is missing from the artifact"
+            exit 1
+          fi
+          echo "snapshot=${snapshot}" >> "$GITHUB_OUTPUT"
+
+      - name: List the open pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > pulls.json
+
+      - name: Validate the snapshot provenance
+        env:
+          SNAPSHOT: ${{ steps.download.outputs.snapshot }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        run: |
+          scripts/validate-dependency-graph-provenance.sh \
+            "$SNAPSHOT" pulls.json "$HEAD_SHA" "$RUN_ID" "$CORRELATOR" "$HEAD_REPO" "$TRUSTED_PULLS"
+
+      - name: Verify the snapshot carries the resolved transitive dependencies
+        env:
+          SNAPSHOT: ${{ steps.download.outputs.snapshot }}
+        run: scripts/verify-dependency-graph.sh "$SNAPSHOT"
+
+      - name: Submit the snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SNAPSHOT: ${{ steps.download.outputs.snapshot }}
+        # The API answers 201 even when it rejects the snapshot (`result: INVALID`), so the
+        # response body is checked rather than the status code.
+        run: |
+          gh api --method POST "repos/$GITHUB_REPOSITORY/dependency-graph/snapshots" \
+            --input "$SNAPSHOT" > response.json
+          result=$(jq -r '.result // "MISSING"' response.json)
+          echo "Submitted $SNAPSHOT: ${result} ($(jq -r '.message // ""' response.json))"
+          if [[ "${result}" != "SUCCESS" && "${result}" != "ACCEPTED" ]]; then
+            echo "::error::Dependency Submission API did not accept the snapshot: ${result}"
+            exit 1
+          fi
+
+  review:
+    name: Trusted dependency review (#${{ matrix.pull.number }})
+    # One leg per open pull request of the head, against its own base: same thresholds as
+    # `Dependency review` in dependency-submission.yml (keep them in sync), on the graph submitted
+    # by the pull request run or by `submit` above. Separate job so the review action never
+    # holds `contents: write`.
+    needs:
+      - pulls
+      - submit
+    if: >-
+      always()
+      && needs.pulls.result == 'success'
+      && (needs.submit.result == 'success' || needs.submit.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        pull: ${{ fromJSON(needs.pulls.outputs.matrix) }}
+
+    steps:
+      - name: Dependency Review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          base-ref: ${{ matrix.pull.base }}
+          head-ref: ${{ github.event.workflow_run.head_sha }}
+          fail-on-severity: high
+          fail-on-scopes: runtime, development, unknown
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 120
+
+  status:
+    name: Report the trusted dependency review status
+    # Publishes the outcome on the pull request head commit whatever happened above, so that a
+    # required `Trusted dependency review` status never stays pending on a failure: success only
+    # when every review leg (one per open pull request of that head) passed. The App key
+    # is an environment secret: the `trusted-review` environment only accepts `main`, which a
+    # `pull_request` run never is, so no pull request can mint this token.
+    needs:
+      - pulls
+      - submit
+      - review
+    if: >-
+      always()
+      && github.event.action == 'completed'
+      && github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: trusted-review
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Warn when the App is not configured
+        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID == ''
+        run: |
+          echo "::warning::DEPENDENCY_REVIEW_APP_CLIENT_ID is not set in the trusted-review environment: the outcome is not reported on the pull request (see CONTRIBUTING.md)"
+
+      - name: Mint the status token of the dependency review App
+        id: app-token
+        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.DEPENDENCY_REVIEW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPENDENCY_REVIEW_APP_PRIVATE_KEY }}
+          permission-statuses: write
+
+      - name: Report the status
+        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          STATE: ${{ needs.review.result == 'success' && 'success' || 'failure' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: scripts/report-trusted-review-status.sh "$HEAD_SHA" "$STATE" "$RUN_URL"
