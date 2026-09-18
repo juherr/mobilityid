@@ -14,17 +14,14 @@
  * limitations under the License.
  */
 
-import { type StringId, type StringIdCompanion, defineStringId } from "./brand.js";
-import { isValidPartyCode } from "./provider-id.js";
+import { type StringId, type StringIdCompanion, defineStringId } from "./string-id.js";
+import { partyCodeSpec } from "./provider-id.js";
 
 const OPERATOR_DIN_REGEX = /^[0-9]{3,6}$/;
 
 export type OperatorIdIso = StringId<"OperatorIdIso">;
 
-export const OperatorIdIso: StringIdCompanion<OperatorIdIso> = defineStringId({
-  isValid: isValidPartyCode,
-  message: () => "OperatorId must have a length of 3 and be ASCII letters or digits",
-});
+export const OperatorIdIso: StringIdCompanion<OperatorIdIso> = defineStringId(partyCodeSpec);
 
 export type OperatorIdDin = StringId<"OperatorIdDin">;
 

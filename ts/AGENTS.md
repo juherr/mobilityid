@@ -6,8 +6,8 @@ command below from `ts/`.
 
 ## Layout
 
-- `src/` -> one file per identifier (`contract-id.ts`, `evse-id.ts`, ...), `brand.ts` (`Brand`,
-  `StringId`, `defineStringId`), check digits (`check-digit-iso.ts`, `check-digit-din.ts`),
+- `src/` -> one file per identifier (`contract-id.ts`, `evse-id.ts`, ...), `string-id.ts` (`StringId`,
+  `StringIdSpec`, `defineStringId`), check digits (`check-digit-iso.ts`, `check-digit-din.ts`),
   `parsers.ts` (`MobilityIdParsers`), `index.ts` is the public barrel: export new public symbols
   there.
 - `test/` -> Vitest parity suites; `properties.test.ts` holds the fast-check properties (check

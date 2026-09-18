@@ -57,11 +57,11 @@ function expectSuccess<T>(result: ParseResult<T>): T {
 
 describe("tryParse", () => {
   it("returns the value the strict parser would return", () => {
-    expect(expectSuccess(CountryCode.tryParse("nl")).toString()).toBe("NL");
-    expect(expectSuccess(PhoneCountryCode.tryParse("+49")).toString()).toBe("+49");
-    expect(expectSuccess(ProviderId.tryParse("tnm")).toString()).toBe("TNM");
-    expect(expectSuccess(OperatorIdIso.tryParse("ab7")).toString()).toBe("AB7");
-    expect(expectSuccess(OperatorIdDin.tryParse("810")).toString()).toBe("810");
+    expect(expectSuccess(CountryCode.tryParse("nl"))).toBe("NL");
+    expect(expectSuccess(PhoneCountryCode.tryParse("+49"))).toBe("+49");
+    expect(expectSuccess(ProviderId.tryParse("tnm"))).toBe("TNM");
+    expect(expectSuccess(OperatorIdIso.tryParse("ab7"))).toBe("AB7");
+    expect(expectSuccess(OperatorIdDin.tryParse("810"))).toBe("810");
     expect(expectSuccess(PartyId.tryParse("NL*TNM")).toString()).toBe("NL-TNM");
     expect(
       expectSuccess(ContractId.tryParse(ContractIdStandards.ISO, "NLTNM000122045")).toString(),
@@ -159,11 +159,11 @@ describe("tryParse", () => {
   });
 
   it("is mirrored by MobilityIdParsers", () => {
-    expect(expectSuccess(MobilityIdParsers.tryParseCountryCode("NL")).toString()).toBe("NL");
-    expect(expectSuccess(MobilityIdParsers.tryParsePhoneCountryCode("+31")).toString()).toBe("+31");
-    expect(expectSuccess(MobilityIdParsers.tryParseProviderId("TNM")).toString()).toBe("TNM");
-    expect(expectSuccess(MobilityIdParsers.tryParseOperatorIdIso("TNM")).toString()).toBe("TNM");
-    expect(expectSuccess(MobilityIdParsers.tryParseOperatorIdDin("456")).toString()).toBe("456");
+    expect(expectSuccess(MobilityIdParsers.tryParseCountryCode("NL"))).toBe("NL");
+    expect(expectSuccess(MobilityIdParsers.tryParsePhoneCountryCode("+31"))).toBe("+31");
+    expect(expectSuccess(MobilityIdParsers.tryParseProviderId("TNM"))).toBe("TNM");
+    expect(expectSuccess(MobilityIdParsers.tryParseOperatorIdIso("TNM"))).toBe("TNM");
+    expect(expectSuccess(MobilityIdParsers.tryParseOperatorIdDin("456"))).toBe("456");
     expect(expectSuccess(MobilityIdParsers.tryParsePartyId("NL-TNM")).toString()).toBe("NL-TNM");
     expect(
       expectSuccess(MobilityIdParsers.tryParseContractIdIso("NL-TNM-000722345-X")).toString(),

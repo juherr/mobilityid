@@ -43,6 +43,11 @@ export function failure<T>(error: string): ParseResult<T> {
   return Object.freeze({ ok: false, error });
 }
 
+/** Collapses a `ParseResult` to the tolerant contract: the value, or `null` on failure. */
+export function valueOrNull<T>(result: ParseResult<T>): T | null {
+  return result.ok ? result.value : null;
+}
+
 /**
  * Runs a strict parser and captures its `ValidationError` as a failure. Any other error, a plain
  * `TypeError` included, is a bug rather than an invalid input and keeps propagating.

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type StringId, type StringIdCompanion, defineStringId } from "./brand.js";
+import { type StringId, type StringIdCompanion, defineStringId } from "./string-id.js";
 
 const COUNTRY_CODE_REGEX = /^[A-Za-z]{2}$/;
 

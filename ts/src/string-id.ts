@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-import { type ParseResult, ValidationError, attempt } from "./parse-result.js";
+import { type ParseResult, ValidationError, attempt, valueOrNull } from "./parse-result.js";
 
 declare const brand: unique symbol;
 
 /**
- * Nominal marker: a `Brand<string, "CountryCode">` is a plain string at runtime that only the
+ * Branded string: a `StringId<"CountryCode">` is a plain string at runtime that only the
  * `CountryCode` factory can produce at the type level. The symbol is never assigned; it exists
  * only in the type system, so a branded value costs nothing over the underlying string.
  */
-export type Brand<T, B extends string> = T & { readonly [brand]: B };
+export type StringId<B extends string> = string & { readonly [brand]: B };
 
-export type StringId<B extends string> = Brand<string, B>;
+/** Validation rule of a string identifier: the predicate and the `ValidationError` message. */
+export type StringIdSpec = Readonly<{
+  isValid: (raw: string) => boolean;
+  message: (raw: string) => string;
+}>;
 
 /**
  * The three parsing entry points of a single-valued identifier plus its predicate. `from` is
@@ -43,9 +47,7 @@ export type StringIdCompanion<T extends string> = Readonly<{
  * (a no-op for the digit-only identifiers); `isValid` stays a boolean rather than a type guard
  * because it accepts the non-normalized input that `from` still has to uppercase.
  */
-export function defineStringId<T extends string>(
-  spec: Readonly<{ isValid: (raw: string) => boolean; message: (raw: string) => string }>,
-): StringIdCompanion<T> {
+export function defineStringId<T extends string>(spec: StringIdSpec): StringIdCompanion<T> {
   const from = (raw: string): T => {
     if (!spec.isValid(raw)) {
       throw new ValidationError(spec.message(raw));
@@ -54,10 +56,7 @@ export function defineStringId<T extends string>(
     return raw.toUpperCase() as T;
   };
   const tryParse = (raw: string): ParseResult<T> => attempt(() => from(raw));
-  const parse = (raw: string): T | null => {
-    const result = tryParse(raw);
-    return result.ok ? result.value : null;
-  };
+  const parse = (raw: string): T | null => valueOrNull(tryParse(raw));
 
   return Object.freeze({ isValid: spec.isValid, from, tryParse, parse });
 }
