@@ -6,9 +6,10 @@ command below from `ts/`.
 
 ## Layout
 
-- `src/` -> one file per identifier (`contract-id.ts`, `evse-id.ts`, ...), check digits
-  (`check-digit-iso.ts`, `check-digit-din.ts`), `parsers.ts` (`MobilityIdParsers`), `index.ts`
-  is the public barrel: export new public symbols there.
+- `src/` -> one file per identifier (`contract-id.ts`, `evse-id.ts`, ...), `brand.ts` (`Brand`,
+  `StringId`, `defineStringId`), check digits (`check-digit-iso.ts`, `check-digit-din.ts`),
+  `parsers.ts` (`MobilityIdParsers`), `index.ts` is the public barrel: export new public symbols
+  there.
 - `test/` -> Vitest parity suites; `properties.test.ts` holds the fast-check properties (check
   digits, render/parse round trips, `parse`/`parseStrict`/`tryParse` agreement): extend it when
   adding a parser.
@@ -46,6 +47,9 @@ command below from `ts/`.
   (`ParseResult<T>`, frozen `{ ok: true, value } | { ok: false, error }` with the strict message)
   and tolerant `parse` (`T | null`, derived from `tryParse`). Only `ValidationError` is captured;
   anything else propagates. Mirror all three in `MobilityIdParsers`.
-- Domain objects are immutable (`readonly`, frozen); canonical `toString()` plus compact
-  rendering helpers.
+- Single-valued identifiers are branded strings: `export type X = StringId<"X">` plus
+  `export const X: StringIdCompanion<X> = defineStringId({ isValid, message })` in the same file
+  (type and value share the name). No wrapper class, no `.value`; add a new one the same way.
+  Composite identifiers (`PartyId`, `ContractId`, `EvseId*`) are immutable classes (`readonly`,
+  frozen) holding branded strings; canonical `toString()` plus compact rendering helpers.
 - ESM only with `.js` extensions in relative imports (`./parsers.js`).
