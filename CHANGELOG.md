@@ -52,6 +52,10 @@ which requires a dated section for the version below and a matching file in
   `EU`, `XK`, `AN`, `SU`, `DD`, `YU`, ...), diverging from Scala, Java, PHP and TypeScript. The
   list is now generated from the JDK's `Locale.getISOCountries()`, the reference source.
   Values that `go/v0.1.0` accepted are therefore rejected (observable change, weighed in #70).
+- **Go:** `NewEvseIDISOFromParts` and `NewEvseIDFromParts` no longer drop a leading `E` from
+  the power outlet id; as in Scala, Java and TypeScript, `("NL", "TNM", "E840*6487")` keeps
+  `PowerOutletID() == "E840*6487"` and renders `NL*TNM*EE840*6487` (the first `E` is the ISO
+  id type, added by the renderer).
 - **Go:** `NewEvseID` keeps both parser causes when a value is neither ISO nor DIN
   (`invalid EVSE id: 'ZZ*TNM*E840*6487': ISO: invalid ISO 3166-1 alpha-2 country code: 'ZZ';
   DIN: does not match the DIN format`), so `errors.Is` on the component sentinel holds through

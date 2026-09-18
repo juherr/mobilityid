@@ -81,7 +81,9 @@ func NewEvseIDISOFromParts(countryCode string, operatorID string, powerOutletID 
 		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
-	normalizedPowerOutletID := strings.TrimPrefix(strings.ToUpper(powerOutletID), "E")
+	// The "E" id type is added by String(); a power outlet id starting with "E" keeps it, as
+	// in the Scala reference.
+	normalizedPowerOutletID := strings.ToUpper(powerOutletID)
 
 	if !evseIDISOFromPartsPowerOutletRegex.MatchString(normalizedPowerOutletID) {
 		return nil, fmt.Errorf("%w: invalid power outlet id '%s' for ISO format", ErrInvalidEvseID, powerOutletID)
