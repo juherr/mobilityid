@@ -63,7 +63,7 @@ for single-suite and lint invocations. Full gates per workspace:
 
 | Workspace | Full gate (what CI runs) | Single suite |
 |---|---|---|
-| `scala/` | `sbt headerCheck test` (cross: `sbt +test`) | `sbt "core/testOnly *ContractIdSpec"` |
+| `scala/` | `sbt --server --batch "+headerCheckAll; +scalafmtCheckAll; scalafmtSbtCheck; +scalafixAll --check; +test; +mimaReportBinaryIssues"` (release preflight: `scripts/verify.sh`) | `sbt --server --batch "core/testOnly *ContractIdSpec"` |
 | `java/` | `./gradlew check` | `./gradlew test --tests "*ContractIdTest"` |
 | `go/` | `golangci-lint run && go vet ./... && go test ./...` | `go test ./... -run TestContractID` |
 | `php/` | `composer check` (needs pcov or xdebug for Infection) | `./vendor/bin/phpunit --filter ContractIdIsoTest` |
@@ -72,7 +72,7 @@ for single-suite and lint invocations. Full gates per workspace:
 ### CI and release
 
 - One CI workflow per workspace (`.github/workflows/ci-{scala,java,go,php,ts}.yml`); only touch the workflow of the workspace you changed.
-- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, runs the Java, TypeScript and PHP preflights, and only when all pass publishes Java (Maven Central Portal via nmcp), TypeScript (npm via Trusted Publishing/OIDC, no token) and PHP (a `git subtree split` of `php/` pushed to the `juherr/mobility-id-php` mirror that Packagist follows, via a deploy key) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`). Full procedure in `CONTRIBUTING.md`.
+- `Release` (`release.yml`) is dispatched manually from `main` with the version as input: it checks `CHANGELOG.md` and `.github/release-notes/X.Y.Z.md`, runs the Java, TypeScript, PHP and Scala preflights, and only when all pass publishes Java (Maven Central Portal via nmcp), Scala (Maven Central Portal via sbt `publishSigned` + `sonaRelease`, Scala 2.13 and 3), TypeScript (npm via Trusted Publishing/OIDC, no token) and PHP (a `git subtree split` of `php/` pushed to the `juherr/mobility-id-php` mirror that Packagist follows, via a deploy key) idempotently, then creates the signed `vX.Y.Z` tag and the GitHub Release. Go uses `go/vX.Y.Z` tags (`release-go.yml`). Full procedure in `CONTRIBUTING.md`.
 - `CI Workflows` (`ci-workflows.yml`) lints every workflow with actionlint and zizmor; every checkout uses `persist-credentials: false` and publishing workflows disable caches.
 - Security gates: `dependency-submission.yml` submits the resolved Gradle graph (GitHub cannot parse Gradle) on `main` and same-repository PRs; dependency review on pull requests (same workflow, job after the submission, fails on high+ in any scope); Dependabot alerts on `main`; weekly/on-demand OWASP Dependency-Check full scan (`security.yml`, not a PR gate). Fork PRs get no Java review before merge.
 
@@ -157,7 +157,7 @@ Before finalizing a change, an agent should:
 
 The project uses simplified version formats in `mise.toml`:
 - **Java/Node**: major only (`21`, `24`)
-- **sbt/gradle/php/go**: major.minor (`1.12`, `9.7`, `8.4`, `1.26`)
+- **sbt/gradle/php/go**: major.minor (`2.0`, `9.7`, `8.4`, `1.26`)
 
 This is enforced via `extractVersionTemplate` and `autoReplaceStringTemplate` in the customManager configuration in `.github/renovate.json`:
 
@@ -175,16 +175,16 @@ This is enforced via `extractVersionTemplate` and `autoReplaceStringTemplate` in
 ```
 
 **Consequences:**
-- Patch updates (e.g., 1.12.3 → 1.12.4) will NOT trigger PRs for mise.toml
-- Minor updates (e.g., 1.12 → 1.13) WILL trigger PRs and write X.Y format (not X.Y.Z)
+- Patch updates (e.g., 2.0.9 → 2.0.10) will NOT trigger PRs for mise.toml
+- Minor updates (e.g., 2.0 → 2.1) WILL trigger PRs and write X.Y format (not X.Y.Z)
 - Major updates (e.g., 21 → 25) WILL trigger PRs and write X format for java/node, X.Y for others
 - Major-only tools (Java/Node) will track major updates in `mise.toml`
-- Build files keep full versions: `scala/project/build.properties` → `sbt.version=1.12.3`
+- Build files keep full versions: `scala/project/build.properties` → `sbt.version=2.0.9`
 - mise automatically uses the latest patch version available for the specified X.Y
 - The `extractVersionTemplate` regex handles both regular versions and openjdk-prefixed versions
 - The `autoReplaceStringTemplate` controls what format Renovate writes back to the file
 
-Scala version policy (LTS + latest) is documented in `scala/AGENTS.md`.
+Scala version policy (2.13 + the Scala 3 LTS only) is documented in `scala/AGENTS.md`.
 
 ## Notes for Future Agents
 
