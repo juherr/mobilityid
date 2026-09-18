@@ -25,19 +25,27 @@ name: Trusted Dependency Review
 # build files, limited to that pull request.
 #
 # The check runs of a `workflow_run` workflow are attached to the default-branch commit, not to
-# the pull request, hence the commit status (job `status`, run even on failure). A `workflow_run`
-# workflow only triggers from the default branch, so changes to this file take effect once merged.
+# the pull request, hence the commit status (job `status`, run even on failure). A commit status
+# is per commit: a pull request opened later on a commit that already carries a success would
+# inherit it until the review is recomputed, so the `requested` event (fired as soon as
+# `Dependency Submission` is requested for the pull request) resets the status to `pending`
+# first (job `pending`), and the review set covers every open pull request of that commit
+# whatever its branch (job `pulls`). A `workflow_run` workflow only triggers from the default
+# branch, so changes to this file take effect once merged.
 on:
   workflow_run: # zizmor: ignore[dangerous-triggers] no checkout of the triggering ref; the artifact is validated before use
     workflows:
       - Dependency Submission
     types:
+      - requested
       - completed
 
 permissions: {}
 
+# Per commit, like the status: sibling runs (several pull requests, several branches at the same
+# sha) supersede each other and the survivor reviews every pull request of that commit.
 concurrency:
-  group: trusted-dependency-review-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  group: trusted-dependency-review-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: true
 
 env:
@@ -50,14 +58,52 @@ env:
   TRUSTED_PULLS: ${{ join(github.event.workflow_run.pull_requests.*.number, ',') }}
 
 jobs:
+  pending:
+    name: Reset the trusted dependency review status
+    # As soon as the pull request run is requested: a previous success on that commit (another
+    # pull request, another base) must not be inherited while the review is being recomputed.
+    if: >-
+      github.event.action == 'requested'
+      && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: trusted-review
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Mint the status token of the dependency review App
+        id: app-token
+        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.DEPENDENCY_REVIEW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPENDENCY_REVIEW_APP_PRIVATE_KEY }}
+          permission-statuses: write
+
+      - name: Report the pending status
+        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: scripts/report-trusted-review-status.sh "$HEAD_SHA" pending "$RUN_URL"
+
   pulls:
     name: Open pull requests of the head
     # The commit status is per commit and shared by every open pull request whose head is this
-    # commit (siblings with different bases included; their runs even share the concurrency
-    # group above), so each of their bases is reviewed below (matrix) and the set is the same
-    # whichever run survives: all of them, never only the triggering run's own.
+    # commit (siblings with different bases or branches included; their runs even share the
+    # concurrency group above), so each of their bases is reviewed below (matrix) and the set is
+    # the same whichever run survives: all of them, never only the triggering run's own.
     if: >-
-      github.event.workflow_run.event == 'pull_request'
+      github.event.action == 'completed'
+      && github.event.workflow_run.event == 'pull_request'
       && github.event.workflow_run.conclusion != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -78,12 +124,11 @@ jobs:
         id: list
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/pulls?head=${HEAD_OWNER}:${HEAD_BRANCH}&state=open" > pulls.json
+          # Every open pull request, whatever its head branch: filtered on head repository + sha.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > pulls.json
           pulls=$(scripts/list-pull-requests-of-head.sh pulls.json "$HEAD_SHA" "$HEAD_REPO")
           echo "pulls=${pulls}" >> "$GITHUB_OUTPUT"
 
@@ -92,7 +137,8 @@ jobs:
     # Same-repository pull requests submitted their graph themselves; cancelled runs left no
     # artifact (the concurrency group of the triggering workflow supersedes them).
     if: >-
-      github.event.workflow_run.event == 'pull_request'
+      github.event.action == 'completed'
+      && github.event.workflow_run.event == 'pull_request'
       && github.event.workflow_run.conclusion != 'cancelled'
       && (github.event.workflow_run.head_repository.full_name != github.repository
           || github.event.workflow_run.actor.login == 'dependabot[bot]')
@@ -135,13 +181,11 @@ jobs:
           fi
           echo "snapshot=${snapshot}" >> "$GITHUB_OUTPUT"
 
-      - name: List the open pull requests of the head branch
+      - name: List the open pull requests
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/pulls?head=${HEAD_OWNER}:${HEAD_BRANCH}&state=open" > pulls.json
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > pulls.json
 
       - name: Validate the snapshot provenance
         env:
@@ -220,6 +264,7 @@ jobs:
       - review
     if: >-
       always()
+      && github.event.action == 'completed'
       && github.event.workflow_run.event == 'pull_request'
       && github.event.workflow_run.conclusion != 'cancelled'
     runs-on: ubuntu-latest

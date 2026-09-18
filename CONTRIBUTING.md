@@ -70,10 +70,20 @@ messages, code, comments and documentation are written in English.
   on base...head, all ecosystems, same thresholds as `Dependency review`) and publishes it as the
   `Trusted dependency review` commit status on the pull request head. A commit status is per
   commit and shared by every open pull request having that head (siblings with different bases
-  included, whose runs also share one concurrency group), so the review runs against each of
-  their bases (job `pulls`, `scripts/list-pull-requests-of-head.sh`: every open pull request with
-  exactly that head repository and sha, never only the triggering run's own; one matrix leg per
-  base) and the status is green only when every leg passes.
+  or head branches included; their runs share one concurrency group keyed by head repository
+  and sha), so the review runs against each of their bases (job `pulls`,
+  `scripts/list-pull-requests-of-head.sh` over every open pull request of the repository:
+  exactly that head repository and sha, whatever the branch, never only the triggering run's
+  own; one matrix leg per base) and the status is green only when every leg passes. Per-commit
+  also means that a pull request opened later on a commit already carrying a success (another
+  pull request, another base) would inherit it until recomputed, as any GitHub check does: the
+  `requested` `workflow_run` event, fired as soon as `Dependency Submission` is requested for
+  that pull request, resets the status to `pending` from `main` with the App (job `pending`,
+  no pull request code involved), and the `completed` event publishes the recomputed result.
+  What remains is the few seconds before that `pending` lands; merging in that window needs a
+  human or auto-merge with every other required check already green on that commit, so keep
+  a required approval on `main` (a new pull request has none) and do not rely on auto-merge
+  alone.
   The status is published by `scripts/report-trusted-review-status.sh` because check runs of a
   `workflow_run` workflow are attached to the `main` commit, not to the pull request; it is set
   by a dedicated GitHub App
@@ -106,8 +116,11 @@ messages, code, comments and documentation are written in English.
     status once `Trusted Dependency Review` has run (for a fork, after the artifact was selected,
     validated and submitted); re-run that workflow once to see the latest artifact selected.
     Siblings: open two same-repository pull requests from one branch (same head sha) towards
-    `main` and another base — whichever run survives the concurrency group must show two
-    `Trusted dependency review (#N)` legs, one per base, and a single status on the commit.
+    `main` and another base, then a third one from another branch pointing at the same sha —
+    whichever run survives the concurrency group must show one `Trusted dependency review (#N)`
+    leg per pull request, and a single status on the commit. Stale success: on a commit whose
+    status is already green, open a new pull request towards another base — the status must
+    turn `pending` within seconds (the `requested` run), then reflect the recomputed reviews.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes
