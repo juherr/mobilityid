@@ -85,7 +85,7 @@ val commonSettings = Seq(
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,
   // Binary compatibility against the last release on Maven Central. CI resolves the baseline with
-  // scripts/mima-baseline.sh and passes it as -Dmobilityid.mimaBaseline=X.Y.Z; without it (no
+  // ../scripts/mima-baseline.sh and passes it as -Dmobilityid.mimaBaseline=X.Y.Z; without it (no
   // release yet, or a local run) the check is skipped.
   mimaPreviousArtifacts :=
     sys.props.get("mobilityid.mimaBaseline").map(organization.value %% moduleName.value % _).toSet,

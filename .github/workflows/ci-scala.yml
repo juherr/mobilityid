@@ -7,12 +7,12 @@ on:
       - master
     paths:
       - 'scala/**'
-      - 'scripts/check-central-release.sh'
+      - 'scripts/mima-baseline.sh'
       - '.github/workflows/ci-scala.yml'
   pull_request:
     paths:
       - 'scala/**'
-      - 'scripts/check-central-release.sh'
+      - 'scripts/mima-baseline.sh'
       - '.github/workflows/ci-scala.yml'
 
 permissions:
@@ -57,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           status=0
-          baseline=$(scripts/mima-baseline.sh) || status=$?
+          baseline=$(../scripts/mima-baseline.sh) || status=$?
           case "${status}" in
             0) echo "MIMA_OPTION=-Dmobilityid.mimaBaseline=${baseline}" >> "${GITHUB_ENV}"; echo "MiMa baseline: ${baseline}" ;;
             1) echo "MIMA_OPTION=" >> "${GITHUB_ENV}"; echo "MiMa baseline: none published yet" ;;

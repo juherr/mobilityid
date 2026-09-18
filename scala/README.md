@@ -55,18 +55,21 @@ If you use `mise` from the repository root, prefix the commands with `mise exec 
   build stays on the cross-published 4.x line (4.23.0).
 - **Quality gates.** Scalafmt (`.scalafmt.conf`, no alignment, imports left to Scalafix),
   Scalafix (`.scalafix.conf`: `OrganizeImports` groups Scala/JDK, third-party, then project
-  imports; `RemoveUnused`), fatal warnings (`-Xfatal-warnings` / `-Werror`, `-Xlint` on 2.13,
+  imports; `RemoveUnused` for imports, the only `-Wunused` category enabled), fatal warnings (`-Xfatal-warnings` / `-Werror`, `-Xlint` on 2.13,
   `-Wunused:imports` everywhere) and sbt-header on main and test sources.
 - **Binary compatibility.** sbt-mima-plugin compares `core` and `interpolators` with the last
-  release found on Maven Central (`scripts/mima-baseline.sh` reads the `mobilityid_3`
+  release found on Maven Central (the repository `scripts/mima-baseline.sh` reads the `mobilityid_3`
   metadata, CI passes it as `-Dmobilityid.mimaBaseline=X.Y.Z`). Until the first release the
-  check is skipped; `scripts/verify-release-wiring.sh` proves the wiring against a locally
+  check is skipped; `scripts/verify-release-wiring.sh` proves the wiring (resolution and
+  analysis, not detection: the baseline is built from the same sources) against a locally
   published baseline.
 - **Publishing.** sbt's built-in Central Portal support (`publishSigned` stages every Scala
   version in `target/sona-staging`, `sonaRelease` uploads the bundle) with sbt-pgp. The
   version is `RELEASE_VERSION` (set by the workflow), `0.1.0-SNAPSHOT` otherwise, and a
   `verifyRelease` guard refuses to sign a SNAPSHOT or to run without `SONATYPE_USERNAME`,
-  `SONATYPE_PASSWORD`, `PGP_PASSPHRASE` and a GPG secret key. sbt-ci-release was not used: it
+  `SONATYPE_PASSWORD`, `PGP_PASSPHRASE` and a GPG secret key; `scripts/verify-release-wiring.sh`
+  also signs and stages a throw-away version with a temporary key to prove that path without
+  uploading anything. sbt-ci-release was not used: it
   derives the version from an existing git tag, whereas the `Release` workflow tags after
   every registry has accepted the artifacts.
 - **Consumer smoke.** `consumer-smoke/` is a separate sbt build that resolves both modules from

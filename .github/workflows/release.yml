@@ -406,7 +406,9 @@ jobs:
     name: Release Scala to Maven Central
     needs: [preflight-java, preflight-ts, preflight-php, preflight-scala]
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Cross build without cache, sonaRelease waits for the Portal to validate the bundle, then
+    # up to 30 minutes for repo1 to sync.
+    timeout-minutes: 60
     environment: maven-central
     defaults:
       run:

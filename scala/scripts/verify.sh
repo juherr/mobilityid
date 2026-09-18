@@ -15,7 +15,7 @@ run() {
 
 # MiMa baseline: the last Scala release on Maven Central; none before the first release.
 baseline_status=0
-baseline=$(scripts/mima-baseline.sh) || baseline_status=$?
+baseline=$(../scripts/mima-baseline.sh) || baseline_status=$?
 case "${baseline_status}" in
   0) echo "MiMa baseline: ${baseline}" | tee -a "${log}"; mima_option="-Dmobilityid.mimaBaseline=${baseline}" ;;
   1) echo "MiMa baseline: none published yet" | tee -a "${log}"; mima_option="" ;;

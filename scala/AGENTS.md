@@ -14,7 +14,8 @@ Run every command below from `scala/`.
   Published as `dev.juherr.mobilityid:mobilityid-interpolators_{2.13,3}`.
 - `root` aggregates both (`publish / skip`).
 - `consumer-smoke/` -> separate sbt build used by `scripts/verify-consumer.sh` only; it is not
-  part of the aggregate and needs `SMOKE_REPOSITORY` + `MOBILITYID_VERSION` to load.
+  part of the aggregate (so `headerCheckAll` / `scalafmtCheckAll` do not cover it: keep its
+  header and style by hand) and needs `SMOKE_REPOSITORY` + `MOBILITYID_VERSION` to load.
 
 ## Toolchain
 
@@ -46,12 +47,12 @@ task results, run with a changed input instead.
 - Format and fix: `sbt --server --batch "scalafmtSbt; +scalafmtAll; +scalafixAll"`.
 - Full gate (what CI runs per Scala version):
   `sbt --server --batch "+headerCheckAll; +scalafmtCheckAll; scalafmtSbtCheck; +scalafixAll --check; +test; +mimaReportBinaryIssues"`.
-  CI adds `-Dmobilityid.mimaBaseline=X.Y.Z` from `scripts/mima-baseline.sh` (last Scala release on
+  CI adds `-Dmobilityid.mimaBaseline=X.Y.Z` from the repository `scripts/mima-baseline.sh` (last Scala release on
   Maven Central; without it MiMa is skipped).
 - Release preflight, as `release.yml` runs it: `scripts/verify.sh` = full gate +
   `scripts/verify-release-wiring.sh` (guard refuses SNAPSHOT / missing inputs / empty keyring,
-  `publishSigned` stages nothing when the guard fails, MiMa analyzes a locally published
-  baseline) + `scripts/verify-consumer.sh` (publishes to `target/smoke-repo` and runs
+  `publishSigned` stages nothing when the guard fails, signs and stages everything with a
+  throw-away key when the inputs are present, MiMa analyzes a locally published baseline) + `scripts/verify-consumer.sh` (publishes to `target/smoke-repo` and runs
   `consumer-smoke/` on both Scala versions). Log in `target/verification/verify.log`.
 - License headers: `sbt --server --batch "+headerCheckAll"` to validate,
   `sbt --server --batch "+headerCreateAll"` to apply (main and test sources).

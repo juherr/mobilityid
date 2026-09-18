@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Exercises scala/scripts/mima-baseline.sh against a local HTTP stub:
+# Exercises scripts/mima-baseline.sh against a local HTTP stub:
 #   metadata with a <release> -> prints it, exit 0; 404 -> nothing, exit 1;
 #   5xx, unexpected code, metadata without <release> or transport failure -> 2.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
-script=scala/scripts/mima-baseline.sh
+script=scripts/mima-baseline.sh
 failures=0
 port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
 stub_log=$(mktemp)

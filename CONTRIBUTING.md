@@ -93,7 +93,7 @@ user token), `GPG_PRIVATE_KEY` (armored) and `GPG_PASSPHRASE`, shared by the Jav
 jobs (Scala maps them to `SONATYPE_USERNAME`, `SONATYPE_PASSWORD` and `PGP_PASSPHRASE`); the
 public GPG key must be available from a public keyserver. After the first Scala release, the
 Scala CI and preflight compare the public API with that release (MiMa, baseline read from
-Maven Central by `scala/scripts/mima-baseline.sh`); a deliberate break needs a
+Maven Central by `scripts/mima-baseline.sh`); a deliberate break needs a
 `mimaBinaryIssueFilters` entry and a major/minor bump. The `npm` environment holds **no secret**: npm is published
 through Trusted Publishing (OIDC) bound to `release.yml` and this environment, after a one-time
 manual first publication (`ts/README.md`, "Publishing to npm"). Never add an npm token to the
