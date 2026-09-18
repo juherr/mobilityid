@@ -12,8 +12,13 @@ name: Fork Dependency Graph
 #
 # The check runs of a `workflow_run` workflow are attached to the default-branch commit, not to
 # the pull request, so the outcome is reported as the `Java dependency review` commit status on
-# the pull request head (job `status`, run even on failure). A `workflow_run` workflow only
-# triggers from the default branch, so changes to this file only take effect once merged.
+# the pull request head (job `status`, run even on failure). The status is published with a
+# dedicated GitHub App (`JAVA_REVIEW_APP_CLIENT_ID` / `JAVA_REVIEW_APP_PRIVATE_KEY`), not with
+# GITHUB_TOKEN: a fork can define a job with that name in its own `pull_request` workflow, and
+# such a check comes from the same "GitHub Actions" source as a GITHUB_TOKEN status, whereas the
+# App key is out of reach of fork and Dependabot runs (see CONTRIBUTING.md for the required
+# check setup). A `workflow_run` workflow only triggers from the default branch, so changes to
+# this file only take effect once merged.
 on:
   workflow_run: # zizmor: ignore[dangerous-triggers] no checkout of the triggering ref; the artifact is validated before use
     workflows:
@@ -48,7 +53,6 @@ jobs:
       actions: read
       contents: write
       pull-requests: read
-      statuses: write
     outputs:
       base-sha: ${{ steps.provenance.outputs.base_sha }}
 
@@ -59,9 +63,19 @@ jobs:
           persist-credentials: false
           sparse-checkout: scripts
 
+      - name: Mint the status token of the Java dependency review App
+        id: app-token
+        if: vars.JAVA_REVIEW_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.JAVA_REVIEW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.JAVA_REVIEW_APP_PRIVATE_KEY }}
+          permission-statuses: write
+
       - name: Report the pending status
+        if: vars.JAVA_REVIEW_APP_CLIENT_ID != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: scripts/report-java-review-status.sh "$HEAD_SHA" pending "$RUN_URL"
@@ -165,7 +179,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      statuses: write
+      contents: read
 
     steps:
       - name: Checkout scripts of the default branch
@@ -174,9 +188,24 @@ jobs:
           persist-credentials: false
           sparse-checkout: scripts
 
+      - name: Warn when the App is not configured
+        if: vars.JAVA_REVIEW_APP_CLIENT_ID == ''
+        run: |
+          echo "::warning::JAVA_REVIEW_APP_CLIENT_ID is not set: the Java dependency review outcome is not reported on the pull request (see CONTRIBUTING.md)"
+
+      - name: Mint the status token of the Java dependency review App
+        id: app-token
+        if: vars.JAVA_REVIEW_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.JAVA_REVIEW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.JAVA_REVIEW_APP_PRIVATE_KEY }}
+          permission-statuses: write
+
       - name: Report the status
+        if: vars.JAVA_REVIEW_APP_CLIENT_ID != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           STATE: ${{ needs.submit.result == 'success' && needs.review.result == 'success' && 'success' || 'failure' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
