@@ -37,7 +37,7 @@ var operatorIDDINRegex = regexp.MustCompile(`^[0-9]{3,6}$`)
 func NewOperatorIDDIN(id string) (*OperatorIDDIN, error) {
 	normalized := strings.ToUpper(id)
 	if !isValidOperatorIDDIN(normalized) {
-		return nil, fmt.Errorf("'%s' is not a valid DIN OperatorID", id)
+		return nil, fmt.Errorf("%w: '%s' is not a valid DIN operator id", ErrInvalidOperatorID, id)
 	}
 	return &OperatorIDDIN{value: normalized}, nil
 }

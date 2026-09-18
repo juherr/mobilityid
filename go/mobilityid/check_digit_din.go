@@ -41,46 +41,36 @@ func init() {
 func CalculateDIN7064ModXY(code string) (string, error) {
 	upperCode := strings.ToUpper(code)
 
-	// Based on Scala's implementation, it expects only ASCII uppercase and digits.
-	// The Scala test CheckDigitDin("INTNM" + "%06d".format(instance)) also implies this.
+	// Weighted sum of the character values with growing powers of two, as in the reference
+	// (DIN SPEC 91286): a digit d at coefficient c adds d*2^c and advances c by one; a letter
+	// splits into tens and units, adds tens*2^c + units*2^(c+1) and advances c by two. The
+	// reference keeps the raw sum in a machine int, which is exact for the 11-character DIN
+	// payload but overflows on long inputs; reducing every step modulo 11 gives the same result
+	// on the domain and a valid digit for any length.
+	const modulus = 11
+	sum, weight := 0, 1 // weight is 2^coefficient mod 11
+	step := func(value int) {
+		sum = (sum + value*weight) % modulus
+		weight = weight * 2 % modulus
+	}
 	for _, r := range upperCode {
-		if _, ok := dinToNumericValue[r]; !ok {
-			return "", fmt.Errorf("invalid character '%c' in code '%s'; must consist of uppercase ASCII letters and digits", r, code)
+		// Only ASCII uppercase letters and digits, as in the Scala implementation.
+		current, ok := dinToNumericValue[r]
+		if !ok {
+			return "", fmt.Errorf("%w: invalid character '%c' in '%s'; must consist of uppercase ASCII letters and digits", ErrInvalidCheckDigitInput, r, code)
 		}
-	}
-
-	// Scala's 'go' function
-	var goDin func(rest []int, acc int, coefficient int) int
-	goDin = func(rest []int, acc int, coefficient int) int {
-		if len(rest) == 0 {
-			return acc
-		}
-		current := rest[0]
-		var stepResult int
-		var newCoefficient int
-
 		if current < 10 {
-			stepResult = current * (1 << coefficient) // current * 2^coefficient
-			newCoefficient = coefficient + 1
+			step(current)
 		} else {
-			stepResult = (current/10)*(1<<coefficient) + (current%10)*(1<<(coefficient+1)) // (current/10)*2^coeff + (current%10)*2^(coeff+1)
-			newCoefficient = coefficient + 2
+			step(current / 10)
+			step(current % 10)
 		}
-		return goDin(rest[1:], acc+stepResult, newCoefficient)
 	}
 
-	lookupResults := make([]int, len(upperCode))
-	for i, r := range upperCode {
-		lookupResults[i] = dinToNumericValue[r]
-	}
-
-	sum := goDin(lookupResults, 0, 0)
-	mod := sum % 11
-
-	if mod >= 10 {
+	if sum >= 10 {
 		return "X", nil
 	}
-	return strconv.Itoa(mod), nil
+	return strconv.Itoa(sum), nil
 }
 
 // VerifyDIN7064ModXY verifies an input string against its DIN 7064 Mod X, Y check digit.

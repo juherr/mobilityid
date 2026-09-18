@@ -33,7 +33,7 @@ type OperatorIDISO struct {
 func NewOperatorIDISO(id string) (*OperatorIDISO, error) {
 	normalized := strings.ToUpper(id)
 	if !isValidOperatorIDISO(normalized) {
-		return nil, fmt.Errorf("'%s' is not a valid ISO 15118 OperatorID", id)
+		return nil, fmt.Errorf("%w: '%s' is not a valid ISO 15118 operator id", ErrInvalidOperatorID, id)
 	}
 	return &OperatorIDISO{value: normalized}, nil
 }

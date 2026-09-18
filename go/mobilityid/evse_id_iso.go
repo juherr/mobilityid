@@ -18,13 +18,16 @@
 package mobilityid
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 )
 
-var evseIDISORegex = regexp.MustCompile(`^([A-Z]{2})\*?([A-Z0-9]{3})\*?E([A-Z0-9*]{1,31})$`)
-var evseIDISOFromPartsPowerOutletRegex = regexp.MustCompile(`^[A-Z0-9*]{1,31}$`)
+var (
+	evseIDISORegex                     = regexp.MustCompile(`^([A-Z]{2})\*?([A-Z0-9]{3})\*?E([A-Z0-9*]{1,31})$`)
+	evseIDISOFromPartsPowerOutletRegex = regexp.MustCompile(`^[A-Z0-9*]{1,31}$`)
+)
 
 // EvseIDISO represents an EVSE identifier in ISO format.
 type EvseIDISO struct {
@@ -33,11 +36,21 @@ type EvseIDISO struct {
 	powerOutletID string
 }
 
-// NewEvseIDISO parses an ISO EVSE ID.
+// NewEvseIDISO parses an ISO EVSE ID. Every failure wraps ErrInvalidEvseID and the error of
+// the failing part.
 func NewEvseIDISO(id string) (*EvseIDISO, error) {
+	eid, err := parseEvseIDISO(id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
+	}
+	return eid, nil
+}
+
+// parseEvseIDISO does the work of NewEvseIDISO and returns the bare error of the failing part.
+func parseEvseIDISO(id string) (*EvseIDISO, error) {
 	matches := evseIDISORegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 4 {
-		return nil, fmt.Errorf("'%s' is not a valid ISO 15118 EvseID", id)
+		return nil, errors.New("does not match the ISO 15118 format")
 	}
 
 	cc, err := NewCountryCode(matches[1])
@@ -60,18 +73,20 @@ func NewEvseIDISO(id string) (*EvseIDISO, error) {
 func NewEvseIDISOFromParts(countryCode string, operatorID string, powerOutletID string) (*EvseIDISO, error) {
 	cc, err := NewCountryCode(countryCode)
 	if err != nil {
-		return nil, fmt.Errorf("invalid countryCode for ISO format: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
 	op, err := NewOperatorIDISO(operatorID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid operatorID for ISO format: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
-	normalizedPowerOutletID := strings.TrimPrefix(strings.ToUpper(powerOutletID), "E")
+	// The "E" id type is added by String(); a power outlet id starting with "E" keeps it, as
+	// in the Scala reference.
+	normalizedPowerOutletID := strings.ToUpper(powerOutletID)
 
 	if !evseIDISOFromPartsPowerOutletRegex.MatchString(normalizedPowerOutletID) {
-		return nil, fmt.Errorf("invalid powerOutletID for ISO format")
+		return nil, fmt.Errorf("%w: invalid power outlet id '%s' for ISO format", ErrInvalidEvseID, powerOutletID)
 	}
 
 	return &EvseIDISO{
@@ -82,6 +97,9 @@ func NewEvseIDISOFromParts(countryCode string, operatorID string, powerOutletID 
 }
 
 func (eido *EvseIDISO) String() string {
+	if eido.countryCode == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s*%s*E%s", eido.countryCode.Value(), eido.operatorID.Value(), eido.powerOutletID)
 }
 

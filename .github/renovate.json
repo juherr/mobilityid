@@ -89,6 +89,16 @@
       "versioningTemplate": "loose",
       "extractVersionTemplate": "^(?:openjdk-)?(?<version>\\d+(?:\\.\\d+)?)",
       "autoReplaceStringTemplate": "{{depName}} = \"{{#if (equals depName 'java')}}{{newMajor}}{{else if (equals depName 'node')}}{{newMajor}}{{else}}{{newMajor}}.{{newMinor}}{{/if}}\""
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/.+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+version: (?<currentValue>v?[0-9.]+)",
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+run: go run [^@\\s]+@(?<currentValue>v[0-9.]+)"
+      ]
     }
   ]
 }

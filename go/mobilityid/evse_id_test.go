@@ -130,7 +130,7 @@ func TestNewEvseIDAutoDetect(t *testing.T) {
 }
 
 func TestNewEvseIDFromParts(t *testing.T) {
-	iso, err := NewEvseIDFromParts("NL", "TNM", "E840*6487")
+	iso, err := NewEvseIDFromParts("NL", "TNM", "840*6487")
 	if err != nil {
 		t.Fatalf("NewEvseIDFromParts() ISO unexpected error: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestNewEvseIDFromParts(t *testing.T) {
 }
 
 func TestNewEvseIDFormatSpecificFromParts(t *testing.T) {
-	iso, err := NewEvseIDISOFromParts("NL", "TNM", "E840*6487")
+	iso, err := NewEvseIDISOFromParts("NL", "TNM", "840*6487")
 	if err != nil {
 		t.Fatalf("NewEvseIDISOFromParts() unexpected error: %v", err)
 	}
@@ -203,5 +203,37 @@ func TestEvseISOHelpers(t *testing.T) {
 	}
 	if got := partyID.Value(); got != "NLTNM" {
 		t.Fatalf("party id = %v", got)
+	}
+}
+
+// The ISO "E" id type is added by the renderer, so a power outlet id that itself starts with
+// "E" keeps it, as in Scala (EvseIdSpec), Java and TypeScript: ("NL", "TNM", "E840*6487")
+// renders NL*TNM*EE840*6487 and parses back to the same components.
+func TestNewEvseIDFromPartsKeepsLeadingE(t *testing.T) {
+	iso, err := NewEvseIDISOFromParts("nl", "tnm", "e840*6487")
+	if err != nil {
+		t.Fatalf("NewEvseIDISOFromParts() unexpected error: %v", err)
+	}
+	if got := iso.String(); got != "NL*TNM*EE840*6487" {
+		t.Fatalf("NewEvseIDISOFromParts() renders %q, want NL*TNM*EE840*6487", got)
+	}
+	if got := iso.powerOutletID; got != "E840*6487" {
+		t.Fatalf("PowerOutletID() = %q, want E840*6487", got)
+	}
+
+	generic, err := NewEvseIDFromParts("NL", "TNM", "E840*6487")
+	if err != nil {
+		t.Fatalf("NewEvseIDFromParts() unexpected error: %v", err)
+	}
+	if got := generic.String(); got != "NL*TNM*EE840*6487" || generic.PowerOutletID() != "E840*6487" {
+		t.Fatalf("NewEvseIDFromParts() = %q / %q, want NL*TNM*EE840*6487 / E840*6487", got, generic.PowerOutletID())
+	}
+
+	reparsed, err := NewEvseIDISO(iso.String())
+	if err != nil {
+		t.Fatalf("NewEvseIDISO(%q) error: %v", iso, err)
+	}
+	if reparsed.powerOutletID != "E840*6487" {
+		t.Fatalf("round trip lost the leading E: %q", reparsed.powerOutletID)
 	}
 }

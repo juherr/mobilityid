@@ -28,7 +28,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: ['1.25.x', '1.26.x']
+        # go.mod declares the oldest supported Go; each leg must run its own toolchain.
+        go-version: ['1.26.x', '1.27.x']
+
+    env:
+      GOTOOLCHAIN: local
 
     defaults:
       run:
@@ -49,23 +53,19 @@ jobs:
       - name: Download Dependencies
         run: go mod download
 
-      - name: Check Formatting
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "The following files are not gofmt-formatted:"
-            echo "$unformatted"
-            exit 1
-          fi
-
-      - name: Lint (includes license headers)
-        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0 run
+      - name: Lint (formatters and license headers included)
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          # renovate: datasource=github-releases depName=golangci/golangci-lint
+          version: v2.13.2
+          working-directory: go
 
       - name: Vet
         run: go vet ./...
 
       - name: Test
-        run: go test ./...
+        run: go test -race -cover ./...
 
-      - name: Build
-        run: go build ./...
+      - name: Vulnerability check
+        # renovate: datasource=go depName=golang.org/x/vuln
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...

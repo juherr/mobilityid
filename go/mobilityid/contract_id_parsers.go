@@ -48,6 +48,7 @@ func (p isoParser) ComputeCheckDigit(s string) (rune, error) {
 	}
 	return rune(cd[0]), nil // Check digit is a single char
 }
+
 func (p isoParser) ValidateInstanceValue(s string) error {
 	if !p.instanceRegex.MatchString(s) {
 		return fmt.Errorf("'%s' is not a valid instance value for %s format (expected 9 alphanumeric)", s, p.Name())
@@ -71,6 +72,7 @@ func (p emi3Parser) ComputeCheckDigit(s string) (rune, error) {
 	}
 	return rune(cd[0]), nil
 }
+
 func (p emi3Parser) ValidateInstanceValue(s string) error {
 	if !p.instanceRegex.MatchString(s) {
 		return fmt.Errorf("'%s' is not a valid instance value for %s format (expected 'C' + 8 alphanumeric)", s, p.Name())
@@ -94,6 +96,7 @@ func (p dinParser) ComputeCheckDigit(s string) (rune, error) {
 	}
 	return rune(cd[0]), nil
 }
+
 func (p dinParser) ValidateInstanceValue(s string) error {
 	if !p.instanceRegex.MatchString(s) {
 		return fmt.Errorf("'%s' is not a valid instance value for %s format (expected 6 alphanumeric)", s, p.Name())

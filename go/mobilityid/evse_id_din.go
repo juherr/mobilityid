@@ -18,13 +18,16 @@
 package mobilityid
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 )
 
-var evseIDDINRegex = regexp.MustCompile(`^(\+?[0-9]{1,3})\*([0-9]{3,6})\*([0-9*]{1,32})$`)
-var evseIDDINFromPartsPowerOutletRegex = regexp.MustCompile(`^[0-9*]{1,32}$`)
+var (
+	evseIDDINRegex                     = regexp.MustCompile(`^(\+?[0-9]{1,3})\*([0-9]{3,6})\*([0-9*]{1,32})$`)
+	evseIDDINFromPartsPowerOutletRegex = regexp.MustCompile(`^[0-9*]{1,32}$`)
+)
 
 // EvseIDDIN represents an EVSE identifier in DIN format.
 type EvseIDDIN struct {
@@ -33,11 +36,21 @@ type EvseIDDIN struct {
 	powerOutletID string
 }
 
-// NewEvseIDDIN parses a DIN EVSE ID.
+// NewEvseIDDIN parses a DIN EVSE ID. Every failure wraps ErrInvalidEvseID and the error of the
+// failing part.
 func NewEvseIDDIN(id string) (*EvseIDDIN, error) {
+	eid, err := parseEvseIDDIN(id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
+	}
+	return eid, nil
+}
+
+// parseEvseIDDIN does the work of NewEvseIDDIN and returns the bare error of the failing part.
+func parseEvseIDDIN(id string) (*EvseIDDIN, error) {
 	matches := evseIDDINRegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 4 {
-		return nil, fmt.Errorf("'%s' is not a valid DIN EvseID", id)
+		return nil, errors.New("does not match the DIN format")
 	}
 
 	ccRaw := matches[1]
@@ -69,17 +82,17 @@ func NewEvseIDDINFromParts(countryCode string, operatorID string, powerOutletID 
 
 	cc, err := NewPhoneCountryCode(ccRaw)
 	if err != nil {
-		return nil, fmt.Errorf("invalid countryCode for DIN format: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
 	op, err := NewOperatorIDDIN(operatorID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid operatorID for DIN format: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
 	normalizedPowerOutletID := strings.ToUpper(powerOutletID)
 	if !evseIDDINFromPartsPowerOutletRegex.MatchString(normalizedPowerOutletID) {
-		return nil, fmt.Errorf("invalid powerOutletID for DIN format")
+		return nil, fmt.Errorf("%w: invalid power outlet id '%s' for DIN format", ErrInvalidEvseID, powerOutletID)
 	}
 
 	return &EvseIDDIN{
@@ -90,6 +103,9 @@ func NewEvseIDDINFromParts(countryCode string, operatorID string, powerOutletID 
 }
 
 func (eidd *EvseIDDIN) String() string {
+	if eidd.countryCode == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s*%s*%s", eidd.countryCode.Value(), eidd.operatorID.Value(), eidd.powerOutletID)
 }
 

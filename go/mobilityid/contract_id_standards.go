@@ -29,9 +29,11 @@ type ContractIDStandard interface {
 }
 
 // Internal concrete types for each standard
-type isoStandard struct{}
-type emi3Standard struct{}
-type dinStandard struct{}
+type (
+	isoStandard  struct{}
+	emi3Standard struct{}
+	dinStandard  struct{}
+)
 
 func (isoStandard) isContractIDStandard()  {}
 func (emi3Standard) isContractIDStandard() {}

@@ -37,12 +37,12 @@ var partyIDRegex = regexp.MustCompile(`^([A-Z]{2})[-*]?([A-Z0-9]{3})$`)
 func NewPartyID(id string) (*PartyID, error) {
 	matches := partyIDRegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 3 {
-		return nil, fmt.Errorf("'%s' is not a valid PartyID", id)
+		return nil, fmt.Errorf("%w: '%s'", ErrInvalidPartyID, id)
 	}
 
 	cc, err := NewCountryCode(matches[1])
 	if err != nil {
-		return nil, fmt.Errorf("'%s' is not a valid PartyID: %w", id, err)
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidPartyID, id, err)
 	}
 
 	return &PartyID{
@@ -53,6 +53,9 @@ func NewPartyID(id string) (*PartyID, error) {
 
 // String returns the canonical string representation of the PartyID.
 func (pid *PartyID) String() string {
+	if pid.countryCode == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s-%s", pid.countryCode.Value(), pid.partyCode)
 }
 
@@ -64,4 +67,14 @@ func (pid *PartyID) Value() string {
 // ToCompactString returns the compact representation without separator.
 func (pid *PartyID) ToCompactString() string {
 	return pid.countryCode.Value() + pid.partyCode
+}
+
+// CountryCode returns the CountryCode part of the PartyID.
+func (pid *PartyID) CountryCode() *CountryCode {
+	return pid.countryCode
+}
+
+// PartyCode returns the three-character party code part of the PartyID.
+func (pid *PartyID) PartyCode() string {
+	return pid.partyCode
 }

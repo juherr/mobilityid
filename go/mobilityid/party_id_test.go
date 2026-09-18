@@ -74,3 +74,16 @@ func TestNewPartyIDNonsenseInputs(t *testing.T) {
 		})
 	}
 }
+
+func TestPartyIDComponents(t *testing.T) {
+	pid, err := NewPartyID("nl*tnm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := pid.CountryCode().String(); got != "NL" {
+		t.Errorf("CountryCode() = %q, want NL", got)
+	}
+	if got := pid.PartyCode(); got != "TNM" {
+		t.Errorf("PartyCode() = %q, want TNM", got)
+	}
+}
