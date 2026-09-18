@@ -49,33 +49,28 @@ func CalculateDIN7064ModXY(code string) (string, error) {
 		}
 	}
 
-	// Scala's 'go' function
-	var goDin func(rest []int, acc int, coefficient int) int
-	goDin = func(rest []int, acc int, coefficient int) int {
-		if len(rest) == 0 {
-			return acc
-		}
-		current := rest[0]
-		var stepResult int
-		var newCoefficient int
-
+	// Weighted sum of the character values with growing powers of two, as in the reference
+	// (DIN SPEC 91286): a digit d at coefficient c adds d*2^c and advances c by one; a letter
+	// splits into tens and units, adds tens*2^c + units*2^(c+1) and advances c by two. The
+	// reference keeps the raw sum in a machine int, which is exact for the 11-character DIN
+	// payload but overflows on long inputs; reducing every step modulo 11 gives the same result
+	// on the domain and a valid digit for any length.
+	const modulus = 11
+	sum := 0
+	weight := 1 // 2^coefficient mod 11
+	for _, r := range upperCode {
+		current := dinToNumericValue[r]
 		if current < 10 {
-			stepResult = current * (1 << coefficient) // current * 2^coefficient
-			newCoefficient = coefficient + 1
+			sum = (sum + current*weight) % modulus
+			weight = weight * 2 % modulus
 		} else {
-			stepResult = (current/10)*(1<<coefficient) + (current%10)*(1<<(coefficient+1)) // (current/10)*2^coeff + (current%10)*2^(coeff+1)
-			newCoefficient = coefficient + 2
+			sum = (sum + (current/10)*weight) % modulus
+			weight = weight * 2 % modulus
+			sum = (sum + (current%10)*weight) % modulus
+			weight = weight * 2 % modulus
 		}
-		return goDin(rest[1:], acc+stepResult, newCoefficient)
 	}
-
-	lookupResults := make([]int, len(upperCode))
-	for i, r := range upperCode {
-		lookupResults[i] = dinToNumericValue[r]
-	}
-
-	sum := goDin(lookupResults, 0, 0)
-	mod := sum % 11
+	mod := sum
 
 	if mod >= 10 {
 		return "X", nil
