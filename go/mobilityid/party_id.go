@@ -37,12 +37,12 @@ var partyIDRegex = regexp.MustCompile(`^([A-Z]{2})[-*]?([A-Z0-9]{3})$`)
 func NewPartyID(id string) (*PartyID, error) {
 	matches := partyIDRegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 3 {
-		return nil, fmt.Errorf("'%s' is not a valid PartyID", id)
+		return nil, fmt.Errorf("%w: '%s'", ErrInvalidPartyID, id)
 	}
 
 	cc, err := NewCountryCode(matches[1])
 	if err != nil {
-		return nil, fmt.Errorf("'%s' is not a valid PartyID: %w", id, err)
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidPartyID, id, err)
 	}
 
 	return &PartyID{

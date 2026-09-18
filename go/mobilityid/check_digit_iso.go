@@ -29,12 +29,12 @@ func CalculateISO7064Mod37_2(code string) (string, error) {
 	// Check for character validity
 	for _, r := range upperCode {
 		if !isASCIIUpperOrDigit(r) {
-			return "", fmt.Errorf("invalid character '%c' in code '%s'; must consist of uppercase ASCII letters and digits", r, code)
+			return "", fmt.Errorf("%w: invalid character '%c' in '%s'; must consist of uppercase ASCII letters and digits", ErrInvalidCheckDigitInput, r, code)
 		}
 	}
 
 	if len(upperCode) != len(p1s) {
-		return "", fmt.Errorf("code must have a length of %d for ISO 7064 Mod 37, 2 calculation, got %d", len(p1s), len(upperCode))
+		return "", fmt.Errorf("%w: code must have a length of %d for ISO 7064 Mod 37, 2 calculation, got %d", ErrInvalidCheckDigitInput, len(p1s), len(upperCode))
 	}
 
 	sumEq := func(ps []isoMatrix, f func(isoMatrix) isoVec) isoVec {
@@ -56,7 +56,7 @@ func CalculateISO7064Mod37_2(code string) (string, error) {
 	t2 := t2Sum.Mul(negP2minus15)
 
 	if t1.v1 == -1 || t2.v1 == -1 { // Propagate error from sumEq
-		return "", fmt.Errorf("internal error during character encoding")
+		return "", fmt.Errorf("%w: internal error during character encoding", ErrInvalidCheckDigitInput)
 	}
 
 	m15 := isoMatrix{
@@ -68,7 +68,7 @@ func CalculateISO7064Mod37_2(code string) (string, error) {
 
 	char, ok := isoDecoding[m15]
 	if !ok {
-		return "", fmt.Errorf("undecodable matrix for check digit: %+v", m15)
+		return "", fmt.Errorf("%w: undecodable matrix for check digit: %+v", ErrInvalidCheckDigitInput, m15)
 	}
 
 	return string(char), nil

@@ -39,7 +39,7 @@ type EvseIDDIN struct {
 func NewEvseIDDIN(id string) (*EvseIDDIN, error) {
 	matches := evseIDDINRegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 4 {
-		return nil, fmt.Errorf("'%s' is not a valid DIN EvseID", id)
+		return nil, fmt.Errorf("%w: '%s' does not match the DIN format", ErrInvalidEvseID, id)
 	}
 
 	ccRaw := matches[1]
@@ -48,11 +48,11 @@ func NewEvseIDDIN(id string) (*EvseIDDIN, error) {
 	}
 	cc, err := NewPhoneCountryCode(ccRaw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
 	}
 	op, err := NewOperatorIDDIN(matches[2])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
 	}
 
 	return &EvseIDDIN{
@@ -71,17 +71,17 @@ func NewEvseIDDINFromParts(countryCode string, operatorID string, powerOutletID 
 
 	cc, err := NewPhoneCountryCode(ccRaw)
 	if err != nil {
-		return nil, fmt.Errorf("invalid countryCode for DIN format: %w", err)
+		return nil, fmt.Errorf("%w: invalid country code for DIN format: %w", ErrInvalidEvseID, err)
 	}
 
 	op, err := NewOperatorIDDIN(operatorID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid operatorID for DIN format: %w", err)
+		return nil, fmt.Errorf("%w: invalid operator id for DIN format: %w", ErrInvalidEvseID, err)
 	}
 
 	normalizedPowerOutletID := strings.ToUpper(powerOutletID)
 	if !evseIDDINFromPartsPowerOutletRegex.MatchString(normalizedPowerOutletID) {
-		return nil, fmt.Errorf("invalid powerOutletID for DIN format")
+		return nil, fmt.Errorf("%w: invalid power outlet id '%s' for DIN format", ErrInvalidEvseID, powerOutletID)
 	}
 
 	return &EvseIDDIN{

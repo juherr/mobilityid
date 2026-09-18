@@ -37,7 +37,7 @@ var partyCodeRegex = regexp.MustCompile(`^[A-Z0-9]{3}$`)
 func NewProviderID(id string) (*ProviderID, error) {
 	upperID := strings.ToUpper(id)
 	if !partyCodeRegex.MatchString(upperID) {
-		return nil, fmt.Errorf("invalid provider ID '%s': must be 3 alphanumeric characters", id)
+		return nil, fmt.Errorf("%w: '%s' must be 3 alphanumeric characters", ErrInvalidProviderID, id)
 	}
 	return &ProviderID{value: upperID}, nil
 }

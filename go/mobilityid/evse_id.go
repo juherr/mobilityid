@@ -33,7 +33,7 @@ func NewEvseID(id string) (*EvseID, error) {
 	if din, err := NewEvseIDDIN(id); err == nil {
 		return &EvseID{din: din}, nil
 	}
-	return nil, fmt.Errorf("'%s' is not a valid EvseID", id)
+	return nil, fmt.Errorf("%w: '%s' is neither a valid ISO nor a valid DIN EVSE id", ErrInvalidEvseID, id)
 }
 
 // NewEvseIDFromParts builds an EVSE ID from components, preferring ISO when both are valid.

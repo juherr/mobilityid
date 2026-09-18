@@ -45,7 +45,7 @@ func CalculateDIN7064ModXY(code string) (string, error) {
 	// The Scala test CheckDigitDin("INTNM" + "%06d".format(instance)) also implies this.
 	for _, r := range upperCode {
 		if _, ok := dinToNumericValue[r]; !ok {
-			return "", fmt.Errorf("invalid character '%c' in code '%s'; must consist of uppercase ASCII letters and digits", r, code)
+			return "", fmt.Errorf("%w: invalid character '%c' in '%s'; must consist of uppercase ASCII letters and digits", ErrInvalidCheckDigitInput, r, code)
 		}
 	}
 

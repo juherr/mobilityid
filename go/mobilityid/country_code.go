@@ -34,7 +34,7 @@ type CountryCode struct {
 func NewCountryCode(code string) (*CountryCode, error) {
 	normalized := strings.ToUpper(code)
 	if !isValidCountryCode(normalized) {
-		return nil, fmt.Errorf("'%s' is not a valid ISO 3166-1 alpha-2 country code", code)
+		return nil, fmt.Errorf("%w: '%s'", ErrInvalidCountryCode, code)
 	}
 	return &CountryCode{value: normalized}, nil
 }

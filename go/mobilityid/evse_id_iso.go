@@ -39,16 +39,16 @@ type EvseIDISO struct {
 func NewEvseIDISO(id string) (*EvseIDISO, error) {
 	matches := evseIDISORegex.FindStringSubmatch(strings.ToUpper(id))
 	if len(matches) != 4 {
-		return nil, fmt.Errorf("'%s' is not a valid ISO 15118 EvseID", id)
+		return nil, fmt.Errorf("%w: '%s' does not match the ISO 15118 format", ErrInvalidEvseID, id)
 	}
 
 	cc, err := NewCountryCode(matches[1])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
 	}
 	op, err := NewOperatorIDISO(matches[2])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidEvseID, id, err)
 	}
 
 	return &EvseIDISO{
@@ -62,18 +62,18 @@ func NewEvseIDISO(id string) (*EvseIDISO, error) {
 func NewEvseIDISOFromParts(countryCode string, operatorID string, powerOutletID string) (*EvseIDISO, error) {
 	cc, err := NewCountryCode(countryCode)
 	if err != nil {
-		return nil, fmt.Errorf("invalid countryCode for ISO format: %w", err)
+		return nil, fmt.Errorf("%w: invalid country code for ISO format: %w", ErrInvalidEvseID, err)
 	}
 
 	op, err := NewOperatorIDISO(operatorID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid operatorID for ISO format: %w", err)
+		return nil, fmt.Errorf("%w: invalid operator id for ISO format: %w", ErrInvalidEvseID, err)
 	}
 
 	normalizedPowerOutletID := strings.TrimPrefix(strings.ToUpper(powerOutletID), "E")
 
 	if !evseIDISOFromPartsPowerOutletRegex.MatchString(normalizedPowerOutletID) {
-		return nil, fmt.Errorf("invalid powerOutletID for ISO format")
+		return nil, fmt.Errorf("%w: invalid power outlet id '%s' for ISO format", ErrInvalidEvseID, powerOutletID)
 	}
 
 	return &EvseIDISO{

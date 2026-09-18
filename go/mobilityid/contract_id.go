@@ -43,7 +43,7 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 	upperID := strings.ToUpper(id)
 
 	if len(upperID) < minContractIDLength { // Basic length check
-		return nil, fmt.Errorf("'%s' is too short to be a valid ContractID", id)
+		return nil, fmt.Errorf("%w: '%s' is too short", ErrInvalidContractID, id)
 	}
 
 	parser, err := parserForStandard(standard)
@@ -55,7 +55,7 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 	matcher := parser.FullRegex()
 	matches := matcher.FindStringSubmatch(upperID) // Use upperID for matching
 	if len(matches) < 5 {                          // Expecting full match + 4 capturing groups: CC, PID_Suffix, InstanceValue, CheckDigit (optional)
-		return nil, fmt.Errorf("'%s' is not a valid Contract ID for %s format", id, parser.Name())
+		return nil, fmt.Errorf("%w: '%s' does not match the %s format", ErrInvalidContractID, id, parser.Name())
 	}
 
 	// Extract components (remembering groups start from 1)
@@ -67,12 +67,12 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 	// Validate CountryCode
 	cc, err := NewCountryCode(countryCodeStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid country code in ContractID '%s': %w", id, err)
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidContractID, id, err)
 	}
 
 	pid, err := NewProviderID(providerIDPartStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid provider ID '%s' in ContractID '%s': %w", providerIDPartStr, id, err)
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidContractID, id, err)
 	}
 
 	if err = parser.ValidateInstanceValue(instanceValueStr); err != nil {
@@ -82,14 +82,14 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 	// Compute and verify check digit
 	computedCD, err := parser.ComputeCheckDigit(countryCodeStr + pid.Value() + instanceValueStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute check digit for '%s': %w", id, err)
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidContractID, id, err)
 	}
 
 	var finalCheckDigit rune
 	if checkDigitStr != "" { // If check digit is present in input
 		inputCD := rune(checkDigitStr[0])
 		if inputCD != computedCD {
-			return nil, fmt.Errorf("given check digit '%c' is not equal to computed '%c' for '%s'", inputCD, computedCD, id)
+			return nil, fmt.Errorf("%w: given '%c' is not equal to computed '%c' for '%s'", ErrInvalidCheckDigit, inputCD, computedCD, id)
 		}
 		finalCheckDigit = inputCD
 	} else { // If check digit is optional and not provided in input
@@ -160,7 +160,7 @@ func (cid *ContractID) CheckDigit() rune {
 // PartyID returns the PartyID derived from the ContractID's CountryCode and ProviderID.
 func (cid *ContractID) PartyID() (*PartyID, error) {
 	if cid.countryCode == nil || cid.providerID == nil {
-		return nil, fmt.Errorf("cannot derive PartyID from incomplete ContractID")
+		return nil, fmt.Errorf("%w: cannot derive it from an incomplete contract id", ErrInvalidPartyID)
 	}
 	return NewPartyID(cid.countryCode.Value() + cid.providerID.Value())
 }
@@ -172,20 +172,20 @@ func (cid *ContractID) ToDIN() (*ContractID, error) {
 		return cid, nil
 	case ContractIDStandardISO:
 		if !strings.HasPrefix(cid.instanceValue, "00") {
-			return nil, fmt.Errorf("%s cannot be converted to %s format", cid.String(), DINParser.Name())
+			return nil, fmt.Errorf("%w: %s to %s format", ErrUnconvertibleContractID, cid.String(), DINParser.Name())
 		}
 		dinInstance := cid.instanceValue[2:8]
 		dinCheck := cid.instanceValue[8]
 		return NewContractID(fmt.Sprintf("%s-%s-%s-%c", cid.countryCode.Value(), cid.providerID.Value(), dinInstance, dinCheck), ContractIDStandardDIN)
 	case ContractIDStandardEMI3:
 		if !strings.HasPrefix(cid.instanceValue, "C0") {
-			return nil, fmt.Errorf("%s cannot be converted to %s format", cid.String(), DINParser.Name())
+			return nil, fmt.Errorf("%w: %s to %s format", ErrUnconvertibleContractID, cid.String(), DINParser.Name())
 		}
 		dinInstance := cid.instanceValue[2:8]
 		dinCheck := cid.instanceValue[8]
 		return NewContractID(fmt.Sprintf("%s-%s-%s-%c", cid.countryCode.Value(), cid.providerID.Value(), dinInstance, dinCheck), ContractIDStandardDIN)
 	default:
-		return nil, fmt.Errorf("unsupported ContractIDStandard: %v", cid.standard)
+		return nil, fmt.Errorf("%w: %v", ErrUnsupportedStandard, cid.standard)
 	}
 }
 
@@ -202,7 +202,7 @@ func (cid *ContractID) ToEMI3() (*ContractID, error) {
 	case ContractIDStandardISO:
 		return NewContractID(cid.String(), ContractIDStandardEMI3)
 	default:
-		return nil, fmt.Errorf("unsupported ContractIDStandard: %v", cid.standard)
+		return nil, fmt.Errorf("%w: %v", ErrUnsupportedStandard, cid.standard)
 	}
 }
 
@@ -219,7 +219,7 @@ func (cid *ContractID) ToISO() (*ContractID, error) {
 	case ContractIDStandardEMI3:
 		return NewContractID(cid.String(), ContractIDStandardISO)
 	default:
-		return nil, fmt.Errorf("unsupported ContractIDStandard: %v", cid.standard)
+		return nil, fmt.Errorf("%w: %v", ErrUnsupportedStandard, cid.standard)
 	}
 }
 
@@ -232,6 +232,6 @@ func parserForStandard(standard ContractIDStandard) (ContractIDParser, error) {
 	case ContractIDStandardDIN:
 		return DINParser, nil
 	default:
-		return nil, fmt.Errorf("unsupported ContractIDStandard: %v", standard)
+		return nil, fmt.Errorf("%w: %v", ErrUnsupportedStandard, standard)
 	}
 }

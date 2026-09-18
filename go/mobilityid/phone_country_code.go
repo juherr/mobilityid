@@ -33,7 +33,7 @@ var phoneCountryCodeRegex = regexp.MustCompile(`^\+?[0-9]{1,3}$`)
 // It returns an error if the value is not a valid E.164 country calling code.
 func NewPhoneCountryCode(code string) (*PhoneCountryCode, error) {
 	if !isValidPhoneCountryCode(code) {
-		return nil, fmt.Errorf("'%s' is not a valid E.164 phone country code", code)
+		return nil, fmt.Errorf("%w: '%s'", ErrInvalidPhoneCountryCode, code)
 	}
 	return &PhoneCountryCode{value: code}, nil
 }
