@@ -18,15 +18,24 @@ command below from `ts/`.
 
 ## Toolchain
 
-- Bun (package manager) + Vite+ (`vp`), Node 24 (`mise.toml`). Not pnpm, not bare Vitest.
-- TypeScript 6 is an explicit devDependency (Vite+ does not ship `tsc`); `tsconfig.json` sets
+- Bun (package manager, the version in `packageManager` is what `vp`/`setup-vp` run; `engines.bun`
+  is the consumer floor) + Vite+ (`vp`), Node 24 (`mise.toml`). Not pnpm, not bare Vitest.
+- `@vitest/coverage-v8` is pinned to the exact Vitest version Vite+ bundles (`vp --version`):
+  Vite+ refuses any other one at startup. Bump it by hand with the `vite-plus` update that moves
+  the bundled Vitest; Renovate is told not to touch it (`.github/renovate.json`).
+- TypeScript 6 is the supported baseline and an explicit devDependency (Vite+ does not ship
+  `tsc`); Renovate keeps it `<7`. TypeScript 7 is a compatibility canary only (`ts-next` job in
+  `ci-ts.yml`: TS 7 `tsc` on sources/tests/config, then `scripts/verify-package.sh` with it).
+  `tsconfig.json` sets
   `verbatimModuleSyntax`, `isolatedDeclarations` and `erasableSyntaxOnly` (`README.md`
   "TypeScript configuration"): exported functions and constants need explicit types, type-only
   imports use `import type`, no `enum`/`namespace`/parameter properties.
 - Oxlint with `@tony.ganchev/eslint-plugin-header` enforces the Apache header on `src/**` and `test/**`.
 - Header: `license-header.txt`, Julien Herr only (root `AGENTS.md` "Provenance"); `bun run check:headers` proves the gate.
 - CI (`.github/workflows/ci-ts.yml`): `vp check`, `vp test --coverage`, `vp pack`, `bun run lint`,
-  `bun run check:headers`, `bun run check:shape`, then `scripts/verify-package.sh` on Node 24.
+  `bun run check:headers`, `bun run check:shape`, then `scripts/verify-package.sh` on Node 24
+  (TypeScript 6, the baseline); a separate `ts-next` job repeats the type-check and the package
+  verification with the latest TypeScript 7.
 - Published to npm by the dispatched `Release` workflow through npm Trusted Publishing (OIDC, no token; `README.md` "Publishing to npm"); `package.json` version stays `0.0.0-development`. Only `dist/`, `README.md`, `LICENSE` (full Apache 2.0 text), `NOTICE` ship (`files`).
 
 ## Commands
