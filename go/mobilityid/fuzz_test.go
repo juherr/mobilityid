@@ -19,11 +19,11 @@ package mobilityid
 
 import (
 	"errors"
-	"regexp"
 	"testing"
 )
 
-var checkDigitCharRegex = regexp.MustCompile(`^[A-Z0-9]$`)
+// isCheckDigit reports whether cd is exactly one uppercase ASCII letter or digit.
+func isCheckDigit(cd string) bool { return len(cd) == 1 && isASCIIUpperOrDigit(rune(cd[0])) }
 
 // contractIDStandards enumerates the standards for the fuzz targets; the fuzzer picks one by
 // index so every generated input is tried against a known standard.
@@ -55,8 +55,8 @@ func FuzzNewContractID(f *testing.F) {
 		standard := contractIDStandards[int(standardIndex)%len(contractIDStandards)]
 		cid, err := NewContractID(id, standard)
 		if err != nil {
-			if !errors.Is(err, ErrInvalidContractID) && !errors.Is(err, ErrInvalidCheckDigit) {
-				t.Fatalf("NewContractID(%q, %v) error %v wraps no contract id sentinel", id, standard, err)
+			if !errors.Is(err, ErrInvalidContractID) {
+				t.Fatalf("NewContractID(%q, %v) error %v does not wrap ErrInvalidContractID", id, standard, err)
 			}
 			return
 		}
@@ -69,7 +69,7 @@ func FuzzNewContractID(f *testing.F) {
 				t.Fatalf("NewContractID(%q, %v) round-trips through %q as %q", id, standard, again, reparsed)
 			}
 		}
-		if !checkDigitCharRegex.MatchString(string(cid.CheckDigit())) {
+		if !isASCIIUpperOrDigit(cid.CheckDigit()) {
 			t.Fatalf("NewContractID(%q, %v) has check digit %q", id, standard, cid.CheckDigit())
 		}
 		if _, err := cid.PartyID(); err != nil {
@@ -143,7 +143,7 @@ func FuzzCalculateISO7064Mod37_2(f *testing.F) {
 			}
 			return
 		}
-		if !checkDigitCharRegex.MatchString(cd) {
+		if !isCheckDigit(cd) {
 			t.Fatalf("CalculateISO7064Mod37_2(%q) = %q, want one of [A-Z0-9]", code, cd)
 		}
 	})
@@ -161,7 +161,7 @@ func FuzzCalculateDIN7064ModXY(f *testing.F) {
 			}
 			return
 		}
-		if !checkDigitCharRegex.MatchString(cd) {
+		if !isCheckDigit(cd) {
 			t.Fatalf("CalculateDIN7064ModXY(%q) = %q, want one of [A-Z0-9]", code, cd)
 		}
 	})

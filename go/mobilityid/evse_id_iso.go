@@ -62,12 +62,12 @@ func NewEvseIDISO(id string) (*EvseIDISO, error) {
 func NewEvseIDISOFromParts(countryCode string, operatorID string, powerOutletID string) (*EvseIDISO, error) {
 	cc, err := NewCountryCode(countryCode)
 	if err != nil {
-		return nil, fmt.Errorf("%w: invalid country code for ISO format: %w", ErrInvalidEvseID, err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
 	op, err := NewOperatorIDISO(operatorID)
 	if err != nil {
-		return nil, fmt.Errorf("%w: invalid operator id for ISO format: %w", ErrInvalidEvseID, err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
 	normalizedPowerOutletID := strings.TrimPrefix(strings.ToUpper(powerOutletID), "E")
@@ -84,6 +84,9 @@ func NewEvseIDISOFromParts(countryCode string, operatorID string, powerOutletID 
 }
 
 func (eido *EvseIDISO) String() string {
+	if eido.countryCode == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s*%s*E%s", eido.countryCode.Value(), eido.operatorID.Value(), eido.powerOutletID)
 }
 

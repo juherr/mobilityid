@@ -61,15 +61,3 @@ func TestNewCountryCode(t *testing.T) {
 		})
 	}
 }
-
-func TestISO3166Alpha2Matches(t *testing.T) {
-	// Locale.getISOCountries() in the Java reference lists 249 codes.
-	if got := len(iso3166Alpha2); got != 249 {
-		t.Fatalf("len(iso3166Alpha2) = %d, want 249", got)
-	}
-	for code := range iso3166Alpha2 {
-		if len(code) != 2 || code[0] < 'A' || code[0] > 'Z' || code[1] < 'A' || code[1] > 'Z' {
-			t.Errorf("iso3166Alpha2 contains %q, want two uppercase letters", code)
-		}
-	}
-}

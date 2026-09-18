@@ -16,9 +16,9 @@ linters:
     govet:
       enable:
         - shadow
-    revive:
-      confidence: 0.8
     goheader:
+      # go-header keeps the " * " prefixes of a block comment and trims only the first line, so
+      # the template transcribes the header as extracted: "* " on line one, " * " afterwards.
       template: |-
         * Copyright (c) 2014 The New Motion team, and respective contributors
          * Copyright (c) 2026 Julien Herr, and respective contributors
@@ -37,12 +37,9 @@ linters:
 
 formatters:
   enable:
-    - gofmt
-    - gofumpt
+    - gofumpt # strict superset of gofmt -s
     - goimports
   settings:
-    gofmt:
-      simplify: true
     goimports:
       local-prefixes:
         - mobilityid.juherr.dev

@@ -80,8 +80,8 @@ which requires a dated section for the version below and a matching file in
   1.27); Go 1.25 is no longer supported. Error messages now start with the sentinel text
   (`invalid contract id: 'NL' is too short`).
 - **Go:** the module has no third-party dependency any more (`golang.org/x/text` dropped).
-- **Go:** `.golangci.yml` rewritten for the golangci-lint v2 schema with `gofmt`, `gofumpt` and
-  `goimports` as formatters and `errorlint`, `gocritic`, `copyloopvar`, `misspell` enabled;
+- **Go:** `.golangci.yml` rewritten for the golangci-lint v2 schema with `gofumpt` and `goimports`
+  as formatters and `errorlint`, `gocritic`, `copyloopvar`, `misspell` enabled;
   the license-header gate now really runs (the v1-layout settings were silently ignored). CI
   uses `golangci-lint-action` (2.13, tracked by Renovate), `go test -race -cover` and
   `govulncheck`.

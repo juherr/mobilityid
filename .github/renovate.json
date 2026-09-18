@@ -96,7 +96,8 @@
         "/^\\.github/workflows/.+\\.ya?ml$/"
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+version: (?<currentValue>v?[0-9.]+)"
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+version: (?<currentValue>v?[0-9.]+)",
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+run: go run [^@\\s]+@(?<currentValue>v[0-9.]+)"
       ]
     }
   ]

@@ -68,17 +68,9 @@ jobs:
       - name: Test
         run: go test -race -cover ./...
 
-      - name: Build
-        run: go build ./...
-
       - name: Vulnerability check
-        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
-        with:
-          go-version-input: 1.26.x
-          work-dir: go
-          go-package: ./...
-          # No cache in a publishing workflow (zizmor cache-poisoning).
-          cache: false
+        # renovate: datasource=go depName=golang.org/x/vuln
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 
       - name: Create GitHub release
         if: startsWith(github.ref, 'refs/tags/go/v')

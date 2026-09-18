@@ -20,11 +20,11 @@ and status are in `README.md`. Run every command below from `go/`.
 - `go.mod` declares the oldest Go version supported upstream (`go 1.26.0`), no `toolchain`
   directive; CI runs 1.26.x and 1.27.x with `GOTOOLCHAIN=local`. Bump the directive only when
   upstream drops the version. `mise.toml` pins the development Go and golangci-lint (2.13).
-- golangci-lint v2 config (`.golangci.yml`): formatters `gofmt`, `gofumpt`, `goimports`;
+- golangci-lint v2 config (`.golangci.yml`): formatters `gofumpt` (superset of `gofmt -s`) and `goimports`;
   `goheader` enforces the license header (block comment, both copyright lines).
 - No third-party dependency; keep it that way unless the domain requires one.
 - CI (`.github/workflows/ci-go.yml`): `golangci-lint-action` (version annotated for Renovate),
-  `go vet`, `go test -race -cover`, `go build`, `govulncheck-action`.
+  `go vet`, `go test -race -cover`, `govulncheck` (`go run …@vX`, version annotated for Renovate).
 - Releases use `go/vX.Y.Z` tags (`.github/workflows/release-go.yml`); the version follows the
   common `vX.Y.Z` line of the repository (never pick a Go-only number), see #70 for the
   published-version state.

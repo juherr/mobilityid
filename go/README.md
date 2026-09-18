@@ -89,9 +89,9 @@ entry points.
   toolchain. CI runs the two supported versions (1.26.x and 1.27.x) with `GOTOOLCHAIN=local`;
   `mise.toml` pins the development version.
 - **Quality gates** (`../.github/workflows/ci-go.yml`): `golangci-lint run` on the v2 config
-  (`.golangci.yml`: `gofmt`, `gofumpt` and `goimports` as formatters; `errorlint`, `gocritic`,
+  (`.golangci.yml`: `gofumpt` and `goimports` as formatters; `errorlint`, `gocritic`,
   `copyloopvar`, `misspell`, `revive`, `govet` with shadow checking and `goheader` for the
-  license header), `go vet`, `go test -race -cover`, `go build` and `govulncheck`.
+  license header), `go vet`, `go test -race -cover` and `govulncheck`.
 - **Tests:** standard `testing` package, table-driven; `Example*` functions with verified
   output; `Fuzz*` targets (parsers, `FromParts` builders, check digits) whose seeds run with
   `go test` and which can be explored with `go test ./... -run='^$' -fuzz=FuzzNewContractID

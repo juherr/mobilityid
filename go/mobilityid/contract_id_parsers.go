@@ -51,7 +51,7 @@ func (p isoParser) ComputeCheckDigit(s string) (rune, error) {
 
 func (p isoParser) ValidateInstanceValue(s string) error {
 	if !p.instanceRegex.MatchString(s) {
-		return fmt.Errorf("%w: '%s' is not a valid instance value for %s format (expected 9 alphanumeric)", ErrInvalidContractID, s, p.Name())
+		return fmt.Errorf("'%s' is not a valid instance value for %s format (expected 9 alphanumeric)", s, p.Name())
 	}
 	return nil
 }
@@ -75,7 +75,7 @@ func (p emi3Parser) ComputeCheckDigit(s string) (rune, error) {
 
 func (p emi3Parser) ValidateInstanceValue(s string) error {
 	if !p.instanceRegex.MatchString(s) {
-		return fmt.Errorf("%w: '%s' is not a valid instance value for %s format (expected 'C' + 8 alphanumeric)", ErrInvalidContractID, s, p.Name())
+		return fmt.Errorf("'%s' is not a valid instance value for %s format (expected 'C' + 8 alphanumeric)", s, p.Name())
 	}
 	return nil
 }
@@ -99,7 +99,7 @@ func (p dinParser) ComputeCheckDigit(s string) (rune, error) {
 
 func (p dinParser) ValidateInstanceValue(s string) error {
 	if !p.instanceRegex.MatchString(s) {
-		return fmt.Errorf("%w: '%s' is not a valid instance value for %s format (expected 6 alphanumeric)", ErrInvalidContractID, s, p.Name())
+		return fmt.Errorf("'%s' is not a valid instance value for %s format (expected 6 alphanumeric)", s, p.Name())
 	}
 	return nil
 }

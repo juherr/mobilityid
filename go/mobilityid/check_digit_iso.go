@@ -34,7 +34,7 @@ func CalculateISO7064Mod37_2(code string) (string, error) {
 	}
 
 	if len(upperCode) != len(p1s) {
-		return "", fmt.Errorf("%w: code must have a length of %d for ISO 7064 Mod 37, 2 calculation, got %d", ErrInvalidCheckDigitInput, len(p1s), len(upperCode))
+		return "", fmt.Errorf("%w: '%s' must have a length of %d for ISO 7064 Mod 37, 2 calculation, got %d", ErrInvalidCheckDigitInput, code, len(p1s), len(upperCode))
 	}
 
 	sumEq := func(ps []isoMatrix, f func(isoMatrix) isoVec) isoVec {

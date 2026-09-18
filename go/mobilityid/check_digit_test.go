@@ -56,29 +56,28 @@ func checkDigitFixtures(t *testing.T, name string) [][2]string {
 	return rows
 }
 
-func TestCalculateISO7064Mod37_2Fixtures(t *testing.T) {
-	for _, row := range checkDigitFixtures(t, "check-digit-iso.csv") {
-		got, err := CalculateISO7064Mod37_2(row[0])
-		if err != nil {
-			t.Errorf("CalculateISO7064Mod37_2(%q) error: %v", row[0], err)
-			continue
-		}
-		if got != row[1] {
-			t.Errorf("CalculateISO7064Mod37_2(%q) = %q, want %q", row[0], got, row[1])
-		}
+func TestCheckDigitFixtures(t *testing.T) {
+	algorithms := []struct {
+		name    string
+		fixture string
+		compute func(string) (string, error)
+	}{
+		{"ISO 7064 Mod 37,2", "check-digit-iso.csv", CalculateISO7064Mod37_2},
+		{"DIN 7064 Mod X,Y", "check-digit-din.csv", CalculateDIN7064ModXY},
 	}
-}
-
-func TestCalculateDIN7064ModXYFixtures(t *testing.T) {
-	for _, row := range checkDigitFixtures(t, "check-digit-din.csv") {
-		got, err := CalculateDIN7064ModXY(row[0])
-		if err != nil {
-			t.Errorf("CalculateDIN7064ModXY(%q) error: %v", row[0], err)
-			continue
-		}
-		if got != row[1] {
-			t.Errorf("CalculateDIN7064ModXY(%q) = %q, want %q", row[0], got, row[1])
-		}
+	for _, alg := range algorithms {
+		t.Run(alg.name, func(t *testing.T) {
+			for _, row := range checkDigitFixtures(t, alg.fixture) {
+				got, err := alg.compute(row[0])
+				if err != nil {
+					t.Errorf("%s(%q) error: %v", alg.name, row[0], err)
+					continue
+				}
+				if got != row[1] {
+					t.Errorf("%s(%q) = %q, want %q", alg.name, row[0], got, row[1])
+				}
+			}
+		})
 	}
 }
 

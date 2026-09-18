@@ -26,177 +26,169 @@ import (
 func TestSentinelErrors(t *testing.T) {
 	tests := []struct {
 		name  string
-		call  func() error
+		err   error
 		want  []error
 		input string
 	}{
 		{
 			name:  "country code",
-			call:  func() error { _, err := NewCountryCode("ZZ"); return err },
+			err:   errOf(NewCountryCode("ZZ")),
 			want:  []error{ErrInvalidCountryCode},
 			input: "ZZ",
 		},
 		{
 			name:  "phone country code",
-			call:  func() error { _, err := NewPhoneCountryCode("1234"); return err },
+			err:   errOf(NewPhoneCountryCode("1234")),
 			want:  []error{ErrInvalidPhoneCountryCode},
 			input: "1234",
 		},
 		{
 			name:  "provider id",
-			call:  func() error { _, err := NewProviderID("TN"); return err },
+			err:   errOf(NewProviderID("TN")),
 			want:  []error{ErrInvalidProviderID},
 			input: "TN",
 		},
 		{
 			name:  "operator id iso",
-			call:  func() error { _, err := NewOperatorIDISO("A|7"); return err },
+			err:   errOf(NewOperatorIDISO("A|7")),
 			want:  []error{ErrInvalidOperatorID},
 			input: "A|7",
 		},
 		{
 			name:  "operator id din",
-			call:  func() error { _, err := NewOperatorIDDIN("AB7"); return err },
+			err:   errOf(NewOperatorIDDIN("AB7")),
 			want:  []error{ErrInvalidOperatorID},
 			input: "AB7",
 		},
 		{
 			name:  "party id format",
-			call:  func() error { _, err := NewPartyID("NL-TNM-X"); return err },
+			err:   errOf(NewPartyID("NL-TNM-X")),
 			want:  []error{ErrInvalidPartyID},
 			input: "NL-TNM-X",
 		},
 		{
 			name:  "party id with unknown country",
-			call:  func() error { _, err := NewPartyID("ZZTNM"); return err },
+			err:   errOf(NewPartyID("ZZTNM")),
 			want:  []error{ErrInvalidPartyID, ErrInvalidCountryCode},
 			input: "ZZTNM",
 		},
 		{
 			name:  "contract id too short",
-			call:  func() error { _, err := NewContractID("NL", ContractIDStandardISO); return err },
+			err:   errOf(NewContractID("NL", ContractIDStandardISO)),
 			want:  []error{ErrInvalidContractID},
 			input: "NL",
 		},
 		{
 			name:  "contract id format",
-			call:  func() error { _, err := NewContractID("NL-TNM-00012204-U", ContractIDStandardISO); return err },
+			err:   errOf(NewContractID("NL-TNM-00012204-U", ContractIDStandardISO)),
 			want:  []error{ErrInvalidContractID},
 			input: "NL-TNM-00012204-U",
 		},
 		{
 			name:  "contract id with unknown country",
-			call:  func() error { _, err := NewContractID("ZZ-TNM-000122045-U", ContractIDStandardISO); return err },
+			err:   errOf(NewContractID("ZZ-TNM-000122045-U", ContractIDStandardISO)),
 			want:  []error{ErrInvalidContractID, ErrInvalidCountryCode},
 			input: "ZZ-TNM-000122045-U",
 		},
 		{
 			name:  "contract id instance value",
-			call:  func() error { _, err := NewContractID("NL-TNM-000122045-U", ContractIDStandardEMI3); return err },
+			err:   errOf(NewContractID("NL-TNM-000122045-U", ContractIDStandardEMI3)),
 			want:  []error{ErrInvalidContractID},
 			input: "000122045",
 		},
 		{
 			name:  "contract id check digit mismatch",
-			call:  func() error { _, err := NewContractID("NL-TNM-000122045-X", ContractIDStandardISO); return err },
-			want:  []error{ErrInvalidCheckDigit},
+			err:   errOf(NewContractID("NL-TNM-000122045-X", ContractIDStandardISO)),
+			want:  []error{ErrInvalidContractID, ErrInvalidCheckDigit},
 			input: "NL-TNM-000122045-X",
 		},
 		{
 			name:  "iso check digit input character",
-			call:  func() error { _, err := CalculateISO7064Mod37_2("NLTNM00012204*"); return err },
+			err:   errOf(CalculateISO7064Mod37_2("NLTNM00012204*")),
 			want:  []error{ErrInvalidCheckDigitInput},
 			input: "NLTNM00012204*",
 		},
 		{
 			name:  "iso check digit input length",
-			call:  func() error { _, err := CalculateISO7064Mod37_2("NLTNM"); return err },
+			err:   errOf(CalculateISO7064Mod37_2("NLTNM")),
 			want:  []error{ErrInvalidCheckDigitInput},
-			input: "5",
+			input: "NLTNM",
 		},
 		{
 			name:  "din check digit input character",
-			call:  func() error { _, err := CalculateDIN7064ModXY("NLTNM12204*"); return err },
+			err:   errOf(CalculateDIN7064ModXY("NLTNM12204*")),
 			want:  []error{ErrInvalidCheckDigitInput},
 			input: "NLTNM12204*",
 		},
 		{
 			name:  "evse id",
-			call:  func() error { _, err := NewEvseID("not an evse id"); return err },
+			err:   errOf(NewEvseID("not an evse id")),
 			want:  []error{ErrInvalidEvseID},
 			input: "not an evse id",
 		},
 		{
 			name:  "evse id iso with unknown country",
-			call:  func() error { _, err := NewEvseIDISO("ZZ*TNM*E840*6487"); return err },
+			err:   errOf(NewEvseIDISO("ZZ*TNM*E840*6487")),
 			want:  []error{ErrInvalidEvseID, ErrInvalidCountryCode},
 			input: "ZZ*TNM*E840*6487",
 		},
 		{
 			name:  "evse id din from parts with invalid phone country code",
-			call:  func() error { _, err := NewEvseIDDINFromParts("1234", "745", "840*6487"); return err },
+			err:   errOf(NewEvseIDDINFromParts("1234", "745", "840*6487")),
 			want:  []error{ErrInvalidEvseID, ErrInvalidPhoneCountryCode},
 			input: "+1234",
 		},
 		{
 			name:  "evse id iso from parts power outlet",
-			call:  func() error { _, err := NewEvseIDISOFromParts("NL", "TNM", "840|6487"); return err },
+			err:   errOf(NewEvseIDISOFromParts("NL", "TNM", "840|6487")),
 			want:  []error{ErrInvalidEvseID},
 			input: "840|6487",
 		},
 		{
 			name:  "evse id din from parts operator",
-			call:  func() error { _, err := NewEvseIDDINFromParts("31", "AB7", "840*6487"); return err },
+			err:   errOf(NewEvseIDDINFromParts("31", "AB7", "840*6487")),
 			want:  []error{ErrInvalidEvseID, ErrInvalidOperatorID},
 			input: "AB7",
 		},
 		{
 			name:  "evse id from parts",
-			call:  func() error { _, err := NewEvseIDFromParts("ZZ", "TNM", "840*6487"); return err },
+			err:   errOf(NewEvseIDFromParts("ZZ", "TNM", "840*6487")),
 			want:  []error{ErrInvalidEvseID},
 			input: "ZZ",
 		},
 		{
-			name: "unconvertible iso contract id",
-			call: func() error {
-				cid, err := NewContractID("NL-TNM-123122045-R", ContractIDStandardISO)
-				if err != nil {
-					return err
-				}
-				_, err = cid.ToDIN()
-				return err
-			},
+			name:  "unconvertible iso contract id",
+			err:   errOf(must(NewContractID("NL-TNM-123122045-R", ContractIDStandardISO)).ToDIN()),
 			want:  []error{ErrUnconvertibleContractID},
 			input: "NL-TNM-123122045-R",
 		},
 		{
-			name: "unsupported standard",
-			call: func() error {
-				_, err := NewContractID("NL-TNM-000122045-U", unsupportedStandard{})
-				return err
-			},
-			want:  []error{ErrUnsupportedStandard},
+			name:  "unsupported standard",
+			err:   errOf(NewContractID("NL-TNM-000122045-U", unsupportedStandard{})),
+			want:  []error{ErrInvalidContractID, ErrUnsupportedStandard},
 			input: "unsupported",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.call()
-			if err == nil {
+			if tt.err == nil {
 				t.Fatal("expected an error")
 			}
 			for _, want := range tt.want {
-				if !errors.Is(err, want) {
-					t.Errorf("errors.Is(%v, %v) = false", err, want)
+				if !errors.Is(tt.err, want) {
+					t.Errorf("errors.Is(%v, %v) = false", tt.err, want)
 				}
 			}
-			if !strings.Contains(err.Error(), tt.input) {
-				t.Errorf("error %q does not name the input %q", err, tt.input)
+			if !strings.Contains(tt.err.Error(), tt.input) {
+				t.Errorf("error %q does not name the input %q", tt.err, tt.input)
 			}
 		})
 	}
 }
+
+// errOf keeps only the error of a constructor call, for the table above.
+func errOf[T any](_ T, err error) error { return err }
 
 // unsupportedStandard cannot be built outside the package; it stands for a standard the
 // conversions do not know about.

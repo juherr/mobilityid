@@ -41,14 +41,6 @@ func init() {
 func CalculateDIN7064ModXY(code string) (string, error) {
 	upperCode := strings.ToUpper(code)
 
-	// Based on Scala's implementation, it expects only ASCII uppercase and digits.
-	// The Scala test CheckDigitDin("INTNM" + "%06d".format(instance)) also implies this.
-	for _, r := range upperCode {
-		if _, ok := dinToNumericValue[r]; !ok {
-			return "", fmt.Errorf("%w: invalid character '%c' in '%s'; must consist of uppercase ASCII letters and digits", ErrInvalidCheckDigitInput, r, code)
-		}
-	}
-
 	// Weighted sum of the character values with growing powers of two, as in the reference
 	// (DIN SPEC 91286): a digit d at coefficient c adds d*2^c and advances c by one; a letter
 	// splits into tens and units, adds tens*2^c + units*2^(c+1) and advances c by two. The
@@ -56,26 +48,29 @@ func CalculateDIN7064ModXY(code string) (string, error) {
 	// payload but overflows on long inputs; reducing every step modulo 11 gives the same result
 	// on the domain and a valid digit for any length.
 	const modulus = 11
-	sum := 0
-	weight := 1 // 2^coefficient mod 11
+	sum, weight := 0, 1 // weight is 2^coefficient mod 11
+	step := func(value int) {
+		sum = (sum + value*weight) % modulus
+		weight = weight * 2 % modulus
+	}
 	for _, r := range upperCode {
-		current := dinToNumericValue[r]
+		// Only ASCII uppercase letters and digits, as in the Scala implementation.
+		current, ok := dinToNumericValue[r]
+		if !ok {
+			return "", fmt.Errorf("%w: invalid character '%c' in '%s'; must consist of uppercase ASCII letters and digits", ErrInvalidCheckDigitInput, r, code)
+		}
 		if current < 10 {
-			sum = (sum + current*weight) % modulus
-			weight = weight * 2 % modulus
+			step(current)
 		} else {
-			sum = (sum + (current/10)*weight) % modulus
-			weight = weight * 2 % modulus
-			sum = (sum + (current%10)*weight) % modulus
-			weight = weight * 2 % modulus
+			step(current / 10)
+			step(current % 10)
 		}
 	}
-	mod := sum
 
-	if mod >= 10 {
+	if sum >= 10 {
 		return "X", nil
 	}
-	return strconv.Itoa(mod), nil
+	return strconv.Itoa(sum), nil
 }
 
 // VerifyDIN7064ModXY verifies an input string against its DIN 7064 Mod X, Y check digit.

@@ -21,6 +21,7 @@ import (
 	"encoding"
 	"encoding/json"
 	"errors"
+	"maps"
 	"testing"
 )
 
@@ -110,23 +111,21 @@ func TestJSONRoundTrip(t *testing.T) {
 	if err = json.Unmarshal(encoded, &out); err != nil {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
-	checks := map[string][2]string{
-		"country":   {out.Country.String(), "NL"},
-		"phone":     {out.Phone.String(), "+31"},
-		"provider":  {out.Provider.String(), "TNM"},
-		"opIso":     {out.OpISO.String(), "AB7"},
-		"opDin":     {out.OpDIN.String(), "745"},
-		"party":     {out.Party.String(), "NL-TNM"},
-		"evse":      {out.Evse.String(), "DE*AB7*E840*6487"},
-		"evseIso":   {out.EvseISO.String(), "NL*TNM*E840*6487"},
-		"evseDin":   {out.EvseDIN.String(), "+31*745*840*6487"},
-		"byValue":   {out.ByValue.String(), "NL"},
-		"evseValue": {out.EvseValue.String(), "DE*AB7*E840*6487"},
+	// The decoded identifiers re-encode to the same values (field order differs because the
+	// shadowing Contract string is emitted last).
+	reencoded, err := json.Marshal(out)
+	if err != nil {
+		t.Fatalf("json.Marshal() of the decoded struct error = %v", err)
 	}
-	for field, c := range checks {
-		if c[0] != c[1] {
-			t.Errorf("%s decoded as %q, want %q", field, c[0], c[1])
-		}
+	var got, expected map[string]string
+	if err = json.Unmarshal(reencoded, &got); err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal([]byte(want), &expected); err != nil {
+		t.Fatal(err)
+	}
+	if !maps.Equal(got, expected) {
+		t.Fatalf("decoded then re-encoded = %s, want %s", reencoded, want)
 	}
 	if !out.Evse.IsISO() {
 		t.Error("decoded EvseID should be ISO")
@@ -144,22 +143,22 @@ func TestUnmarshalTextRejectsInvalidInput(t *testing.T) {
 	tests := []struct {
 		name string
 		json string
-		into func() (any, error)
+		into any
 		want error
 	}{
-		{"country", `"ZZ"`, func() (any, error) { var v CountryCode; return &v, json.Unmarshal([]byte(`"ZZ"`), &v) }, ErrInvalidCountryCode},
-		{"phone", `"1234"`, func() (any, error) { var v PhoneCountryCode; return &v, json.Unmarshal([]byte(`"1234"`), &v) }, ErrInvalidPhoneCountryCode},
-		{"provider", `"TN"`, func() (any, error) { var v ProviderID; return &v, json.Unmarshal([]byte(`"TN"`), &v) }, ErrInvalidProviderID},
-		{"operator iso", `"A|7"`, func() (any, error) { var v OperatorIDISO; return &v, json.Unmarshal([]byte(`"A|7"`), &v) }, ErrInvalidOperatorID},
-		{"operator din", `"AB7"`, func() (any, error) { var v OperatorIDDIN; return &v, json.Unmarshal([]byte(`"AB7"`), &v) }, ErrInvalidOperatorID},
-		{"party", `"ZZTNM"`, func() (any, error) { var v PartyID; return &v, json.Unmarshal([]byte(`"ZZTNM"`), &v) }, ErrInvalidPartyID},
-		{"evse", `"nope"`, func() (any, error) { var v EvseID; return &v, json.Unmarshal([]byte(`"nope"`), &v) }, ErrInvalidEvseID},
-		{"evse iso", `"+31*745*840"`, func() (any, error) { var v EvseIDISO; return &v, json.Unmarshal([]byte(`"+31*745*840"`), &v) }, ErrInvalidEvseID},
-		{"evse din", `"NL*TNM*E840"`, func() (any, error) { var v EvseIDDIN; return &v, json.Unmarshal([]byte(`"NL*TNM*E840"`), &v) }, ErrInvalidEvseID},
+		{"country", `"ZZ"`, &CountryCode{}, ErrInvalidCountryCode},
+		{"phone", `"1234"`, &PhoneCountryCode{}, ErrInvalidPhoneCountryCode},
+		{"provider", `"TN"`, &ProviderID{}, ErrInvalidProviderID},
+		{"operator iso", `"A|7"`, &OperatorIDISO{}, ErrInvalidOperatorID},
+		{"operator din", `"AB7"`, &OperatorIDDIN{}, ErrInvalidOperatorID},
+		{"party", `"ZZTNM"`, &PartyID{}, ErrInvalidPartyID},
+		{"evse", `"nope"`, &EvseID{}, ErrInvalidEvseID},
+		{"evse iso", `"+31*745*840"`, &EvseIDISO{}, ErrInvalidEvseID},
+		{"evse din", `"NL*TNM*E840"`, &EvseIDDIN{}, ErrInvalidEvseID},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.into()
+			err := json.Unmarshal([]byte(tt.json), tt.into)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("json.Unmarshal(%s) error = %v, want errors.Is %v", tt.json, err, tt.want)
 			}

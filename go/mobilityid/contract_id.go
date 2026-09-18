@@ -18,6 +18,7 @@
 package mobilityid
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -38,12 +39,23 @@ type ContractID struct {
 const minContractIDLength = 4 // Keep for basic sanity check
 
 // NewContractID creates a new ContractID if the provided value is valid for the given standard.
-// It returns an error if the value does not conform to the expected format and validation rules.
+// Every failure wraps ErrInvalidContractID and the error of the failing part (an unknown
+// country also satisfies ErrInvalidCountryCode, a wrong check digit ErrInvalidCheckDigit, ...).
 func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) {
+	cid, err := parseContractID(id, standard)
+	if err != nil {
+		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidContractID, id, err)
+	}
+	return cid, nil
+}
+
+// parseContractID does the work of NewContractID and returns the bare error of the failing
+// part; NewContractID adds the contract id sentinel and the input once.
+func parseContractID(id string, standard ContractIDStandard) (*ContractID, error) {
 	upperID := strings.ToUpper(id)
 
 	if len(upperID) < minContractIDLength { // Basic length check
-		return nil, fmt.Errorf("%w: '%s' is too short", ErrInvalidContractID, id)
+		return nil, errors.New("too short")
 	}
 
 	parser, err := parserForStandard(standard)
@@ -52,10 +64,9 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 	}
 
 	// Use the parser's FullRegex to match and extract components
-	matcher := parser.FullRegex()
-	matches := matcher.FindStringSubmatch(upperID) // Use upperID for matching
-	if len(matches) < 5 {                          // Expecting full match + 4 capturing groups: CC, PID_Suffix, InstanceValue, CheckDigit (optional)
-		return nil, fmt.Errorf("%w: '%s' does not match the %s format", ErrInvalidContractID, id, parser.Name())
+	matches := parser.FullRegex().FindStringSubmatch(upperID)
+	if len(matches) < 5 { // Expecting full match + 4 capturing groups: CC, PID_Suffix, InstanceValue, CheckDigit (optional)
+		return nil, fmt.Errorf("does not match the %s format", parser.Name())
 	}
 
 	// Extract components (remembering groups start from 1)
@@ -64,15 +75,14 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 	instanceValueStr := matches[3]
 	checkDigitStr := matches[4] // This might be empty if check digit is optional
 
-	// Validate CountryCode
 	cc, err := NewCountryCode(countryCodeStr)
 	if err != nil {
-		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidContractID, id, err)
+		return nil, err
 	}
 
 	pid, err := NewProviderID(providerIDPartStr)
 	if err != nil {
-		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidContractID, id, err)
+		return nil, err
 	}
 
 	if err = parser.ValidateInstanceValue(instanceValueStr); err != nil {
@@ -82,24 +92,19 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 	// Compute and verify check digit
 	computedCD, err := parser.ComputeCheckDigit(countryCodeStr + pid.Value() + instanceValueStr)
 	if err != nil {
-		return nil, fmt.Errorf("%w: '%s': %w", ErrInvalidContractID, id, err)
+		return nil, err
 	}
 
-	var finalCheckDigit rune
+	finalCheckDigit := computedCD
 	if checkDigitStr != "" { // If check digit is present in input
 		inputCD := rune(checkDigitStr[0])
 		if inputCD != computedCD {
-			return nil, fmt.Errorf("%w: given '%c' is not equal to computed '%c' for '%s'", ErrInvalidCheckDigit, inputCD, computedCD, id)
+			return nil, fmt.Errorf("%w: given '%c' is not equal to computed '%c'", ErrInvalidCheckDigit, inputCD, computedCD)
 		}
 		finalCheckDigit = inputCD
-	} else { // If check digit is optional and not provided in input
-		// In Scala, if check digit is None, it uses the computed one.
-		// So we use the computed one for the final ContractID object.
-		finalCheckDigit = computedCD
-	}
+	} // In Scala, an absent check digit means the computed one.
 
 	result := &ContractID{
-		value:         upperID,
 		standard:      standard,
 		countryCode:   cc,
 		providerID:    pid,
@@ -112,6 +117,9 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 
 // String returns the canonical string representation of the ContractID, formatted as "CC-PS-IV-CD".
 func (cid *ContractID) String() string {
+	if cid.countryCode == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s-%s-%s-%c", cid.countryCode.Value(), cid.providerID.String(), cid.instanceValue, cid.checkDigit)
 }
 

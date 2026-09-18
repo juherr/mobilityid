@@ -53,6 +53,9 @@ func NewPartyID(id string) (*PartyID, error) {
 
 // String returns the canonical string representation of the PartyID.
 func (pid *PartyID) String() string {
+	if pid.countryCode == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s-%s", pid.countryCode.Value(), pid.partyCode)
 }
 

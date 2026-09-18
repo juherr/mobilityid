@@ -71,12 +71,12 @@ func NewEvseIDDINFromParts(countryCode string, operatorID string, powerOutletID 
 
 	cc, err := NewPhoneCountryCode(ccRaw)
 	if err != nil {
-		return nil, fmt.Errorf("%w: invalid country code for DIN format: %w", ErrInvalidEvseID, err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
 	op, err := NewOperatorIDDIN(operatorID)
 	if err != nil {
-		return nil, fmt.Errorf("%w: invalid operator id for DIN format: %w", ErrInvalidEvseID, err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
 	normalizedPowerOutletID := strings.ToUpper(powerOutletID)
@@ -92,6 +92,9 @@ func NewEvseIDDINFromParts(countryCode string, operatorID string, powerOutletID 
 }
 
 func (eidd *EvseIDDIN) String() string {
+	if eidd.countryCode == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s*%s*%s", eidd.countryCode.Value(), eidd.operatorID.Value(), eidd.powerOutletID)
 }
 
