@@ -3,9 +3,12 @@
 #   artifactId defaults to mobilityid4j (Gradle: pom, jar, sources, javadoc and .module metadata).
 #   --no-module drops the Gradle module metadata payload (sbt artifacts do not publish one).
 # Exit 0: every payload of every artifact for <version> resolves from Maven Central.
-# Exit 1: Central answered and at least one payload is absent.
+# Exit 1: Central answered and no payload exists: the version was never published.
+# Exit 3: Central answered and only some payloads exist: propagation in progress, or a previous
+#         upload. Callers must wait, never publish again.
 # Exit 2: Central could not be questioned, or missing version. Callers must not read 2 as "absent":
 #         deploying on a transport failure would republish an already published version.
+# Every payload is queried (no short-circuit) so that 1 really means "nothing exists".
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
@@ -45,12 +48,25 @@ resolves() {
   esac
 }
 
+present=0
+absent=0
 for artifact in "${artifacts[@]}"; do
   base="${base_url}/${artifact}/${version}/${artifact}-${version}"
   for payload in "${payloads[@]}"; do
-    if ! resolves "${base}${payload}"; then
-      echo "Not published to Maven Central: ${base}${payload}" >&2
-      exit 1
+    if resolves "${base}${payload}"; then
+      present=$((present + 1))
+    else
+      echo "Not on Maven Central: ${base}${payload}" >&2
+      absent=$((absent + 1))
     fi
   done
 done
+if (( absent == 0 )); then
+  exit 0
+fi
+if (( present == 0 )); then
+  echo "Version ${version} is not published to Maven Central." >&2
+  exit 1
+fi
+echo "Version ${version} is partially visible on Maven Central (${present} payloads present, ${absent} absent): propagation in progress or an earlier upload; never publish it again." >&2
+exit 3

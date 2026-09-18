@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Exercises scripts/wait-central-release.sh against a local HTTP stub:
-#   resolvable -> 0 on the first attempt; absent after every attempt -> 1; unreachable -> 1 (kept
-#   polling, never mistaken for "published"); no version -> 2.
+#   resolvable -> 0 on the first attempt; absent or partially visible after every attempt -> 1;
+#   unreachable -> 1 (kept polling, never mistaken for "published"); no version -> 2.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -17,7 +17,13 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 class Stub(BaseHTTPRequestHandler):
     def do_HEAD(self):
         mode = self.path.split("/")[1]
-        self.send_response(200 if mode == "ok" else 404)
+        if mode == "ok":
+            code = 200
+        elif mode == "partial":
+            code = 404 if self.path.endswith("-javadoc.jar") else 200
+        else:
+            code = 404
+        self.send_response(code)
         self.end_headers()
     def log_message(self, *args):
         pass
@@ -47,6 +53,7 @@ base="http://127.0.0.1:${port}"
 expect 0 ok "${base}/ok/dev/juherr/mobilityid" 1.2.3
 expect 0 ok-scala "${base}/ok/dev/juherr/mobilityid" 1.2.3 --no-module mobilityid_2.13 mobilityid_3
 expect 1 absent "${base}/absent/dev/juherr/mobilityid" 1.2.3
+expect 1 partial "${base}/partial/dev/juherr/mobilityid" 1.2.3
 expect 1 unreachable "http://127.0.0.1:1/dev/juherr/mobilityid" 1.2.3
 expect 2 usage "${base}/ok/dev/juherr/mobilityid"
 

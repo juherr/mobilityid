@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Usage: wait-central-release.sh <version> [check-central-release.sh arguments...]
-# Polls Maven Central until every payload of the version resolves (exit 0). A transient failure to
-# question Central counts as "not yet". Exit 1 when the artifacts are still absent after the last
-# attempt (CENTRAL_WAIT_ATTEMPTS, default 60, every CENTRAL_WAIT_SECONDS, default 30).
+# Polls Maven Central until every payload of the version resolves (exit 0). Absent, partially
+# visible or unreachable all count as "not yet". Exit 1 when the artifacts are still not fully
+# visible after the last attempt (CENTRAL_WAIT_ATTEMPTS, default 120, every CENTRAL_WAIT_SECONDS,
+# default 60: the Central Portal documents "10 minutes to a few hours" before repo1 serves a release).
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
@@ -10,8 +11,8 @@ if [[ $# -lt 1 ]]; then
   exit 2
 fi
 
-attempts=${CENTRAL_WAIT_ATTEMPTS:-60}
-interval=${CENTRAL_WAIT_SECONDS:-30}
+attempts=${CENTRAL_WAIT_ATTEMPTS:-120}
+interval=${CENTRAL_WAIT_SECONDS:-60}
 check="$(dirname "$0")/check-central-release.sh"
 
 for attempt in $(seq 1 "${attempts}"); do

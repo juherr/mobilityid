@@ -14,6 +14,10 @@ which requires a dated section for the version below and a matching file in
   `RemoveUnused`), fatal compiler warnings on both Scala versions, license headers on test
   sources too, and MiMa binary-compatibility checks of `core` and `interpolators` against the
   last release on Maven Central (skipped until the first one).
+- **Release:** the Maven Central jobs (Java and Scala) distinguish a version that is fully
+  visible (skipped), never published (uploaded), partially visible (a previous upload still
+  propagating: waited for, never uploaded again) or unknown (refused), and wait up to two
+  hours for repo1 to serve a release instead of thirty minutes (`scripts/wait-central-release.sh`).
 - **Release:** the `Release` workflow now also publishes Scala to Maven Central: a `Preflight
   Scala` job runs `scala/scripts/verify.sh` (full gate on Scala 2.13 and 3, release guard
   wiring proof, consumer smoke from an isolated repository), then `Release Scala` stages both

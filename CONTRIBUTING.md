@@ -86,7 +86,13 @@ Go is released from `go/vX.Y.Z` tags by `Release Go`.
    the Java and Scala artifacts and creates the signed `vX.Y.Z` tag and the GitHub Release. A
    failing preflight, including a missing secret, leaves every registry untouched.
 3. Re-run a failed run with `gh run rerun <run-id> --failed` rather than dispatching again, so the
-   tag still points at the commit that produced the published artifacts.
+   tag still points at the commit that produced the published artifacts. The Maven Central jobs
+   query repo1 first (`scripts/check-central-release.sh`): a version whose every payload is
+   visible is skipped, one with no payload at all is uploaded, one that is only partially
+   visible (a previous upload still propagating) is waited for and never uploaded again, and an
+   unreachable Central refuses to upload. Propagation to repo1 can take from ten minutes to a
+   few hours: `scripts/wait-central-release.sh` polls for up to two hours before failing the job,
+   and a re-run after that simply resumes the wait.
 
 The `maven-central` environment provides `CENTRAL_USERNAME`, `CENTRAL_TOKEN` (a Central Portal
 user token), `GPG_PRIVATE_KEY` (armored) and `GPG_PASSPHRASE`, shared by the Java and Scala
