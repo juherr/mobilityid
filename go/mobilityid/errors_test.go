@@ -132,12 +132,9 @@ func TestSentinelErrors(t *testing.T) {
 			want:  []error{ErrInvalidEvseID, ErrInvalidCountryCode},
 			input: "ZZ*TNM*E840*6487",
 		},
-		{
-			name:  "evse id with invalid DIN operator keeps the DIN cause",
-			err:   errOf(NewEvseIDDIN("+31*AB7*840")),
-			want:  []error{ErrInvalidEvseID},
-			input: "+31*AB7*840",
-		},
+		// No DIN counterpart through NewEvseID/NewEvseIDDIN: the DIN regex already constrains
+		// the phone country code and the operator id exactly like their constructors, so a DIN
+		// component failure is only reachable through NewEvseIDDINFromParts (cases below).
 		{
 			name:  "evse id iso with unknown country",
 			err:   errOf(NewEvseIDISO("ZZ*TNM*E840*6487")),

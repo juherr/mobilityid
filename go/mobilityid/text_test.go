@@ -166,6 +166,14 @@ func TestUnmarshalTextRejectsInvalidInput(t *testing.T) {
 	}
 }
 
+func TestUnmarshalTextKeepsComponentCause(t *testing.T) {
+	var eid EvseID
+	err := json.Unmarshal([]byte(`"ZZ*TNM*E840*6487"`), &eid)
+	if !errors.Is(err, ErrInvalidEvseID) || !errors.Is(err, ErrInvalidCountryCode) {
+		t.Fatalf("json.Unmarshal() error = %v, want ErrInvalidEvseID and ErrInvalidCountryCode", err)
+	}
+}
+
 func TestUnmarshalTextNormalizes(t *testing.T) {
 	var cc CountryCode
 	if err := cc.UnmarshalText([]byte("nl")); err != nil {
