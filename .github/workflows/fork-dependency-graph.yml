@@ -1,0 +1,137 @@
+name: Fork Dependency Graph
+
+# Submits the Java dependency graph of pull requests whose `pull_request` run has a read-only
+# GITHUB_TOKEN (forks and Dependabot), then runs the Java dependency review for them. The
+# unprivileged run of `dependency-submission.yml` uploads the graph as a workflow artifact;
+# this privileged run downloads only that artifact and submits it once
+# scripts/validate-dependency-graph-provenance.sh has bound it to the triggering run and its
+# pull request (the checks and the threat model are documented there, the policy in
+# CONTRIBUTING.md). No fork code runs here: the checkout is a sparse checkout of the default
+# branch limited to `scripts/`, and the only untrusted input is that JSON file, whose size is
+# not bounded before download (worst case: this job's `timeout-minutes`).
+#
+# A `workflow_run` workflow only triggers from the default branch, so changes to this file
+# only take effect once merged.
+on:
+  workflow_run: # zizmor: ignore[dangerous-triggers] no checkout of the triggering ref; the artifact is validated before use
+    workflows:
+      - Dependency Submission
+    types:
+      - completed
+
+permissions: {}
+
+concurrency:
+  group: fork-dependency-graph-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+env:
+  # Job correlator gradle/actions derives from the triggering workflow and job names
+  # (`Dependency Submission` / `java-graph`); the artifact is named after it.
+  CORRELATOR: dependency_submission-java-graph
+
+jobs:
+  submit:
+    name: Submit the Java dependency graph
+    # Same-repository pull requests submitted their graph themselves; cancelled runs left no
+    # artifact (the concurrency group of the triggering workflow supersedes them).
+    if: >-
+      github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion != 'cancelled'
+      && (github.event.workflow_run.head_repository.full_name != github.repository
+          || github.event.workflow_run.actor.login == 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: read
+    outputs:
+      base-sha: ${{ steps.provenance.outputs.base_sha }}
+
+    steps:
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Download the uploaded graph
+        id: download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "dependency-graph_${CORRELATOR}.json" --dir snapshot
+          # The artifact keeps the workspace-relative path of the report (gradle/actions default
+          # `dependency-graph-report-dir`); anything else packed into it is ignored.
+          snapshot="snapshot/dependency-graph-reports/${CORRELATOR}.json"
+          if [[ ! -f "${snapshot}" ]]; then
+            echo "::error::${snapshot} is missing from the artifact"
+            exit 1
+          fi
+          echo "snapshot=${snapshot}" >> "$GITHUB_OUTPUT"
+
+      - name: List the open pull requests of the head branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/pulls?head=${HEAD_OWNER}:${HEAD_BRANCH}&state=open" > pulls.json
+
+      - name: Validate the snapshot provenance
+        id: provenance
+        env:
+          SNAPSHOT: ${{ steps.download.outputs.snapshot }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        run: |
+          scripts/validate-dependency-graph-provenance.sh \
+            "$SNAPSHOT" pulls.json "$HEAD_SHA" "$RUN_ID" "$CORRELATOR" "$HEAD_REPO" \
+            >> "$GITHUB_OUTPUT"
+
+      - name: Verify the snapshot carries the resolved transitive dependencies
+        env:
+          SNAPSHOT: ${{ steps.download.outputs.snapshot }}
+        run: scripts/verify-dependency-graph.sh "$SNAPSHOT"
+
+      - name: Submit the snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SNAPSHOT: ${{ steps.download.outputs.snapshot }}
+        # The API answers 201 even when it rejects the snapshot (`result: INVALID`), so the
+        # response body is checked rather than the status code.
+        run: |
+          gh api --method POST "repos/$GITHUB_REPOSITORY/dependency-graph/snapshots" \
+            --input "$SNAPSHOT" > response.json
+          result=$(jq -r '.result // "MISSING"' response.json)
+          echo "Submitted $SNAPSHOT: ${result} ($(jq -r '.message // ""' response.json))"
+          if [[ "${result}" != "SUCCESS" && "${result}" != "ACCEPTED" ]]; then
+            echo "::error::Dependency Submission API did not accept the snapshot: ${result}"
+            exit 1
+          fi
+
+  review:
+    name: Java dependency review
+    # Same gate as `Dependency review` in dependency-submission.yml (keep the thresholds in
+    # sync), on the snapshot just submitted; separate job so the review action never holds
+    # `contents: write`.
+    needs: submit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Dependency Review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          base-ref: ${{ needs.submit.outputs.base-sha }}
+          head-ref: ${{ github.event.workflow_run.head_sha }}
+          fail-on-severity: high
+          fail-on-scopes: runtime, development, unknown
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 120
