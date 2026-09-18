@@ -9,17 +9,23 @@
 #   - `job.id` is the triggering run id and `job.correlator` the expected job correlator;
 #   - pull request <N> is in the given list (`GET /repos/{owner}/{repo}/pulls?head=<owner>:<branch>`),
 #     open, with that head sha and coming from the expected head repository;
+#   - when the triggering run knows its pull requests (`workflow_run.pull_requests`, populated for
+#     same-repository and Dependabot runs, empty for forks), <N> is one of them. Several open pull
+#     requests can share one head: for a fork run the list is empty and any open sibling of the
+#     same fork on the same commit is accepted, which cannot change what the snapshot describes nor
+#     the commit it is attached to (snapshots are keyed by sha; `ref` is metadata);
 #   - every manifest `source_location` is a canonical repository-relative path under `java/`
 #     (no `..`, `.` or `//` segment, not absolute): the fork may only describe the Java graph of
 #     its own pull request, not shadow the manifests GitHub parses itself (npm, Composer, Go,
 #     Actions) through a path such as `java/../ts/package.json`.
 # The content itself (resolved transitive dependencies) is the job of verify-dependency-graph.sh.
 # Exit 0 when accepted, 1 when rejected, 2 on usage error.
-# Usage: validate-dependency-graph-provenance.sh <snapshot.json> <pulls.json> <head-sha> <run-id> <correlator> <head-repo>
+# Usage: validate-dependency-graph-provenance.sh <snapshot.json> <pulls.json> <head-sha> <run-id> <correlator> <head-repo> <trusted-pull-numbers>
+#   <trusted-pull-numbers>: comma-separated, may be empty.
 set -euo pipefail
 
-if [[ $# -ne 6 ]]; then
-  echo "Usage: $0 <snapshot.json> <pulls.json> <head-sha> <run-id> <correlator> <head-repo>" >&2
+if [[ $# -ne 7 ]]; then
+  echo "Usage: $0 <snapshot.json> <pulls.json> <head-sha> <run-id> <correlator> <head-repo> <trusted-pull-numbers>" >&2
   exit 2
 fi
 
@@ -36,7 +42,8 @@ import posixpath
 import re
 import sys
 
-snapshot_file, pulls_file, head_sha, run_id, correlator, head_repo = sys.argv[1:]
+snapshot_file, pulls_file, head_sha, run_id, correlator, head_repo, trusted = sys.argv[1:]
+trusted_numbers = {int(number) for number in trusted.split(",") if number.strip()}
 
 failures = []
 
@@ -74,6 +81,10 @@ try:
 
     if match is not None:
         number = int(match.group(1))
+        if trusted_numbers:
+            check(number in trusted_numbers, f"pull request #{number} is a pull request of the triggering run", f"run knows {sorted(trusted_numbers)}")
+        else:
+            print("ok: the triggering run carries no pull request (fork): any open sibling on this head is accepted", file=sys.stderr)
         pull = next((p for p in pulls if p.get("number") == number), None)
         check(pull is not None, f"pull request #{number} is a pull request of the head branch", "not in the list")
         if pull is not None:

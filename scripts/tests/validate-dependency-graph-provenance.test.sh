@@ -29,22 +29,27 @@ JSON
   echo "${file}"
 }
 
-# make_pulls <name> <state> <head-sha> <head-repo>: the open pull requests of the head branch (#42)
+# make_pulls <name> <state> <head-sha> <head-repo> [number...]: the open pull requests of the
+# head branch (#42 by default), all sharing that head.
 make_pulls() {
-  local file="${work}/$1.json"
-  cat > "${file}" <<JSON
-[{"number":42,"state":"$2","head":{"sha":"$3","repo":{"full_name":"$4"}},"base":{"sha":"3333333333333333333333333333333333333333"}}]
-JSON
+  local file="${work}/$1.json" pulls=""
+  local numbers=("${@:5}")
+  (( ${#numbers[@]} > 0 )) || numbers=(42)
+  for number in "${numbers[@]}"; do
+    pulls+="{\"number\":${number},\"state\":\"$2\",\"head\":{\"sha\":\"$3\",\"repo\":{\"full_name\":\"$4\"}},\"base\":{\"sha\":\"base-of-${number}\"}},"
+  done
+  echo "[${pulls%,}]" > "${file}"
   echo "${file}"
 }
 
 valid_snapshot=$(make_snapshot valid "${head_sha}" refs/pull/42/merge "${run_id}" "${correlator}" java/settings.gradle.kts)
 open_pull=$(make_pulls open open "${head_sha}" "${head_repo}")
 
-# expect <status> <label> <snapshot> [<pulls>]: runs the script against the trusted facts above.
+# expect <status> <label> <snapshot> [<pulls> [<trusted-numbers>]]: runs the script against the
+# trusted facts above; the trusted pull request numbers default to none (a fork run).
 expect() {
-  local expected=$1 label=$2 snapshot=$3 pulls=${4:-${open_pull}} status=0
-  "${script}" "${snapshot}" "${pulls}" "${head_sha}" "${run_id}" "${correlator}" "${head_repo}" \
+  local expected=$1 label=$2 snapshot=$3 pulls=${4:-${open_pull}} trusted=${5:-} status=0
+  "${script}" "${snapshot}" "${pulls}" "${head_sha}" "${run_id}" "${correlator}" "${head_repo}" "${trusted}" \
     >/dev/null 2>&1 || status=$?
   if [[ "${status}" -ne "${expected}" ]]; then
     echo "FAIL: ${label} -> exit ${status}, expected ${expected}"
@@ -82,6 +87,17 @@ expect 1 "pull request from another head repository" \
   "${valid_snapshot}" "$(make_pulls otherrepo open "${head_sha}" someone/else)"
 expect 1 "pull request closed" \
   "${valid_snapshot}" "$(make_pulls closed closed "${head_sha}" "${head_repo}")"
+# Two open pull requests share the head (#42 -> main, #43 -> another base). The triggering run
+# knows its pull request (Dependabot, same-repository): the snapshot must reference that one.
+siblings=$(make_pulls siblings open "${head_sha}" "${head_repo}" 42 43)
+other_pr=$(make_snapshot sibling "${head_sha}" refs/pull/43/merge "${run_id}" "${correlator}" java/settings.gradle.kts)
+expect 0 "trusted pull request: snapshot of the triggering pull request" "${valid_snapshot}" "${siblings}" 42
+expect 1 "trusted pull request: snapshot of a sibling pull request sharing the head" "${other_pr}" "${siblings}" 42
+expect 1 "trusted pull requests: none of them" "${other_pr}" "${siblings}" "7,8"
+expect 0 "trusted pull requests: one of them" "${other_pr}" "${siblings}" "42,43"
+# A fork run carries no pull request in the workflow_run payload: any open sibling of the same
+# fork on the same commit is accepted (same content, snapshots are keyed by sha).
+expect 0 "no trusted pull request (fork run): sibling pull request sharing the head" "${other_pr}" "${siblings}"
 echo '[]' > "${work}/none.json"
 expect 1 "no pull request for the head branch" "${valid_snapshot}" "${work}/none.json"
 expect 1 "snapshot does not exist" "${work}/missing.json"
@@ -91,7 +107,7 @@ echo '{"sha":1,"ref":[],"job":"x","manifests":[]}' > "${work}/shape.json"
 expect 1 "snapshot with the wrong shape" "${work}/shape.json"
 
 status=0
-"${script}" "${valid_snapshot}" >/dev/null 2>&1 || status=$?
+"${script}" "${valid_snapshot}" "${open_pull}" >/dev/null 2>&1 || status=$?
 if [[ "${status}" -ne 2 ]]; then
   echo "FAIL: usage error -> exit ${status}, expected 2"
   failures=$((failures + 1))
