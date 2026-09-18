@@ -159,11 +159,24 @@ func TestSentinelErrors(t *testing.T) {
 			want:  []error{ErrInvalidEvseID, ErrInvalidOperatorID},
 			input: "AB7",
 		},
+		// NewEvseIDFromParts reports the error of the format that got furthest, ISO on a tie.
 		{
-			name:  "evse id from parts",
+			name:  "evse id from parts: ISO wins the tie and keeps the country cause",
 			err:   errOf(NewEvseIDFromParts("ZZ", "TNM", "840*6487")),
-			want:  []error{ErrInvalidEvseID},
+			want:  []error{ErrInvalidEvseID, ErrInvalidCountryCode},
 			input: "ZZ",
+		},
+		{
+			name:  "evse id from parts: DIN got further and keeps the operator cause",
+			err:   errOf(NewEvseIDFromParts("31", "AB7", "840*6487")),
+			want:  []error{ErrInvalidEvseID, ErrInvalidOperatorID},
+			input: "AB7",
+		},
+		{
+			name:  "evse id from parts: DIN got further, power outlet cause",
+			err:   errOf(NewEvseIDFromParts("31", "745", "840|6487")),
+			want:  []error{ErrInvalidEvseID},
+			input: "840|6487",
 		},
 		{
 			name:  "unconvertible iso contract id",
