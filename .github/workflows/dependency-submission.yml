@@ -89,7 +89,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      statuses: write
     env:
       # Same expression as in `java-graph`: keep both in sync.
       GRAPH_MODE: >-
@@ -124,12 +123,22 @@ jobs:
           retry-on-snapshot-warnings: ${{ env.GRAPH_MODE == 'generate-and-submit' }}
           retry-on-snapshot-warnings-timeout: 120
 
+      - name: Mint the status token of the Java dependency review App
+        # Same commit status, published by the same App, as `fork-dependency-graph.yml` for fork
+        # and Dependabot pull requests, so that `Java dependency review` can be required for every
+        # pull request and restricted to that App (see CONTRIBUTING.md).
+        id: app-token
+        if: always() && env.GRAPH_MODE == 'generate-and-submit' && vars.JAVA_REVIEW_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.JAVA_REVIEW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.JAVA_REVIEW_APP_PRIVATE_KEY }}
+          permission-statuses: write
+
       - name: Report the Java dependency review status
-        # Same commit status as `fork-dependency-graph.yml` publishes for fork and Dependabot
-        # pull requests, so that `Java dependency review` can be required for every pull request.
-        if: always() && env.GRAPH_MODE == 'generate-and-submit'
+        if: always() && env.GRAPH_MODE == 'generate-and-submit' && vars.JAVA_REVIEW_APP_CLIENT_ID != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

@@ -33,7 +33,8 @@ which requires a dated section for the version below and a matching file in
   and reviewed before merge: the `Fork Dependency Graph` workflow (`workflow_run`) validates the
   provenance of the uploaded snapshot (bound to the triggering run and its pull request) before
   submitting it and running the review; the outcome is the `Java dependency review` commit
-  status on the pull request head, also published for same-repository pull requests.
+  status on the pull request head, published by a dedicated GitHub App (so that a pull request
+  cannot forge it) for fork, Dependabot and same-repository pull requests alike.
 - **Release:** the `Release` workflow now also publishes PHP: a `Preflight PHP` job runs
   `composer check`, then `Release PHP` pushes a `git subtree split` of `php/` to the
   `juherr/mobility-id-php` mirror as `vX.Y.Z`, the repository Packagist follows (Packagist

@@ -4,7 +4,10 @@
 # request, so `fork-dependency-graph.yml` reports its outcome through this status for fork and
 # Dependabot pull requests; `dependency-submission.yml` publishes the same context for
 # same-repository pull requests, so the context can be required on `main` for every pull request.
-# Needs `GH_TOKEN` with `statuses: write` and `GITHUB_REPOSITORY`.
+# `GH_TOKEN` must be an installation token of the dedicated GitHub App (`statuses: write`), not
+# GITHUB_TOKEN: the required check is restricted to that App because any `pull_request` workflow
+# (a fork's included) can create a same-named check under the "GitHub Actions" source.
+# Needs `GITHUB_REPOSITORY`.
 # Usage: report-java-review-status.sh <sha> <pending|success|failure|error> <target-url>
 set -euo pipefail
 

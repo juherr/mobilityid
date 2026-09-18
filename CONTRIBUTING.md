@@ -61,11 +61,36 @@ messages, code, comments and documentation are written in English.
   to the pull request, so the outcome is published as the `Java dependency review` **commit
   status** on the pull request head (`scripts/report-java-review-status.sh`), by
   `fork-dependency-graph.yml` for fork and Dependabot pull requests and by `Dependency
-  Submission` for same-repository ones. That status context is the one to require on `main`
-  for Java, next to `Dependency review`; enable it only after a real fork pull request has shown
-  the full path (artifact upload, provenance validation, submission, review, status on the
-  head). `workflow_run` workflows only run from `main`, so changes to that file take effect
-  after merge.
+  Submission` for same-repository ones. `workflow_run` workflows only run from `main`, so
+  changes to that file take effect after merge.
+- **Why that status is published by a dedicated GitHub App.** A required status check is
+  matched by context name, and the only source restriction GitHub offers is the app that set
+  it. A `pull_request` run executes the pull request's own workflow files, so a fork can add a
+  trivially green job named `Java dependency review` and rename `Dependency Submission` so the
+  `workflow_run` never fires; the check run of that job and a status set with `GITHUB_TOKEN`
+  both come from the "GitHub Actions" app, so neither the name nor that source tells them apart.
+  The status is therefore published with an installation token of a dedicated App
+  (`actions/create-github-app-token`, repository variable `JAVA_REVIEW_APP_CLIENT_ID`, secret
+  `JAVA_REVIEW_APP_PRIVATE_KEY`): secrets are unavailable to `pull_request` runs from forks and
+  to Dependabot runs, and a check with that source can only come from `main`'s workflows.
+  The same spoofing applies to every Actions-sourced required check (`Dependency review`
+  included): keep that in mind when choosing required checks, or use the ruleset rule
+  "Require workflows to pass before merging" where it is available.
+  - Setup: create a GitHub App (any name, e.g. `mobilityid-java-review`; permissions:
+    Repository → Commit statuses: Read and write, nothing else; no webhook), install it on this
+    repository only, then set the variable `JAVA_REVIEW_APP_CLIENT_ID` (App client id) and the
+    secret `JAVA_REVIEW_APP_PRIVATE_KEY` (a private key of the App, PEM). While they are unset
+    the workflows skip the status with a warning; nothing else changes.
+  - Required check: on `main`, require the status check `Java dependency review` and pick the
+    App as its source (it is offered once it has set the status at least once), next to
+    `Dependency review`. Do this only after the adversarial check below.
+  - Adversarial check, from a fork, after merge: (red) open a pull request that renames the
+    `Dependency Submission` workflow and adds a job named `Java dependency review` that just
+    succeeds — the merge box must keep showing the required check as expected/missing, the
+    forged job being listed under the GitHub Actions source; (green) open a normal fork pull
+    request — `Fork Dependency Graph` selects and downloads the artifact, validates it, submits
+    it, reviews it and the App sets `Java dependency review` on the head, which the merge box
+    accepts; re-run that workflow once to see the latest artifact selected.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes
