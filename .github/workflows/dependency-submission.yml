@@ -33,13 +33,12 @@ jobs:
       # Same-repository events submit the graph here. Fork and Dependabot pull requests only
       # upload it as a workflow artifact: `fork-dependency-graph.yml` (privileged `workflow_run`)
       # validates its provenance, submits it and runs the Java dependency review.
+      # Duplicated in `dependency-review` below (job outputs are not reliable once this job failed).
       GRAPH_MODE: >-
         ${{ (github.event_name != 'pull_request'
              || (github.event.pull_request.head.repo.full_name == github.repository
                  && github.actor != 'dependabot[bot]'))
             && 'generate-and-submit' || 'generate-and-upload' }}
-    outputs:
-      mode: ${{ env.GRAPH_MODE }}
 
     steps:
       - name: Checkout
@@ -90,6 +89,13 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
+    env:
+      # Same expression as in `java-graph`: keep both in sync.
+      GRAPH_MODE: >-
+        ${{ (github.event.pull_request.head.repo.full_name == github.repository
+             && github.actor != 'dependabot[bot]')
+            && 'generate-and-submit' || 'generate-and-upload' }}
 
     steps:
       - name: Require the Java dependency graph
@@ -115,5 +121,16 @@ jobs:
           fail-on-scopes: runtime, development, unknown
           # Second guard for the propagation delay between the submission and the compare API;
           # nothing to wait for when the graph was only uploaded.
-          retry-on-snapshot-warnings: ${{ needs.java-graph.outputs.mode == 'generate-and-submit' }}
+          retry-on-snapshot-warnings: ${{ env.GRAPH_MODE == 'generate-and-submit' }}
           retry-on-snapshot-warnings-timeout: 120
+
+      - name: Report the Java dependency review status
+        # Same commit status as `fork-dependency-graph.yml` publishes for fork and Dependabot
+        # pull requests, so that `Java dependency review` can be required for every pull request.
+        if: always() && env.GRAPH_MODE == 'generate-and-submit'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: scripts/report-java-review-status.sh "$HEAD_SHA" "$STATE" "$RUN_URL"

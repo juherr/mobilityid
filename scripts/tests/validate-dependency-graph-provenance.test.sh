@@ -77,6 +77,12 @@ expect 1 "job id is another run" \
   "$(make_snapshot runid "${head_sha}" refs/pull/42/merge 123 "${correlator}" java/settings.gradle.kts)"
 expect 1 "manifest outside java/ (shadowing a manifest ecosystem)" \
   "$(make_snapshot shadow "${head_sha}" refs/pull/42/merge "${run_id}" "${correlator}" java/settings.gradle.kts ts/package.json)"
+expect 1 "manifest escaping java/ through a parent segment" \
+  "$(make_snapshot traversal "${head_sha}" refs/pull/42/merge "${run_id}" "${correlator}" java/../ts/package.json)"
+expect 1 "manifest with an absolute path" \
+  "$(make_snapshot absolute "${head_sha}" refs/pull/42/merge "${run_id}" "${correlator}" /java/build.gradle.kts)"
+expect 1 "manifest with a non-canonical path" \
+  "$(make_snapshot noncanonical "${head_sha}" refs/pull/42/merge "${run_id}" "${correlator}" java/./build.gradle.kts)"
 expect 1 "pull request head moved since the run" \
   "${valid_snapshot}" "$(make_pulls moved open "${main_sha}" "${head_repo}")"
 expect 1 "pull request from another head repository" \

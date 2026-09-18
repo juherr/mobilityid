@@ -10,8 +10,10 @@ name: Fork Dependency Graph
 # branch limited to `scripts/`, and the only untrusted input is that JSON file, whose size is
 # not bounded before download (worst case: this job's `timeout-minutes`).
 #
-# A `workflow_run` workflow only triggers from the default branch, so changes to this file
-# only take effect once merged.
+# The check runs of a `workflow_run` workflow are attached to the default-branch commit, not to
+# the pull request, so the outcome is reported as the `Java dependency review` commit status on
+# the pull request head (job `status`, run even on failure). A `workflow_run` workflow only
+# triggers from the default branch, so changes to this file only take effect once merged.
 on:
   workflow_run: # zizmor: ignore[dangerous-triggers] no checkout of the triggering ref; the artifact is validated before use
     workflows:
@@ -46,6 +48,7 @@ jobs:
       actions: read
       contents: write
       pull-requests: read
+      statuses: write
     outputs:
       base-sha: ${{ steps.provenance.outputs.base_sha }}
 
@@ -56,14 +59,29 @@ jobs:
           persist-credentials: false
           sparse-checkout: scripts
 
+      - name: Report the pending status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: scripts/report-java-review-status.sh "$HEAD_SHA" pending "$RUN_URL"
+
       - name: Download the uploaded graph
         id: download
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" \
-            --name "dependency-graph_${CORRELATOR}.json" --dir snapshot
+          # A re-run keeps the artifacts of the previous attempts on the same run id, so the
+          # artifact is selected explicitly (latest non-expired one of that name for that head)
+          # instead of relying on `gh run download --name`.
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?name=dependency-graph_${CORRELATOR}.json" \
+            > artifacts.json
+          artifact_id=$(scripts/select-dependency-graph-artifact.sh artifacts.json \
+            "dependency-graph_${CORRELATOR}.json" "$HEAD_SHA")
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/${artifact_id}/zip" > artifact.zip
+          unzip -q artifact.zip -d snapshot
           # The artifact keeps the workspace-relative path of the report (gradle/actions default
           # `dependency-graph-report-dir`); anything else packed into it is ignored.
           snapshot="snapshot/dependency-graph-reports/${CORRELATOR}.json"
@@ -135,3 +153,31 @@ jobs:
           fail-on-scopes: runtime, development, unknown
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 120
+
+  status:
+    name: Report the Java dependency review status
+    # Publishes the outcome on the pull request head commit whatever happened above, so that a
+    # required `Java dependency review` status never stays pending on a failure.
+    needs:
+      - submit
+      - review
+    if: always() && needs.submit.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      statuses: write
+
+    steps:
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Report the status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          STATE: ${{ needs.submit.result == 'success' && needs.review.result == 'success' && 'success' || 'failure' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: scripts/report-java-review-status.sh "$HEAD_SHA" "$STATE" "$RUN_URL"
