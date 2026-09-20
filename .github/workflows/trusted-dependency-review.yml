@@ -28,10 +28,15 @@ name: Trusted Dependency Review
 # the pull request, hence the commit status (job `status`, run even on failure). A commit status
 # is per commit, whatever branch or fork carries the commit: the review set is every open pull
 # request whose head is that commit (job `pulls`), the concurrency group is the commit, and a
-# previous success on that commit is reset to `pending` as soon as `Dependency Submission` is
-# requested for a pull request (`requested`) or starts an attempt (`in_progress`, the only
-# event a re-run emits before `completed`), job `pending`. A `workflow_run` workflow only
-# triggers from the default branch, so changes to this file take effect once merged.
+# previous success on that commit is reset to `pending` before anything else (job `pending`):
+# as early as `requested` or `in_progress` (the only event a re-run emits before `completed`),
+# and again, as the first job of the `completed` run, since those early runs share the
+# concurrency group and may be cancelled by it. Nothing is reviewed until that reset succeeded;
+# an unconfigured App fails it. Changes to the review set or to a base that produce no new
+# commit (pull request retargeted, reopened or closed) are caught by pull-request-lifecycle.yml,
+# which re-runs `Dependency Submission` for the head so this workflow recomputes. A
+# `workflow_run` workflow only triggers from the default branch, so changes to this file take
+# effect once merged.
 on:
   workflow_run: # zizmor: ignore[dangerous-triggers] no checkout of the triggering ref; the artifact is validated before use
     workflows:
@@ -61,12 +66,12 @@ env:
 jobs:
   pending:
     name: Reset the trusted dependency review status
-    # As soon as the pull request run is requested, or re-run (`in_progress` only): a previous
-    # success on that commit (another pull request, another base, an earlier attempt) must not
-    # be inherited while the review is being recomputed.
-    if: >-
-      github.event.action != 'completed'
-      && github.event.workflow_run.event == 'pull_request'
+    # A previous success on that commit (another pull request, another base, an earlier
+    # attempt) must not be inherited while the review is being recomputed: reset as soon as the
+    # pull request run is requested or starts, and first thing on completion (the review jobs
+    # depend on this one). The App is a prerequisite of the required check: missing
+    # credentials fail here, they are never skipped.
+    if: github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: trusted-review
@@ -74,6 +79,12 @@ jobs:
       contents: read
 
     steps:
+      - name: Require the dependency review App
+        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID == ''
+        run: |
+          echo "::error::DEPENDENCY_REVIEW_APP_CLIENT_ID is not set in the trusted-review environment (see CONTRIBUTING.md)"
+          exit 1
+
       - name: Checkout scripts of the default branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -82,7 +93,6 @@ jobs:
 
       - name: Mint the status token of the dependency review App
         id: app-token
-        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.DEPENDENCY_REVIEW_APP_CLIENT_ID }}
@@ -90,7 +100,6 @@ jobs:
           permission-statuses: write
 
       - name: Report the pending status
-        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -103,6 +112,7 @@ jobs:
     # commit (siblings with different bases, branches or forks included; their runs even share
     # the concurrency group above), so each of their bases is reviewed below (matrix) and the
     # set is the same whichever run survives: all of them, never only the triggering run's own.
+    needs: pending
     if: >-
       github.event.action == 'completed'
       && github.event.workflow_run.event == 'pull_request'
@@ -137,6 +147,7 @@ jobs:
     name: Submit the Java dependency graph
     # Every pull request run; cancelled runs left no artifact (the concurrency group of the
     # triggering workflow supersedes them). A run that uploaded nothing fails here.
+    needs: pending
     if: >-
       github.event.action == 'completed'
       && github.event.workflow_run.event == 'pull_request'
@@ -155,27 +166,39 @@ jobs:
           persist-credentials: false
           sparse-checkout: scripts
 
-      - name: Download the uploaded graph
-        id: download
+      - name: Select the uploaded graph
+        id: select
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           # A re-run keeps the artifacts of the previous attempts on the same run id, so the
-          # artifact is selected explicitly (latest non-expired one of that name for that head)
-          # instead of relying on `gh run download --name`.
+          # artifact is selected explicitly (latest non-expired one of that name for that head).
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?name=dependency-graph_${CORRELATOR}.json" \
-            > artifacts.json
-          artifact_id=$(scripts/select-dependency-graph-artifact.sh artifacts.json \
+            > "$RUNNER_TEMP/artifacts.json"
+          artifact_id=$(scripts/select-dependency-graph-artifact.sh "$RUNNER_TEMP/artifacts.json" \
             "dependency-graph_${CORRELATOR}.json" "$HEAD_SHA")
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/${artifact_id}/zip" > artifact.zip
-          unzip -q artifact.zip -d snapshot
+          echo "artifact-id=${artifact_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Download it outside the workspace
+        # The artifact is pull request content: extracted under the runner temp directory, never
+        # in the workspace holding the trusted scripts, and only the expected file is read.
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ steps.select.outputs.artifact-id }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/snapshot
+
+      - name: Locate the snapshot
+        id: download
+        run: |
           # The artifact keeps the workspace-relative path of the report (gradle/actions default
           # `dependency-graph-report-dir`); anything else packed into it is ignored.
-          snapshot="snapshot/dependency-graph-reports/${CORRELATOR}.json"
+          snapshot="$RUNNER_TEMP/snapshot/dependency-graph-reports/${CORRELATOR}.json"
           if [[ ! -f "${snapshot}" ]]; then
-            echo "::error::${snapshot} is missing from the artifact"
+            echo "::error::dependency-graph-reports/${CORRELATOR}.json is missing from the artifact"
             exit 1
           fi
           echo "snapshot=${snapshot}" >> "$GITHUB_OUTPUT"
@@ -184,7 +207,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > pulls.json
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > "$RUNNER_TEMP/pulls.json"
 
       - name: Validate the snapshot provenance
         env:
@@ -194,7 +217,7 @@ jobs:
           HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
         run: |
           scripts/validate-dependency-graph-provenance.sh \
-            "$SNAPSHOT" pulls.json "$HEAD_SHA" "$RUN_ID" "$CORRELATOR" "$HEAD_REPO" "$TRUSTED_PULLS"
+            "$SNAPSHOT" "$RUNNER_TEMP/pulls.json" "$HEAD_SHA" "$RUN_ID" "$CORRELATOR" "$HEAD_REPO" "$TRUSTED_PULLS"
 
       - name: Verify the snapshot carries the resolved transitive dependencies
         env:
@@ -209,9 +232,9 @@ jobs:
         # response body is checked rather than the status code.
         run: |
           gh api --method POST "repos/$GITHUB_REPOSITORY/dependency-graph/snapshots" \
-            --input "$SNAPSHOT" > response.json
-          result=$(jq -r '.result // "MISSING"' response.json)
-          echo "Submitted $SNAPSHOT: ${result} ($(jq -r '.message // ""' response.json))"
+            --input "$SNAPSHOT" > "$RUNNER_TEMP/response.json"
+          result=$(jq -r '.result // "MISSING"' "$RUNNER_TEMP/response.json")
+          echo "Submitted $SNAPSHOT: ${result} ($(jq -r '.message // ""' "$RUNNER_TEMP/response.json"))"
           if [[ "${result}" != "SUCCESS" && "${result}" != "ACCEPTED" ]]; then
             echo "::error::Dependency Submission API did not accept the snapshot: ${result}"
             exit 1
@@ -255,11 +278,13 @@ jobs:
     # is an environment secret: the `trusted-review` environment only accepts `main`, which a
     # `pull_request` run never is, so no pull request can mint this token.
     needs:
+      - pending
       - pulls
       - submit
       - review
     if: >-
       always()
+      && needs.pending.result == 'success'
       && github.event.action == 'completed'
       && github.event.workflow_run.event == 'pull_request'
       && github.event.workflow_run.conclusion != 'cancelled'
@@ -276,14 +301,8 @@ jobs:
           persist-credentials: false
           sparse-checkout: scripts
 
-      - name: Warn when the App is not configured
-        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID == ''
-        run: |
-          echo "::warning::DEPENDENCY_REVIEW_APP_CLIENT_ID is not set in the trusted-review environment: the outcome is not reported on the pull request (see CONTRIBUTING.md)"
-
       - name: Mint the status token of the dependency review App
         id: app-token
-        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.DEPENDENCY_REVIEW_APP_CLIENT_ID }}
@@ -291,7 +310,6 @@ jobs:
           permission-statuses: write
 
       - name: Report the status
-        if: vars.DEPENDENCY_REVIEW_APP_CLIENT_ID != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}

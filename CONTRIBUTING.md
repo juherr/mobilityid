@@ -78,35 +78,48 @@ messages, code, comments and documentation are written in English.
   of the repository, filtered on the sha alone; one matrix leg per base), the concurrency group
   is the sha, and the status is green only when every leg passes. Per-commit also means that a
   success already on the commit (another pull request, another base, an earlier attempt) would
-  be inherited until recomputed, as any GitHub check does: the `requested` and `in_progress`
-  `workflow_run` events (a re-run emits no `requested`) reset the status to `pending` from
-  `main` with the App as soon as `Dependency Submission` is requested or starts for that pull
-  request (job `pending`, no pull request code involved), and `completed` publishes the
-  recomputed result. What remains is the few seconds before that `pending` lands; merging in
-  that window needs a human or auto-merge with every other required check already green on
-  that commit, so keep a required approval on `main` (a new pull request has none) and do not
-  rely on auto-merge alone. The status is published by `scripts/report-trusted-review-status.sh`
-  because check runs of a `workflow_run` workflow are attached to the `main` commit, not to the
-  pull request; it is set by a dedicated GitHub App whose key is a secret of the
-  `trusted-review` **environment**, restricted to the `main` branch: a repository secret would
-  be readable by any same-repository branch adding a workflow, an environment secret is only
-  handed to jobs whose run ref passes the branch policy, and a `pull_request` run never runs as
-  `main` (its job would fail with "Branch ... is not allowed to deploy to trusted-review"), so no
-  pull request can mint that token. What remains under the author's control is the graph
-  content (a pull request can hide a dependency from its own review by editing the build),
-  limited to that pull request. The result depends on the base at review time while the status
-  only depends on the head: the "Require branches to be up to date before merging" rule below is
-  a **prerequisite** of this design, since it forces a new head commit, hence a recomputation,
-  whenever the base moved. `workflow_run` workflows only run from `main`, so changes to that
-  file take effect after merge.
+  be inherited until recomputed, as any GitHub check does: job `pending` resets the status to
+  `pending` from `main` with the App, as early as the `requested` or `in_progress`
+  `workflow_run` event (a re-run emits no `requested`) and, since those early runs share the
+  commit's concurrency group and may be cancelled, again as the first job of the `completed`
+  run — `pulls`, `submit`, `review` and `status` all depend on it, so nothing is reviewed and no
+  result is published before the reset succeeded, and an unconfigured App fails it rather than
+  being skipped. What remains is the few seconds before that `pending` lands; merging in that
+  window needs a human or auto-merge with every other required check already green on that
+  commit, so keep a required approval on `main` (a new pull request has none) and do not rely
+  on auto-merge alone. Events that change the review set or a base without a new commit
+  (pull request retargeted, reopened, or closed while siblings stay open) do not reach
+  `Dependency Submission`, whose triggers live in the pull request's own file anyway:
+  `pull-request-lifecycle.yml` (`pull_request_target` on `edited`/`reopened`/`closed`, `main`'s
+  definition, no checkout, no App credential) re-runs the latest `Dependency Submission` run of
+  the head, and the trusted workflow resets and recomputes. The status is published by
+  `scripts/report-trusted-review-status.sh` because check runs of a `workflow_run` workflow are
+  attached to the `main` commit, not to the pull request; it is set by a dedicated GitHub App
+  whose key is a secret of the `trusted-review` **environment**, restricted to the `main`
+  branch: a repository secret would be readable by any same-repository branch adding a
+  workflow, an environment secret is only handed to jobs whose run ref is `main` — `push` and
+  `workflow_dispatch` on `main`, `workflow_run`, and `pull_request_target` (which runs on the
+  base ref), all of which execute `main`'s workflow files — never to a `pull_request` run,
+  which executes the pull request's files on the pull request's ref. Consequently no workflow
+  on `main` may check out, download or execute pull request content in a job that holds that
+  key: `pull-request-lifecycle.yml` uses neither, and the trusted workflow extracts the pull
+  request's artifact under the runner temp directory, outside the workspace holding the
+  trusted scripts, and reads only the expected JSON file. What remains under the author's
+  control is the graph content (a pull request can hide a dependency from its own review by
+  editing the build), limited to that pull request. The result depends on the base at review
+  time while the status only depends on the head: the "Require branches to be up to date
+  before merging" rule below is a **prerequisite** of this design, since it forces a new head
+  commit, hence a recomputation, whenever the base branch moved. `workflow_run` workflows only
+  run from `main`, so changes to that file take effect after merge.
   - Setup, in this order: create the `trusted-review` environment with deployment branch policy
     "Selected branches" = `main` (referencing a missing environment would create it without any
     policy); create a GitHub App (any name, e.g. `mobilityid-dependency-review`; permissions:
     Repository → Commit statuses: Read and write, nothing else; no webhook) and install it on
     this repository only; then add to that environment the variable
     `DEPENDENCY_REVIEW_APP_CLIENT_ID` (App client id) and the secret
-    `DEPENDENCY_REVIEW_APP_PRIVATE_KEY` (a private key of the App, PEM). While they are unset the
-    workflow skips the status with a warning; nothing else changes.
+    `DEPENDENCY_REVIEW_APP_PRIVATE_KEY` (a private key of the App, PEM). While they are unset
+    every `Trusted Dependency Review` run fails at its first job and no status is published:
+    the App is a prerequisite of the required check, so set it up right after the merge.
   - Required check: on `main`, require the status check `Trusted dependency review`, pick the
     App as its source (offered once it has set the status at least once), enable "Require
     branches to be up to date before merging" and keep a required approval. Do this only after
@@ -130,9 +143,18 @@ messages, code, comments and documentation are written in English.
     and the uploaded snapshots of the siblings must be identical (same head commit). Stale
     success: on a commit whose status is already green, open a new pull request towards
     another base, and separately re-run `Dependency Submission` — each time the status must
-    turn `pending` within seconds, then reflect the recomputed reviews. Base moved: push to
-    `main` while a green pull request is open — the merge box must require updating the
-    branch, and the new head must be reviewed again.
+    turn `pending` (within seconds, and in any case before the `pulls`/`submit` jobs of the
+    `completed` run start), then reflect the recomputed reviews. Lifecycle: with a green
+    status computed against `main`, retarget the pull request to another base without
+    touching its head — `Pull Request Lifecycle` must re-run `Dependency Submission`, the
+    status must turn `pending` then be recomputed against the new base; then, with two
+    siblings at one sha where one leg fails, close the failing one — the status must be
+    recomputed for the remaining pull request. Base moved: push to `main` while a green pull
+    request is open — the merge box must require updating the branch, and the new head must
+    be reviewed again. Artifact: a pull request whose upload packs extra files with unexpected
+    paths (a `scripts/` entry, a `../` component) must leave the trusted scripts untouched
+    (they live in the workspace, the artifact is extracted under the runner temp directory)
+    and be reviewed on the expected JSON file only.
 - Reference the issue (`Closes #N`) and describe what a reviewer should verify.
 
 ## Changelog and release notes
