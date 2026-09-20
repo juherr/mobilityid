@@ -112,14 +112,16 @@ which requires a dated section for the version below and a matching file in
   uses `golangci-lint-action` (2.13, tracked by Renovate), `go test -race -cover` and
   `govulncheck`.
 - **Breaking (TypeScript):** `CountryCode`, `PhoneCountryCode`, `ProviderId`, `OperatorIdIso` and
-  `OperatorIdDin` are branded strings instead of wrapper classes: `CountryCode.from("nl")` returns
-  the plain string `"NL"` typed as `CountryCode`, so `===`, `JSON.stringify`, template literals and
+  `OperatorIdDin` are plain strings instead of wrapper classes: `ProviderId.from("tnm")` returns
+  the string `"TNM"` typed as `ProviderId`, so `===`, `JSON.stringify`, template literals and
   `Map` keys work on the value itself. `from`, `parse`, `tryParse` and `isValid` keep their
   signatures; the `.value` property and `instanceof` checks are gone. Replace `id.value` with `id`.
-  There is no runtime check that a string is branded: where a `CountryCode` is required, parse
-  the input (`CountryCode.parse`/`tryParse`) and use the returned value; `isValid` only answers
-  whether `from` would accept the input and does not narrow it. `ContractId.fromParts` takes
-  plain strings, a branded value being one.
+  `PhoneCountryCode`, `ProviderId`, `OperatorIdIso` and `OperatorIdDin` are branded (only the
+  factory produces the type); `CountryCode` is a literal union (see the entry under Changed).
+  There is no runtime check that a string carries the type: where a `ProviderId` is required,
+  parse the input (`ProviderId.parse`/`tryParse`) and use the returned value; `isValid` only
+  answers whether `from` would accept the input and does not narrow it. `ContractId.fromParts`
+  takes plain strings, a typed value being one.
 - **Breaking (PHP):** PHP 8.4 is the minimum version (`php: ^8.4`, CI on 8.4 and 8.5); PHP 8.3
   is no longer supported. Every value object is a `final readonly class` (`AbstractContractId`
   and `AbstractEvseId` are `abstract readonly`), so their public properties can no longer be

@@ -88,7 +88,7 @@ same test fixtures, written for TypeScript.
   accepted set no longer depends on the ICU data of the running Node (`Intl.DisplayNames` also
   knows CLDR regions such as `EU`, `UK` or `XK` that ISO 3166-1 does not assign).
 - Composite identifiers (`PartyId`, `ContractId`, `EvseIdIso`, `EvseIdDin`) are immutable classes
-  (`readonly` and frozen instances) holding branded strings.
+  (`readonly` and frozen instances) holding those typed strings.
 - Canonical rendering is preserved (`toString()`, compact rendering helpers).
 
 ## Commands
