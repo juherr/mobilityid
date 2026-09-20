@@ -84,6 +84,7 @@ final class CountryCodeTest extends TestCase
             ['UK'], // Exceptional reservation
             ['EU'], // Exceptional reservation
             ['XK'], // User-assigned
+            ['xk'], // User-assigned, lowercase: the exclusion applies after normalization
             ['AN'], // Transitional
             ['SU'], // Formerly used
             ['DD'], // Formerly used
