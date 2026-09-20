@@ -6,7 +6,8 @@ name: Release
 # Packagist mirror) are published idempotently, and the signed `vX.Y.Z` tag and the GitHub
 # Release are created only once every registry has accepted the artifacts. Re-run a failed run (`gh run rerun <id> --failed`)
 # instead of dispatching again: every job is idempotent and keeps the original commit.
-# Go is released separately from `go/vX.Y.Z` tags (release-go.yml).
+# Go has no registry: its `go/vX.Y.Z` tag, created here from the same commit, is the release
+# (proxy.golang.org fetches it on first request).
 
 on:
   workflow_dispatch:
@@ -53,15 +54,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="v${RELEASE_VERSION}"
-          remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}^{}" | awk '{print $1}')
-          if [[ -z "${remote_tag}" ]]; then
-            remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}" | awk '{print $1}')
-          fi
-          if [[ -n "${remote_tag}" && "${remote_tag}" != "${GITHUB_SHA}" ]]; then
-            echo "Tag ${tag} already points to ${remote_tag}, not ${GITHUB_SHA}." >&2
-            exit 1
-          fi
+          # The root tag and the Go module tag (`go/` is the module subdirectory) must both point
+          # at the released commit.
+          for tag in "v${RELEASE_VERSION}" "go/v${RELEASE_VERSION}"; do
+            remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}^{}" | awk '{print $1}')
+            if [[ -z "${remote_tag}" ]]; then
+              remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}" | awk '{print $1}')
+            fi
+            if [[ -n "${remote_tag}" && "${remote_tag}" != "${GITHUB_SHA}" ]]; then
+              echo "Tag ${tag} already points to ${remote_tag}, not ${GITHUB_SHA}." >&2
+              exit 1
+            fi
+          done
 
   preflight-java:
     name: Preflight Java
@@ -182,6 +186,57 @@ jobs:
       - name: Run the full gate (validate, normalize, audit, format, PHPStan, Rector, PHPUnit, Infection)
         run: composer check
 
+  preflight-go:
+    name: Preflight Go
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GOTOOLCHAIN: local
+    defaults:
+      run:
+        working-directory: go
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Go 1.26.x
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: 1.26.x
+          # No cache in a publishing workflow (zizmor cache-poisoning).
+          cache: false
+
+      - name: Download Dependencies
+        run: go mod download
+
+      - name: Check go.mod is tidy
+        run: go mod tidy -diff
+
+      - name: Lint (formatters and license headers included)
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          # renovate: datasource=github-releases depName=golangci/golangci-lint
+          version: v2.13.2
+          working-directory: go
+          # No cache in a publishing workflow (zizmor cache-poisoning).
+          skip-cache: true
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race -cover ./...
+
+      - name: Check the retract directives repair `@latest`
+        run: scripts/tests/retract.test.sh
+
+      - name: Vulnerability check
+        # renovate: datasource=go depName=golang.org/x/vuln
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
   preflight-scala:
     name: Preflight Scala
     needs: validate
@@ -215,7 +270,7 @@ jobs:
     name: Release Java to Maven Central
     # Every preflight must pass so that no registry receives the version while another
     # workspace would fail its own verification; the publish itself stays idempotent.
-    needs: [preflight-java, preflight-ts, preflight-php, preflight-scala]
+    needs: [preflight-java, preflight-ts, preflight-php, preflight-go, preflight-scala]
     runs-on: ubuntu-latest
     # Build and upload, then up to two hours for repo1 to serve the release (wait-central-release.sh).
     timeout-minutes: 150
@@ -269,7 +324,7 @@ jobs:
 
   release-ts:
     name: Release TypeScript to npm
-    needs: [preflight-java, preflight-ts, preflight-php, preflight-scala]
+    needs: [preflight-java, preflight-ts, preflight-php, preflight-go, preflight-scala]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # npm Trusted Publishing (OIDC): this job is bound on npmjs.com to this exact workflow file
@@ -323,7 +378,7 @@ jobs:
 
   release-php:
     name: Release PHP to the Packagist mirror
-    needs: [preflight-java, preflight-ts, preflight-php, preflight-scala]
+    needs: [preflight-java, preflight-ts, preflight-php, preflight-go, preflight-scala]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Packagist only indexes a repository whose composer.json sits at its root, so the php/
@@ -379,7 +434,7 @@ jobs:
 
   release-scala:
     name: Release Scala to Maven Central
-    needs: [preflight-java, preflight-ts, preflight-php, preflight-scala]
+    needs: [preflight-java, preflight-ts, preflight-php, preflight-go, preflight-scala]
     runs-on: ubuntu-latest
     # Cross build without cache, sonaRelease waits for the Portal to validate the bundle, then
     # up to two hours for repo1 to serve the release (wait-central-release.sh).
@@ -467,7 +522,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="v${RELEASE_VERSION}"
           signing_key=$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "sec" { print $5; exit }')
           test -n "${signing_key}"
           umask 077
@@ -479,16 +533,20 @@ jobs:
           git config user.signingkey "${signing_key}"
           git config gpg.program "$(pwd)/scripts/git-gpg-wrapper.sh"
 
-          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
-            git fetch --force origin "refs/tags/${tag}:refs/tags/${tag}"
-            tagged_commit=$(git rev-list -n 1 "${tag}")
-            [[ "${tagged_commit}" == "${GITHUB_SHA}" ]]
-            git tag --verify "${tag}"
-          else
-            git tag --sign --message "mobilityid ${RELEASE_VERSION}" "${tag}" "${GITHUB_SHA}"
-            git tag --verify "${tag}"
-            git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${tag}"
-          fi
+          # `go/vX.Y.Z` is the Go module version (the module lives in the `go/` subdirectory):
+          # same commit, same signature, so proxy.golang.org and the registries agree.
+          for tag in "v${RELEASE_VERSION}" "go/v${RELEASE_VERSION}"; do
+            if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+              git fetch --force origin "refs/tags/${tag}:refs/tags/${tag}"
+              tagged_commit=$(git rev-list -n 1 "${tag}")
+              [[ "${tagged_commit}" == "${GITHUB_SHA}" ]]
+              git tag --verify "${tag}"
+            else
+              git tag --sign --message "mobilityid ${RELEASE_VERSION}" "${tag}" "${GITHUB_SHA}"
+              git tag --verify "${tag}"
+              git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${tag}"
+            fi
+          done
 
       - name: Create or verify GitHub Release
         shell: bash

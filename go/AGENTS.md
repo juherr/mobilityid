@@ -25,9 +25,11 @@ and status are in `README.md`. Run every command below from `go/`.
 - No third-party dependency; keep it that way unless the domain requires one.
 - CI (`.github/workflows/ci-go.yml`): `golangci-lint-action` (version annotated for Renovate),
   `go vet`, `go test -race -cover`, `govulncheck` (`go run …@vX`, version annotated for Renovate).
-- Releases use `go/vX.Y.Z` tags (`.github/workflows/release-go.yml`); the version follows the
-  common `vX.Y.Z` line of the repository (never pick a Go-only number), see #70 for the
-  published-version state.
+- Releases: the common `Release` workflow (`.github/workflows/release.yml`, job `Preflight Go`)
+  creates the signed `go/vX.Y.Z` tag on the released commit; the version follows the common
+  `vX.Y.Z` line of the repository (never pick a Go-only number). `go.mod` retracts `v0.1.0` and
+  `[v1.0.0, v1.1.1]` (see `README.md`); `scripts/tests/retract.test.sh` proves `@latest`
+  resolves to the released version and runs in CI and in the preflight.
 
 ## Commands
 

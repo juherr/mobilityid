@@ -66,6 +66,9 @@ jobs:
       - name: Test
         run: go test -race -cover ./...
 
+      - name: Check the retract directives repair `@latest`
+        run: scripts/tests/retract.test.sh
+
       - name: Vulnerability check
         # renovate: datasource=go depName=golang.org/x/vuln
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
