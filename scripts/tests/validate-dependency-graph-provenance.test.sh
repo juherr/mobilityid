@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Exercises scripts/validate-dependency-graph-provenance.sh with synthetic snapshots and pull
-# request lists: only a snapshot bound to the head commit, the run and the open pull request of
-# that head is accepted; every forged or stale binding is rejected.
+# request lists: only a snapshot bound to the head commit, the run and a pull request of that
+# head from the run's repository is accepted; every forged or stale binding is rejected.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -85,7 +85,10 @@ expect 1 "pull request head moved since the run" \
   "${valid_snapshot}" "$(make_pulls moved open "${main_sha}" "${head_repo}")"
 expect 1 "pull request from another head repository" \
   "${valid_snapshot}" "$(make_pulls otherrepo open "${head_sha}" someone/else)"
-expect 1 "pull request closed" \
+# The state of the pull request is not provenance: a closed sibling at the same head from the
+# same repository still binds the snapshot to that commit (a lifecycle re-run of the closed
+# sibling's run must still submit for the open ones; the review set is computed separately).
+expect 0 "pull request closed, same head and repository" \
   "${valid_snapshot}" "$(make_pulls closed closed "${head_sha}" "${head_repo}")"
 # Two open pull requests share the head (#42 -> main, #43 -> another base). The triggering run
 # knows its pull request (Dependabot, same-repository): the snapshot must reference that one.

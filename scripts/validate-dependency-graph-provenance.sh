@@ -7,12 +7,14 @@
 #   - `sha` is the head commit of the run (`workflow_run.head_sha`);
 #   - `ref` is `refs/pull/<N>/merge`, the ref gradle/actions records for a pull_request event;
 #   - `job.id` is the triggering run id and `job.correlator` the expected job correlator;
-#   - pull request <N> is in the given list (`GET /repos/{owner}/{repo}/pulls?head=<owner>:<branch>`),
-#     open, with that head sha and coming from the expected head repository;
+#   - pull request <N> is in the given list (`GET /repos/{owner}/{repo}/pulls/<N>`, or the open
+#     pull requests), with that head sha and coming from the expected head repository. Its state
+#     is not provenance: a closed sibling at the same head still binds the snapshot to that
+#     commit (the review set is computed separately from the open pull requests);
 #   - when the triggering run knows its pull requests (`workflow_run.pull_requests`, populated for
-#     same-repository and Dependabot runs, empty for forks), <N> is one of them. Several open pull
-#     requests can share one head: for a fork run the list is empty and any open sibling of the
-#     same fork on the same commit is accepted, which cannot change what the snapshot describes nor
+#     same-repository and Dependabot runs, empty for forks), <N> is one of them. Several pull
+#     requests can share one head: for a fork run the list is empty and any sibling of the same
+#     fork on the same commit is accepted, which cannot change what the snapshot describes nor
 #     the commit it is attached to (snapshots are keyed by sha; `ref` is metadata);
 #   - every manifest `source_location` is a canonical repository-relative path under `java/`
 #     (no `..`, `.` or `//` segment, not absolute): the fork may only describe the Java graph of
@@ -86,11 +88,10 @@ try:
         else:
             print("ok: the triggering run carries no pull request (fork): any open sibling on this head is accepted", file=sys.stderr)
         pull = next((p for p in pulls if p.get("number") == number), None)
-        check(pull is not None, f"pull request #{number} is a pull request of the head branch", "not in the list")
+        check(pull is not None, f"pull request #{number} exists in the list", "not in the list")
         if pull is not None:
             head = pull.get("head") or {}
             repo = (head.get("repo") or {}).get("full_name")
-            check(pull.get("state") == "open", f"pull request #{number} is open", f"state {pull.get('state')!r}")
             check(head.get("sha") == head_sha, f"pull request #{number} head is the run head sha", f"got {head.get('sha')!r}")
             check(repo == head_repo, f"pull request #{number} comes from the run head repository", f"got {repo!r}")
 except (ValueError, AttributeError, TypeError) as error:

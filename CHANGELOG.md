@@ -37,6 +37,7 @@ which requires a dated section for the version below and a matching file in
   holds a write token any more) once the provenance of the uploaded snapshot is validated
   (bound to the triggering run and its pull request); `Pull Request Lifecycle` keeps that status
   in step when a pull request is retargeted, reopened or closed without a new commit.
+  `.github/CODEOWNERS` routes changes under `.github/` and `scripts/` to the owner.
 - **Release:** the `Release` workflow now also publishes PHP: a `Preflight PHP` job runs
   `composer check`, then `Release PHP` pushes a `git subtree split` of `php/` to the
   `juherr/mobility-id-php` mirror as `vX.Y.Z`, the repository Packagist follows (Packagist

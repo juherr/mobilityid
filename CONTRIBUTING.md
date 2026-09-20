@@ -64,11 +64,25 @@ messages, code, comments and documentation are written in English.
   snapshot may name any open sibling of the same fork on the same commit, which changes neither
   what it describes nor the commit it is attached to (snapshots are keyed by sha, `ref` is
   metadata).
-- **Trust model of the required check.** The pull request author, fork or same-repository
-  branch, controls the workflow files a `pull_request` run executes, the build files the graph
-  is generated from, and every check or `GITHUB_TOKEN` status that run produces (all under the
-  "GitHub Actions" source, which a required check cannot tell apart from a forged one: it is
-  matched by context name and, at best, by app). So `Trusted Dependency Review` recomputes the
+- **Trust model of the required check.** What it defends against is pull request **content**:
+  fork authors, Dependabot and Renovate updates, and whatever the build executes when the graph
+  is generated (dependencies and Gradle plugins resolved by the pull request run in a read-only
+  job). What it does not defend against is a collaborator with **write access**: GitHub's
+  Dependency Graph itself is writable by anyone holding `contents: write` — a personal token
+  and one `POST /dependency-graph/snapshots` call submit any snapshot for any commit of `main`,
+  no workflow involved — and such a collaborator can also grant `contents: write` to their own
+  `pull_request` run by editing `permissions:` in their branch. No repository-side design can
+  make the graph the trusted review compares against immutable for them, so write
+  collaborators are trusted by definition, like they are for Dependabot alerts. Two controls
+  keep that boundary visible: `.github/CODEOWNERS` routes every change under `.github/` and
+  `scripts/` to the owner (enable "Require review from Code Owners" on `main`), and the
+  `pull_request` job of `Dependency Submission` as defined on `main` is read-only, so a forged
+  submission needs an explicit `permissions:` change in the reviewed diff — it can never come
+  from build-time code. The pull request author, fork or same-repository branch, controls the
+  workflow files a `pull_request` run executes, the build files the graph is generated from,
+  and every check or `GITHUB_TOKEN` status that run produces (all under the "GitHub Actions"
+  source, which a required check cannot tell apart from a forged one: it is matched by context
+  name and, at best, by app). So `Trusted Dependency Review` recomputes the
   review for **every** pull request from `main`'s definition (`actions/dependency-review-action`
   on base...head, all ecosystems, same thresholds as `Dependency review`) and publishes it as the
   `Trusted dependency review` commit status on the pull request head. A commit status is per
@@ -91,8 +105,13 @@ messages, code, comments and documentation are written in English.
   (pull request retargeted, reopened, or closed while siblings stay open) do not reach
   `Dependency Submission`, whose triggers live in the pull request's own file anyway:
   `pull-request-lifecycle.yml` (`pull_request_target` on `edited`/`reopened`/`closed`, `main`'s
-  definition, no checkout, no App credential) re-runs the latest `Dependency Submission` run of
-  the head, and the trusted workflow resets and recomputes. The status is published by
+  definition, sparse checkout of `main`'s `scripts/` only, no App credential) re-runs a
+  `Dependency Submission` run of the head bound to a pull request still open there
+  (`scripts/select-dependency-submission-run.sh`: the latest run may be the closed sibling's),
+  and the trusted workflow resets and recomputes. Sibling runs from one fork branch are
+  indistinguishable, so the provenance check does not require the pull request a snapshot
+  names to be open: a closed sibling at the same head from the same repository still binds it
+  to that commit, and the review set is computed from the open pull requests separately. The status is published by
   `scripts/report-trusted-review-status.sh` because check runs of a `workflow_run` workflow are
   attached to the `main` commit, not to the pull request; it is set by a dedicated GitHub App
   whose key is a secret of the `trusted-review` **environment**, restricted to the `main`
@@ -122,9 +141,11 @@ messages, code, comments and documentation are written in English.
     the App is a prerequisite of the required check, so set it up right after the merge.
   - Required check: on `main`, require the status check `Trusted dependency review`, pick the
     App as its source (offered once it has set the status at least once), enable "Require
-    branches to be up to date before merging" and keep a required approval. Do this only after
-    the checks below pass.
-  - Adversarial checks, after merge. Red, from a fork: a pull request that renames the
+    branches to be up to date before merging", keep a required approval and enable "Require
+    review from Code Owners" (`.github/CODEOWNERS`). Do this only after the checks below pass.
+  - Adversarial checks, after merge (write collaborators are out of scope, see above; a
+    same-repository branch granting itself `contents: write` is caught by the reviewed diff,
+    not by the workflow). Red, from a fork: a pull request that renames the
     `Dependency Submission` workflow and adds a job named `Trusted dependency review` that just
     succeeds must stay blocked, the forged job being listed under the GitHub Actions source and
     the App status never appearing. Red, from a same-repository branch: a pull request adding a

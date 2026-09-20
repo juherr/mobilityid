@@ -9,8 +9,11 @@ name: Pull Request Lifecycle
 # re-runs the latest `Dependency Submission` run of the head commit; trusted-dependency-review.yml
 # then resets the status to `pending` and recomputes it against the current set of bases.
 #
-# Metadata only: no checkout, no artifact, no App credential, nothing from the pull request is
-# executed. The re-run keeps the privileges of the original run (read-only for forks).
+# Metadata only: the checkout is a sparse checkout of `scripts/` on `main`, no artifact, no App
+# credential, nothing from the pull request is executed. The re-run keeps the privileges of the
+# original run (read-only for forks). The run to re-run is one bound to a pull request still
+# open at that head (scripts/select-dependency-submission-run.sh): the latest run may belong to
+# the pull request that has just been closed.
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] no checkout, no secret: only re-runs a workflow run by id
     types:
@@ -35,33 +38,34 @@ jobs:
     timeout-minutes: 5
     permissions:
       actions: write
+      contents: read
       pull-requests: read
 
     steps:
-      - name: Re-run the latest Dependency Submission run of the head commit
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Re-run a Dependency Submission run bound to an open pull request of the head
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           ACTION: ${{ github.event.action }}
         run: |
-          # Nothing left to review once the last pull request of that commit is closed.
-          if [[ "$ACTION" == "closed" ]]; then
-            open=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' \
-              | jq -s --arg sha "$HEAD_SHA" '[.[] | select(.head.sha == $sha)] | length')
-            if [[ "${open}" -eq 0 ]]; then
-              echo "No open pull request left at ${HEAD_SHA}: nothing to recompute"
-              exit 0
-            fi
-          fi
-          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/dependency-submission.yml/runs?event=pull_request&head_sha=${HEAD_SHA}&per_page=1" \
-            --jq '.workflow_runs[0] | {id, status}' > "$RUNNER_TEMP/run.json" || true
-          run_id=$(jq -r '.id // empty' "$RUNNER_TEMP/run.json")
-          if [[ -z "${run_id}" ]]; then
-            echo "::warning::no Dependency Submission run for ${HEAD_SHA}: the pull request run never happened, so no trusted status exists to refresh"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > "$RUNNER_TEMP/pulls.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/dependency-submission.yml/runs?event=pull_request&head_sha=${HEAD_SHA}&per_page=100" \
+            > "$RUNNER_TEMP/runs.json"
+          if ! selected=$(scripts/select-dependency-submission-run.sh "$RUNNER_TEMP/runs.json" "$RUNNER_TEMP/pulls.json" "$HEAD_SHA"); then
+            # Nothing left to review once the last pull request of that commit is closed, and no
+            # trusted status exists to refresh when the pull request run never happened.
+            echo "No Dependency Submission run bound to an open pull request at ${HEAD_SHA} (${ACTION}): nothing to recompute"
             exit 0
           fi
+          read -r run_id status <<< "${selected}"
           # A run still in progress recomputes against the current bases when it completes.
-          if [[ "$(jq -r '.status' "$RUNNER_TEMP/run.json")" != "completed" ]]; then
+          if [[ "${status}" != "completed" ]]; then
             echo "Dependency Submission run ${run_id} is still running: it will recompute on completion"
             exit 0
           fi

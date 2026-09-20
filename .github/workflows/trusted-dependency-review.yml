@@ -203,11 +203,20 @@ jobs:
           fi
           echo "snapshot=${snapshot}" >> "$GITHUB_OUTPUT"
 
-      - name: List the open pull requests
+      - name: Fetch the pull request the snapshot names
+        # The number is only parsed out of the untrusted file to look the pull request up; the
+        # provenance script does every check. Any state: a closed sibling at the same head from
+        # the same repository still binds the snapshot to that commit (lifecycle re-runs).
         env:
           GH_TOKEN: ${{ github.token }}
+          SNAPSHOT: ${{ steps.download.outputs.snapshot }}
         run: |
-          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > "$RUNNER_TEMP/pulls.json"
+          number=$(jq -r '.ref // "" | capture("^refs/pull/(?<n>[0-9]+)/merge$").n // empty' "$SNAPSHOT" || true)
+          if [[ -n "${number}" ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/pulls/${number}" | jq -s '.' > "$RUNNER_TEMP/pulls.json" || echo '[]' > "$RUNNER_TEMP/pulls.json"
+          else
+            echo '[]' > "$RUNNER_TEMP/pulls.json"
+          fi
 
       - name: Validate the snapshot provenance
         env:
