@@ -6,6 +6,11 @@ name: Dependency Submission
 # Dependency Review nor Dependabot alerts see any Java dependency. No path filter on purpose:
 # Dependency Review compares the snapshot of the pull request head with the one of its merge
 # base on `main`, so every commit of `main` and every pull request head needs a snapshot.
+#
+# Only `main` submits directly (`contents: write`). A `pull_request` run executes the pull
+# request's own workflow files, so no pull request run holds a write token: it generates the
+# graph of its head commit and uploads it as an artifact, and `trusted-dependency-review.yml`
+# (a `workflow_run` from `main`) validates its provenance, submits it and reviews it.
 on:
   push:
     branches:
@@ -23,23 +28,14 @@ concurrency:
 jobs:
   java-graph:
     name: Java dependency graph
+    # Trusted executions only: the default branch, pushed or dispatched.
+    if: >-
+      github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # The Dependency Submission API needs `contents: write`, which GITHUB_TOKEN never has for a
-    # pull request from a fork or from Dependabot (the grant below is silently read-only there).
     permissions:
       contents: write
-    env:
-      # Same-repository events submit the graph here. Fork and Dependabot pull requests only
-      # upload it as a workflow artifact: `trusted-dependency-review.yml` (privileged
-      # `workflow_run`) validates its provenance and submits it.
-      GRAPH_MODE: >-
-        ${{ (github.event_name != 'pull_request'
-             || (github.event.pull_request.head.repo.full_name == github.repository
-                 && github.actor != 'dependabot[bot]'))
-            && 'generate-and-submit' || 'generate-and-upload' }}
-    outputs:
-      mode: ${{ env.GRAPH_MODE }}
 
     steps:
       - name: Checkout
@@ -50,7 +46,7 @@ jobs:
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
 
-      - name: Setup JDK 21
+      - name: Setup JDK 25
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
         with:
           distribution: temurin
@@ -61,8 +57,54 @@ jobs:
         uses: gradle/actions/dependency-submission@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
         with:
           build-root-directory: java
-          dependency-graph: ${{ env.GRAPH_MODE }}
-          # The uploaded graph only has to outlive the `workflow_run` hop.
+          dependency-graph: generate-and-submit
+          # No graph is produced when the configuration is loaded from the configuration cache.
+          additional-arguments: --no-configuration-cache
+
+      - name: Verify the snapshot carries the resolved transitive dependencies
+        env:
+          SNAPSHOT: ${{ steps.graph.outputs.dependency-graph-file }}
+        run: scripts/verify-dependency-graph.sh "$SNAPSHOT"
+
+  java-graph-upload:
+    name: Java dependency graph (upload)
+    # Every pull request, fork or same-repository: same steps as above, read-only token, graph
+    # uploaded for `trusted-dependency-review.yml`. Generated from the head commit, not from the
+    # merge commit of the default checkout: the snapshot is recorded for the head sha, which
+    # sibling pull requests towards different bases share.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      # Job correlator (and artifact name) expected by trusted-dependency-review.yml; the value
+      # gradle/actions would derive for the `java-graph` job above, kept stable on purpose.
+      GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: dependency_submission-java-graph
+
+    steps:
+      - name: Checkout the head commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Generate and upload dependency graph
+        id: graph
+        uses: gradle/actions/dependency-submission@39e147cb9de83bb9910b8ef8bd7fff0ee20fcd6f # v6
+        with:
+          build-root-directory: java
+          dependency-graph: generate-and-upload
+          # The artifact only has to outlive the `workflow_run` hop.
           artifact-retention-days: 1
           # No graph is produced when the configuration is loaded from the configuration cache.
           additional-arguments: --no-configuration-cache
@@ -74,19 +116,13 @@ jobs:
 
   dependency-review:
     name: Dependency review
-    # Pull request security gate: green means "the Java graph was submitted successfully when it
-    # applied, and Dependency Review found no newly introduced high/critical vulnerability".
-    # Manifest-based ecosystems (npm, Composer, Go, Actions) are parsed by GitHub; the Java graph
-    # is the snapshot submitted by the job above, hence `needs`: the review never runs before the
-    # submission has completed (when both sides lack a snapshot GitHub raises no warning, so
-    # `retry-on-snapshot-warnings` alone cannot close that race). The job runs even when the
-    # submission failed and fails itself, because a skipped job satisfies a required status
-    # check. This job is fast feedback inside the pull request run, which the pull request
-    # author controls: the review to require on `main` is `Trusted dependency review`
-    # (`trusted-dependency-review.yml`), computed from `main` for every pull request once this
-    # workflow completes. Fork and Dependabot pull requests are reviewed on the manifest
-    # ecosystems only here, their Java graph being submitted by that workflow.
-    needs: java-graph
+    # Fast feedback inside the pull request run, on the manifest ecosystems GitHub parses itself
+    # (npm, Composer, Go, Actions): the Java graph of the head is not submitted yet at this
+    # point. This run is controlled by the pull request author, so the review to require on
+    # `main` is the `Trusted dependency review` status (`trusted-dependency-review.yml`),
+    # computed from `main` once this workflow completes, Java included. The job runs even when
+    # the upload failed and fails itself, because a skipped job satisfies a required check.
+    needs: java-graph-upload
     if: github.event_name == 'pull_request' && !cancelled()
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -95,12 +131,12 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Require the Java dependency graph
+      - name: Require the Java dependency graph upload
         env:
-          RESULT: ${{ needs.java-graph.result }}
+          RESULT: ${{ needs.java-graph-upload.result }}
         run: |
           if [[ "$RESULT" != "success" ]]; then
-            echo "::error::Java dependency graph job ended with '$RESULT'; the review cannot vouch for Java"
+            echo "::error::Java dependency graph job ended with '$RESULT'; no graph for the trusted review"
             exit 1
           fi
 
@@ -116,7 +152,3 @@ jobs:
           # Test and build-plugin dependencies count too: Java test/plugin classpaths, npm
           # devDependencies and Composer require-dev are all "development" scope.
           fail-on-scopes: runtime, development, unknown
-          # Second guard for the propagation delay between the submission and the compare API;
-          # nothing to wait for when the graph was only uploaded.
-          retry-on-snapshot-warnings: ${{ needs.java-graph.outputs.mode == 'generate-and-submit' }}
-          retry-on-snapshot-warnings-timeout: 120

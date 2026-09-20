@@ -33,9 +33,9 @@ which requires a dated section for the version below and a matching file in
   the dependency review of every pull request from the default branch and publishes it as the
   `Trusted dependency review` commit status through a dedicated GitHub App (environment
   `trusted-review`, branch policy `main`), so that no pull request author can forge the required
-  check; fork and Dependabot pull requests also get their Java dependency graph submitted by it
-  before merge, once the provenance of the uploaded snapshot is validated (bound to the
-  triggering run and its pull request).
+  check; it also submits the Java dependency graph of every pull request (no pull request run
+  holds a write token any more) once the provenance of the uploaded snapshot is validated
+  (bound to the triggering run and its pull request).
 - **Release:** the `Release` workflow now also publishes PHP: a `Preflight PHP` job runs
   `composer check`, then `Release PHP` pushes a `git subtree split` of `php/` to the
   `juherr/mobility-id-php` mirror as `vX.Y.Z`, the repository Packagist follows (Packagist

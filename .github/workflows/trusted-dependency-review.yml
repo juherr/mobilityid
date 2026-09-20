@@ -13,39 +13,40 @@ name: Trusted Dependency Review
 # out of reach of `pull_request` runs: repository secrets would be readable by any same-repository
 # branch, environment secrets only by jobs whose run ref matches the environment's branch policy.
 #
-# Fork and Dependabot pull requests additionally get their Java graph submitted here (job
-# `submit`): their read-only GITHUB_TOKEN cannot call the Dependency Submission API, so
-# dependency-submission.yml uploads the graph as an artifact and this workflow submits it once
-# scripts/validate-dependency-graph-provenance.sh has bound it to the triggering run and its pull
-# request (checks and threat model documented there, policy in CONTRIBUTING.md). No pull request
-# code runs here: the checkout is a sparse checkout of the default branch limited to `scripts/`,
-# and the only untrusted input is that JSON file, whose size is not bounded before download
-# (worst case: the job's `timeout-minutes`). The graph content itself is produced by the pull
-# request, which can hide a dependency from its own review, the same exposure as editing the
-# build files, limited to that pull request.
+# Every pull request gets its Java graph submitted here (job `submit`): no `pull_request` run
+# holds a write token, so dependency-submission.yml uploads the graph of the head commit as an
+# artifact and this workflow submits it once scripts/validate-dependency-graph-provenance.sh has
+# bound it to the triggering run and its pull request (checks and threat model documented there,
+# policy in CONTRIBUTING.md); a run that uploaded nothing, or a forged snapshot, fails here and
+# the status is a failure. No pull request code runs here: the checkout is a sparse checkout of
+# the default branch limited to `scripts/`, and the only untrusted input is that JSON file,
+# whose size is not bounded before download (worst case: the job's `timeout-minutes`). The
+# graph content itself is produced by the pull request, which can hide a dependency from its
+# own review, the same exposure as editing the build files, limited to that pull request.
 #
 # The check runs of a `workflow_run` workflow are attached to the default-branch commit, not to
 # the pull request, hence the commit status (job `status`, run even on failure). A commit status
-# is per commit: a pull request opened later on a commit that already carries a success would
-# inherit it until the review is recomputed, so the `requested` event (fired as soon as
-# `Dependency Submission` is requested for the pull request) resets the status to `pending`
-# first (job `pending`), and the review set covers every open pull request of that commit
-# whatever its branch (job `pulls`). A `workflow_run` workflow only triggers from the default
-# branch, so changes to this file take effect once merged.
+# is per commit, whatever branch or fork carries the commit: the review set is every open pull
+# request whose head is that commit (job `pulls`), the concurrency group is the commit, and a
+# previous success on that commit is reset to `pending` as soon as `Dependency Submission` is
+# requested for a pull request (`requested`) or starts an attempt (`in_progress`, the only
+# event a re-run emits before `completed`), job `pending`. A `workflow_run` workflow only
+# triggers from the default branch, so changes to this file take effect once merged.
 on:
   workflow_run: # zizmor: ignore[dangerous-triggers] no checkout of the triggering ref; the artifact is validated before use
     workflows:
       - Dependency Submission
     types:
       - requested
+      - in_progress
       - completed
 
 permissions: {}
 
-# Per commit, like the status: sibling runs (several pull requests, several branches at the same
-# sha) supersede each other and the survivor reviews every pull request of that commit.
+# Per commit, like the status: sibling runs (several pull requests, branches or forks at the
+# same sha) supersede each other and the survivor reviews every pull request of that commit.
 concurrency:
-  group: trusted-dependency-review-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_sha }}
+  group: trusted-dependency-review-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: true
 
 env:
@@ -60,10 +61,11 @@ env:
 jobs:
   pending:
     name: Reset the trusted dependency review status
-    # As soon as the pull request run is requested: a previous success on that commit (another
-    # pull request, another base) must not be inherited while the review is being recomputed.
+    # As soon as the pull request run is requested, or re-run (`in_progress` only): a previous
+    # success on that commit (another pull request, another base, an earlier attempt) must not
+    # be inherited while the review is being recomputed.
     if: >-
-      github.event.action == 'requested'
+      github.event.action != 'completed'
       && github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -98,9 +100,9 @@ jobs:
   pulls:
     name: Open pull requests of the head
     # The commit status is per commit and shared by every open pull request whose head is this
-    # commit (siblings with different bases or branches included; their runs even share the
-    # concurrency group above), so each of their bases is reviewed below (matrix) and the set is
-    # the same whichever run survives: all of them, never only the triggering run's own.
+    # commit (siblings with different bases, branches or forks included; their runs even share
+    # the concurrency group above), so each of their bases is reviewed below (matrix) and the
+    # set is the same whichever run survives: all of them, never only the triggering run's own.
     if: >-
       github.event.action == 'completed'
       && github.event.workflow_run.event == 'pull_request'
@@ -125,23 +127,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
         run: |
-          # Every open pull request, whatever its head branch: filtered on head repository + sha.
+          # Every open pull request, whatever its head branch or repository: filtered on the sha.
           gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > pulls.json
-          pulls=$(scripts/list-pull-requests-of-head.sh pulls.json "$HEAD_SHA" "$HEAD_REPO")
+          pulls=$(scripts/list-pull-requests-of-head.sh pulls.json "$HEAD_SHA")
           echo "pulls=${pulls}" >> "$GITHUB_OUTPUT"
 
   submit:
     name: Submit the Java dependency graph
-    # Same-repository pull requests submitted their graph themselves; cancelled runs left no
-    # artifact (the concurrency group of the triggering workflow supersedes them).
+    # Every pull request run; cancelled runs left no artifact (the concurrency group of the
+    # triggering workflow supersedes them). A run that uploaded nothing fails here.
     if: >-
       github.event.action == 'completed'
       && github.event.workflow_run.event == 'pull_request'
       && github.event.workflow_run.conclusion != 'cancelled'
-      && (github.event.workflow_run.head_repository.full_name != github.repository
-          || github.event.workflow_run.actor.login == 'dependabot[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -221,16 +220,13 @@ jobs:
   review:
     name: Trusted dependency review (#${{ matrix.pull.number }})
     # One leg per open pull request of the head, against its own base: same thresholds as
-    # `Dependency review` in dependency-submission.yml (keep them in sync), on the graph submitted
-    # by the pull request run or by `submit` above. Separate job so the review action never
+    # `Dependency review` in dependency-submission.yml (keep them in sync), on the graph
+    # submitted by `submit` above, never without it. Separate job so the review action never
     # holds `contents: write`.
     needs:
       - pulls
       - submit
-    if: >-
-      always()
-      && needs.pulls.result == 'success'
-      && (needs.submit.result == 'success' || needs.submit.result == 'skipped')
+    if: needs.pulls.result == 'success' && needs.submit.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
