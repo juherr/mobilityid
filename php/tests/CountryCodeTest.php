@@ -80,6 +80,15 @@ final class CountryCodeTest extends TestCase
         return [
             ['XX'], // Not a real country code
             ['ZZ'], // Not a real country code
+            // Region codes that CLDR knows but ISO 3166-1 does not assign: every port rejects them.
+            ['UK'], // Exceptional reservation
+            ['EU'], // Exceptional reservation
+            ['XK'], // User-assigned
+            ['xk'], // User-assigned, lowercase: the exclusion applies after normalization
+            ['AN'], // Transitional
+            ['SU'], // Formerly used
+            ['DD'], // Formerly used
+            ['YU'], // Formerly used
         ];
     }
 }

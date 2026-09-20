@@ -19,9 +19,11 @@ import { type ParseResult, ValidationError, attempt, valueOrNull } from "./parse
 declare const brand: unique symbol;
 
 /**
- * Branded string: a `StringId<"CountryCode">` is a plain string at runtime that only the
- * `CountryCode` factory can produce at the type level. The symbol is never assigned; it exists
- * only in the type system, so a branded value costs nothing over the underlying string.
+ * Branded string for an open set of values: a `StringId<"ProviderId">` is a plain string at
+ * runtime that only the `ProviderId` factory can produce at the type level. The symbol is never
+ * assigned; it exists only in the type system, so a branded value costs nothing over the
+ * underlying string. A closed set (`CountryCode`) uses a literal union instead and only shares
+ * the companion below.
  */
 export type StringId<B extends string> = string & { readonly [brand]: B };
 
@@ -43,9 +45,10 @@ export type StringIdCompanion<T extends string> = Readonly<{
 }>;
 
 /**
- * Builds the companion of a branded string identifier. Valid input is normalized to uppercase
- * (a no-op for the digit-only identifiers); `isValid` stays a boolean rather than a type guard
- * because it accepts the non-normalized input that `from` still has to uppercase.
+ * Builds the companion of a string identifier (branded or literal union). Valid input is
+ * normalized to uppercase (a no-op for the digit-only identifiers); `isValid` stays a boolean
+ * rather than a type guard because it accepts the non-normalized input that `from` still has to
+ * uppercase.
  */
 export function defineStringId<T extends string>(spec: StringIdSpec): StringIdCompanion<T> {
   const from = (raw: string): T => {

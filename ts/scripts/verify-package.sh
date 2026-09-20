@@ -42,7 +42,7 @@ JSON
 npm install --silent --no-audit --no-fund --prefix "${consumer}" "${tarball}"
 
 cat > "${consumer}/smoke.mjs" <<'JS'
-import { ContractId, ContractIdStandards, MobilityIdParsers, ValidationError } from "@juherr/mobilityid";
+import { ContractId, ContractIdStandards, CountryCode, ISO_3166_ALPHA2, MobilityIdParsers, ValidationError } from "@juherr/mobilityid";
 
 const strict = ContractId.parseStrict(ContractIdStandards.ISO, "NL-TNM-000122045-U");
 if (strict.toCompactString() !== "NLTNM000122045U") throw new Error("unexpected rendering " + strict);
@@ -55,19 +55,22 @@ try {
 }
 const evse = MobilityIdParsers.parseEvseId("+49*810*000*438");
 if (evse === null) throw new Error("expected a DIN EVSE id");
-if (strict.countryCode !== "NL") throw new Error("branded identifiers are plain strings at runtime");
+if (strict.countryCode !== "NL") throw new Error("string identifiers are plain strings at runtime");
+if (ISO_3166_ALPHA2.length !== 249 || !ISO_3166_ALPHA2.includes("NL")) throw new Error("ISO_3166_ALPHA2 is not the 249-code table");
+if (CountryCode.isValid("EU") || !CountryCode.isValid("nl")) throw new Error("CountryCode must accept ISO 3166-1 codes only");
 console.log("@juherr/mobilityid consumer smoke (node): OK", String(strict), String(evse));
 JS
 node "${consumer}/smoke.mjs"
 
 # Type declarations must resolve through `exports` under NodeNext; the tolerant contract is `T | null`,
-# `tryParse` is a discriminated union and the simple identifiers keep their brand through the
-# packed declarations.
+# `tryParse` is a discriminated union, `CountryCode` is a literal union and the open-ended
+# identifiers keep their brand through the packed declarations.
 cat > "${consumer}/smoke.ts" <<'TS'
 import {
   ContractId,
   ContractIdStandards,
   CountryCode,
+  ISO_3166_ALPHA2,
   OperatorIdIso,
   ProviderId,
   type ContractIdStandard,
@@ -82,16 +85,21 @@ const notNull: ContractId = ContractId.parse(standard, "NL-TNM-000122045-X");
 // The result union narrows on `ok` without a cast.
 const result: ParseResult<ContractId> = ContractId.tryParse(standard, "NL-TNM-000122045-X");
 const outcome: string = result.ok ? result.value.toString() : result.error;
-// Branded string identifiers: a `CountryCode` is a string, a string is not a `CountryCode`.
-const country: CountryCode = CountryCode.from("NL");
+// `CountryCode` is a literal union: a known code type-checks as is, a string does not, and the
+// lowercase form only gets in through the parser.
+const country: CountryCode = CountryCode.from("nl");
+const literal: CountryCode = "NL";
+const first: CountryCode = ISO_3166_ALPHA2[0];
 const widened: string = country;
-// @ts-expect-error only `CountryCode.from` produces a CountryCode
-const unbranded: CountryCode = "NL";
+// @ts-expect-error a string is not a CountryCode
+const unbranded: CountryCode = "NL" as string;
+// @ts-expect-error the union holds the uppercase codes only
+const lowercase: CountryCode = "nl";
 // Brands stay distinct through the packed declarations, even between identifiers that accept
 // the same values.
 // @ts-expect-error a ProviderId is not an OperatorIdIso
 const crossed: OperatorIdIso = ProviderId.from("TNM");
-export { strict, tolerant, notNull, outcome, widened, unbranded, crossed };
+export { strict, tolerant, notNull, outcome, literal, first, widened, unbranded, lowercase, crossed };
 TS
 cat > "${consumer}/tsconfig.json" <<'JSON'
 { "compilerOptions": { "module": "NodeNext", "moduleResolution": "NodeNext", "strict": true, "noEmit": true, "skipLibCheck": false, "types": [] }, "files": ["smoke.ts"] }

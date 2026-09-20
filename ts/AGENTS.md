@@ -46,6 +46,14 @@ command below from `ts/`.
 - One test pattern: `vp test ContractId` (no coverage thresholds on a filtered run).
 - Package check (pack, content, publint, throw-away Node + TypeScript consumer): `scripts/verify-package.sh [version]`; runs in CI on Node 24.
 - Lint + headers: `bun run lint`; fix: `bun run lint:fix`.
+- ISO 3166-1 table: `bun run generate:iso3166` rewrites `src/iso3166-alpha2.ts` from the JDK's
+  `Locale.getISOCountries()` through `../go/scripts/Iso3166Codes.java` (needs the Java version
+  pinned in `../mise.toml`). `scripts/generate-iso3166.sh --check` regenerates to a temporary
+  file and fails on any difference; CI runs it on the Node 24 job with the JDK `mise-action`
+  installs from `mise.toml`, and `ci-ts.yml` also triggers on the generator inputs
+  (`go/scripts/Iso3166Codes.java`, `go/mobilityid/iso3166_alpha2.go`, `mise.toml`).
+  `test/country-code.test.ts` asserts the count (249, bump it with the JDK) and equality with
+  the Go table, so regenerate both ports together.
 - Format: `bun run format`, verify: `bun run format:check`. Markdown is excluded from `vp fmt` (`vite.config.ts`): the macOS and Linux oxfmt binaries disagree on the final newline.
 
 ## Code Style
@@ -56,9 +64,12 @@ command below from `ts/`.
   (`ParseResult<T>`, frozen `{ ok: true, value } | { ok: false, error }` with the strict message)
   and tolerant `parse` (`T | null`, derived from `tryParse`). Only `ValidationError` is captured;
   anything else propagates. Mirror all three in `MobilityIdParsers`.
-- Single-valued identifiers are branded strings: `export type X = StringId<"X">` plus
+- Single-valued identifiers are plain strings with a companion: `export type X = StringId<"X">`
+  (a brand, for an open set of values) plus
   `export const X: StringIdCompanion<X> = defineStringId({ isValid, message })` in the same file
   (type and value share the name). No wrapper class, no `.value`; add a new one the same way.
+  `CountryCode` is the exception: a closed set, so its type is the literal union of the generated
+  `ISO_3166_ALPHA2` table and only its companion goes through `defineStringId`.
   Composite identifiers (`PartyId`, `ContractId`, `EvseId*`) are immutable classes (`readonly`,
-  frozen) holding branded strings; canonical `toString()` plus compact rendering helpers.
+  frozen) holding those strings; canonical `toString()` plus compact rendering helpers.
 - ESM only with `.js` extensions in relative imports (`./parsers.js`).

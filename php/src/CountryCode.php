@@ -28,6 +28,12 @@ final readonly class CountryCode implements \Stringable
 {
     private const string REGEX = '([A-Za-z]{2})';
 
+    /**
+     * Codes league/iso3166 ships beyond ISO 3166-1: user-assigned elements the other ports
+     * (JDK Locale.getISOCountries(), generated tables) do not know.
+     */
+    private const array NOT_ASSIGNED = ['XK'];
+
     private function __construct(
         public string $cc
     ) {}
@@ -40,6 +46,10 @@ final readonly class CountryCode implements \Stringable
     public static function isValid(string $countryCode): bool
     {
         if (preg_match('/^' . self::REGEX . '$/', $countryCode) !== 1) {
+            return false;
+        }
+
+        if (\in_array(strtoupper($countryCode), self::NOT_ASSIGNED, true)) {
             return false;
         }
 

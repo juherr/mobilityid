@@ -39,7 +39,7 @@ const ids: ReadonlyArray<{
   { name: "OperatorIdDin", id: OperatorIdDin, raw: "810", expected: "810" },
 ];
 
-describe("branded string identifiers", () => {
+describe("string identifier companions", () => {
   it.each(ids)("$name is the normalized string itself", ({ id, raw, expected }) => {
     const value = id.from(raw);
     expect(typeof value).toBe("string");
@@ -54,7 +54,7 @@ describe("branded string identifiers", () => {
     expect(id.tryParse(raw)).toStrictEqual({ ok: true, value: expected });
   });
 
-  it.each(ids)("$name is idempotent on an already branded value", ({ id, raw }) => {
+  it.each(ids)("$name is idempotent on an already typed value", ({ id, raw }) => {
     const value = id.from(raw);
     expect(id.from(value)).toBe(value);
     expect(id.isValid(value)).toBe(true);
@@ -66,10 +66,12 @@ describe("branded string identifiers", () => {
     expect(new Set([ProviderId.from("TNM"), ProviderId.from("tnm")]).size).toBe(1);
   });
 
-  it("carries a brand distinct from string and from the other identifiers", () => {
-    expectTypeOf<CountryCode>().toExtend<string>();
-    expectTypeOf<string>().not.toExtend<CountryCode>();
-    expectTypeOf<CountryCode>().not.toExtend<ProviderId>();
+  it("keeps every identifier type distinct from string and from the others", () => {
+    expectTypeOf<ProviderId>().toExtend<string>();
+    expectTypeOf<string>().not.toExtend<ProviderId>();
     expectTypeOf<ProviderId>().not.toExtend<OperatorIdIso>();
+    // Brand vs literal union: neither direction holds.
+    expectTypeOf<CountryCode>().not.toExtend<ProviderId>();
+    expectTypeOf<ProviderId>().not.toExtend<CountryCode>();
   });
 });

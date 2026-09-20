@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-import { type StringId, type StringIdCompanion, defineStringId } from "./string-id.js";
+import { ISO_3166_ALPHA2 } from "./iso3166-alpha2.js";
+import { type StringIdCompanion, defineStringId } from "./string-id.js";
 
 const COUNTRY_CODE_REGEX = /^[A-Za-z]{2}$/;
 
-const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+const KNOWN_CODES: ReadonlySet<string> = new Set(ISO_3166_ALPHA2);
 
-function isKnownRegion(code: string): boolean {
-  const display = regionNames.of(code);
-  return display !== undefined && display !== code && display !== "Unknown Region";
-}
-
-export type CountryCode = StringId<"CountryCode">;
+// A literal union rather than a brand: the set is closed and published, so known literals
+// type-check directly and a switch over codes is exhaustiveness-checkable. Lowercase literals do
+// not type-check, but `CountryCode.from` still normalizes them: external input goes through it.
+export type CountryCode = (typeof ISO_3166_ALPHA2)[number];
 
 export const CountryCode: StringIdCompanion<CountryCode> = defineStringId({
-  isValid: (raw) => COUNTRY_CODE_REGEX.test(raw) && isKnownRegion(raw.toUpperCase()),
+  isValid: (raw) => COUNTRY_CODE_REGEX.test(raw) && KNOWN_CODES.has(raw.toUpperCase()),
   message: () => "Country Code must be valid according to ISO 3166-1 alpha-2",
 });
