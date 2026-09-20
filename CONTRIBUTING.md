@@ -134,7 +134,14 @@ share the work; the required check is a commit status set by a dedicated GitHub 
    the secret `DEPENDENCY_REVIEW_APP_PRIVATE_KEY` (a private key of the App, PEM). While they
    are unset every `Trusted Dependency Review` run fails at its first job and no status is
    published.
-4. After the checks below pass, on `main`: require the status check `Trusted dependency review`
+4. Allow `pull_request_target` for `pull-request-lifecycle.yml`. GitHub's workflow execution
+   protections (generally available since 2026-09-17) give public repositories without an
+   applicable Actions event policy a default rule that disables `pull_request_target`, in
+   evaluate mode first and enforced from 2026-11-02. In Settings → Actions → Policies (or the
+   organization's), add an event rule that allows `pull_request_target`, targeted at
+   `.github/workflows/pull-request-lifecycle.yml` only (workflow file targeting), then check
+   the policy insights: a `Pull Request Lifecycle` run must evaluate as allowed.
+5. After the checks below pass, on `main`: require the status check `Trusted dependency review`
    with the App as its source (offered once it has set the status at least once), enable
    "Require branches to be up to date before merging" and keep a required approval.
 

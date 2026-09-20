@@ -7,8 +7,9 @@ name: Pull Request Lifecycle
 # re-runs a `Dependency Submission` run of the head bound to a pull request still open there;
 # trusted-dependency-review.yml then resets the status and recomputes. Invariants: no App
 # credential here, no checkout but `scripts/` of `main`, nothing from the pull request is
-# executed (the re-run keeps the privileges of the original run). CONTRIBUTING.md, "Dependency
-# review gate".
+# executed (the re-run keeps the privileges of the original run). Public repositories need an
+# Actions event policy allowing `pull_request_target` for this file (GitHub's default rule
+# disables the event, enforced from 2026-11-02). CONTRIBUTING.md, "Dependency review gate".
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] no checkout, no secret: only re-runs a workflow run by id
     types:
