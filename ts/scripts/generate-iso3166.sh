@@ -17,11 +17,17 @@
 # Regenerates src/iso3166-alpha2.ts, the ISO 3166-1 alpha-2 codes accepted by CountryCode, from
 # the JDK's Locale.getISOCountries() through the Go port's generator source, so both generated
 # tables come from the same list. Needs the Java version pinned in ../mise.toml.
-# Usage, from ts/: scripts/generate-iso3166.sh
+# Usage, from ts/: scripts/generate-iso3166.sh          rewrites src/iso3166-alpha2.ts
+#                  scripts/generate-iso3166.sh --check  fails when the committed file is stale
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-out=src/iso3166-alpha2.ts
+committed=src/iso3166-alpha2.ts
+out="$committed"
+if [ "${1:-}" = "--check" ]; then
+  out=$(mktemp -t iso3166-alpha2.XXXXXX)
+  trap 'rm -f "$out"' EXIT
+fi
 
 codes=$(java ../go/scripts/Iso3166Codes.java)
 count=$(printf '%s\n' "$codes" | grep -c '^[A-Z][A-Z]$' || true)
@@ -39,6 +45,14 @@ fi
   printf '%s\n' "$codes" | awk '{ printf "  \"%s\",\n", $1 }'
   printf '] as const;\n'
 } > "$out"
-vp fmt --write "$out" > /dev/null
 
-echo "wrote $out ($count codes)"
+
+if [ "${1:-}" = "--check" ]; then
+  if ! diff -u "$committed" "$out"; then
+    echo "$committed is stale: run scripts/generate-iso3166.sh and commit the result" >&2
+    exit 1
+  fi
+  echo "$committed is up to date ($count codes)"
+else
+  echo "wrote $out ($count codes)"
+fi

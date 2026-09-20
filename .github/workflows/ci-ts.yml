@@ -7,10 +7,12 @@ on:
       - master
     paths:
       - "ts/**"
+      - "go/scripts/Iso3166Codes.java"
       - ".github/workflows/ci-ts.yml"
   pull_request:
     paths:
       - "ts/**"
+      - "go/scripts/Iso3166Codes.java"
       - ".github/workflows/ci-ts.yml"
 
 permissions:
@@ -69,6 +71,19 @@ jobs:
       - name: Verify the npm package (pack, content, publint, throw-away consumer)
         if: matrix.node-version == '24'
         run: scripts/verify-package.sh
+
+      # The ISO 3166-1 table is generated from the JDK pinned in mise.toml; regenerate it here and
+      # fail if the committed file drifted from the generator or the generator itself broke.
+      - name: Setup Java for the ISO 3166-1 generator
+        if: matrix.node-version == '24'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Check the generated ISO 3166-1 table is up to date
+        if: matrix.node-version == '24'
+        run: scripts/generate-iso3166.sh --check
 
       - name: Package dry-run
         run: vp exec bun pm pack --dry-run
