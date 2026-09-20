@@ -48,8 +48,14 @@ which requires a dated section for the version below and a matching file in
 
 ### Fixed
 
+- **TypeScript:** `CountryCode` accepted 30 CLDR region codes that ISO 3166-1 does not assign
+  (`EU`, `UK`, `XK`, `SU`, `YU`, ...) because it validated through `Intl.DisplayNames`, whose
+  answer also varied with the ICU data of the running Node. The list is now generated from the
+  JDK's `Locale.getISOCountries()`, the reference source, like Go.
+- **PHP:** `CountryCode` accepted `XK`, a user-assigned code `league/iso3166` ships beyond
+  ISO 3166-1; it is now rejected like in the other ports.
 - **Go:** `CountryCode` accepted 36 CLDR region codes that ISO 3166-1 does not assign (`UK`,
-  `EU`, `XK`, `AN`, `SU`, `DD`, `YU`, ...), diverging from Scala, Java, PHP and TypeScript. The
+  `EU`, `XK`, `AN`, `SU`, `DD`, `YU`, ...), diverging from Scala and Java. The
   list is now generated from the JDK's `Locale.getISOCountries()`, the reference source.
   Values that `go/v0.1.0` accepted are therefore rejected (observable change, weighed in #70).
 - **Go:** `NewEvseIDISOFromParts` and `NewEvseIDFromParts` no longer drop a leading `E` from
@@ -74,6 +80,10 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
+- **TypeScript (breaking):** `CountryCode` is a literal union of the 249 ISO 3166-1 alpha-2
+  codes (exported as `ISO_3166_ALPHA2`) instead of a branded string: `const cc: CountryCode =
+  "NL"` now type-checks, `"nl"` no longer does (`CountryCode.from("nl")` still normalizes it).
+  The companion API is unchanged; the other identifiers stay branded.
 - **TypeScript:** toolchain updated to Vite+ 0.3.3 (Oxlint 1.83, Oxfmt 0.68, Vite 8.3,
   Rolldown 1.2.9, tsdown 0.23; Vitest stays 4.1.11) and Bun 1.4.2 (`packageManager`;
   `engines.bun` unchanged). `@vitest/coverage-v8` stays on the Vitest version Vite+ bundles and
