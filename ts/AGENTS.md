@@ -49,9 +49,11 @@ command below from `ts/`.
 - ISO 3166-1 table: `bun run generate:iso3166` rewrites `src/iso3166-alpha2.ts` from the JDK's
   `Locale.getISOCountries()` through `../go/scripts/Iso3166Codes.java` (needs the Java version
   pinned in `../mise.toml`). `scripts/generate-iso3166.sh --check` regenerates to a temporary
-  file and fails on any difference; CI runs it on the Node 24 job with Temurin 21 (keep that
-  version in step with `mise.toml`). `test/country-code.test.ts` asserts the count (249, bump it
-  with the JDK) and equality with the Go table, so regenerate both ports together.
+  file and fails on any difference; CI runs it on the Node 24 job with the JDK `mise-action`
+  installs from `mise.toml`, and `ci-ts.yml` also triggers on the generator inputs
+  (`go/scripts/Iso3166Codes.java`, `go/mobilityid/iso3166_alpha2.go`, `mise.toml`).
+  `test/country-code.test.ts` asserts the count (249, bump it with the JDK) and equality with
+  the Go table, so regenerate both ports together.
 - Format: `bun run format`, verify: `bun run format:check`. Markdown is excluded from `vp fmt` (`vite.config.ts`): the macOS and Linux oxfmt binaries disagree on the final newline.
 
 ## Code Style

@@ -7,12 +7,20 @@ on:
       - master
     paths:
       - "ts/**"
+      # Inputs of the ISO 3166-1 table check: the generator source, the JDK pin and the Go table
+      # the parity test compares against.
       - "go/scripts/Iso3166Codes.java"
+      - "go/mobilityid/iso3166_alpha2.go"
+      - "mise.toml"
       - ".github/workflows/ci-ts.yml"
   pull_request:
     paths:
       - "ts/**"
+      # Inputs of the ISO 3166-1 table check: the generator source, the JDK pin and the Go table
+      # the parity test compares against.
       - "go/scripts/Iso3166Codes.java"
+      - "go/mobilityid/iso3166_alpha2.go"
+      - "mise.toml"
       - ".github/workflows/ci-ts.yml"
 
 permissions:
@@ -73,17 +81,19 @@ jobs:
         run: scripts/verify-package.sh
 
       # The ISO 3166-1 table is generated from the JDK pinned in mise.toml; regenerate it here and
-      # fail if the committed file drifted from the generator or the generator itself broke.
-      - name: Setup Java for the ISO 3166-1 generator
+      # fail if the committed file drifted from the generator or the generator itself broke. mise
+      # installs the pinned version itself, so the workflow carries no copy of the pin.
+      - name: Setup the JDK pinned in mise.toml for the ISO 3166-1 generator
         if: matrix.node-version == '24'
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
-          distribution: temurin
-          java-version: "21"
+          install_args: java
 
       - name: Check the generated ISO 3166-1 table is up to date
         if: matrix.node-version == '24'
-        run: scripts/generate-iso3166.sh --check
+        run: |
+          java -version
+          scripts/generate-iso3166.sh --check
 
       - name: Package dry-run
         run: vp exec bun pm pack --dry-run
