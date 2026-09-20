@@ -8,15 +8,21 @@ and tooling choices of the port; the domain model itself is described in the roo
 ## Install
 
 ```sh
-go get mobilityid.juherr.dev/go/mobilityid@v0.1.0
+go get mobilityid.juherr.dev/go/mobilityid
 ```
 
 Module path `mobilityid.juherr.dev/go` (vanity import served by `docs/index.html`), package
-`mobilityid.juherr.dev/go/mobilityid`. Use an explicit version for now: proxy.golang.org holds
-a phantom `v1.1.0` synthesized from the Scala `v1.1.0` tag before the Go module existed, so
-`@latest` does not resolve to a usable version until the next release
-(see [#70](https://github.com/juherr/mobilityid/issues/70)). Versions follow the common
-`vX.Y.Z` line of the repository, tagged `go/vX.Y.Z`. The module has no third-party dependency.
+`mobilityid.juherr.dev/go/mobilityid`. Versions follow the common `vX.Y.Z` line of the
+repository: the `Release` workflow tags `go/vX.Y.Z` on the very commit it tags `vX.Y.Z`, so a Go
+version always matches the Java, Scala, TypeScript and PHP releases. The module has no
+third-party dependency.
+
+`go.mod` retracts `v0.1.0` (accepted country codes outside ISO 3166-1, DIN check-digit overflow)
+and `[v1.0.0, v1.1.1]`: `v1.0.0` and `v1.1.0` are Scala-only root tags of the monorepo that
+proxy.golang.org turned into empty module versions, and `go/v1.1.1` exists only to carry the
+retractions (the `go` command reads them from the highest version). `go list -m -versions
+mobilityid.juherr.dev/go` therefore lists the usable versions only; add `-retracted` to see the
+others. Never tag a Go-only version number.
 
 ```go
 import (
@@ -96,6 +102,7 @@ entry points.
   output; `Fuzz*` targets (parsers, `FromParts` builders, check digits) whose seeds run with
   `go test` and which can be explored with `go test ./... -run='^$' -fuzz=FuzzNewContractID
   -fuzztime=30s`.
-- **Releases:** `go/vX.Y.Z` tags trigger `../.github/workflows/release-go.yml`, which runs the
-  same gates before creating the GitHub release. The version follows the common release line;
-  see `CONTRIBUTING.md`.
+- **Releases:** the common `Release` workflow (`../.github/workflows/release.yml`) runs the same
+  gates plus `scripts/tests/retract.test.sh` (a file-based module proxy proving the `retract`
+  directives make `@latest` resolve to the released version) in a `Preflight Go` job, then
+  creates the signed `go/vX.Y.Z` tag next to `vX.Y.Z`; see `CONTRIBUTING.md`.

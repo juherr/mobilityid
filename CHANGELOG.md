@@ -8,8 +8,15 @@ which requires a dated section for the version below and a matching file in
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-20
+
 ### Added
 
+- **Release:** Go joins the common `Release` workflow: a `Preflight Go` job runs the Go gates
+  (`go mod tidy -diff`, lint, vet, race tests, govulncheck and the retraction proof) before any
+  registry is touched, and the workflow creates the signed `go/vX.Y.Z` tag on the very commit it
+  tags `vX.Y.Z`. The tag-triggered `Release Go` workflow is removed. `CONTRIBUTING.md` gains
+  an external verification runbook (clean consumers for the five implementations).
 - **Scala:** quality gates: Scalafmt (`.scalafmt.conf`), Scalafix (`OrganizeImports`,
   `RemoveUnused`), fatal compiler warnings on both Scala versions, license headers on test
   sources too, and MiMa binary-compatibility checks of `core` and `interpolators` against the
@@ -48,9 +55,21 @@ which requires a dated section for the version below and a matching file in
 - **Go:** testable `Example*` functions for the main entry points (shown on pkg.go.dev), `Fuzz*`
   targets for the parsers, the `FromParts` builders and the check digits, and the 400
   cross-language check-digit fixtures in `mobilityid/testdata/`.
+- **Java:** jqwik property-based suites for check digits and contract-id round trips; JaCoCo
+  coverage gates (90 % lines, 80 % branches); japicmp API-compatibility check against the last
+  published release; isolated consumer smoke consuming the published artifact from Java on the
+  module path and from Kotlin (classpath, strict JSpecify) (`java/scripts/verify-consumer.sh`); `java/scripts/verify.sh` as the single verification entry
+  point.
+- **Repository:** workflow linting (actionlint, zizmor), Codecov diff coverage on pull requests
+  (Java flag first), tested release scripts (`scripts/tests`: version validation, Central resolution check, npm tarball content), `CONTRIBUTING.md`, this changelog.
 
 ### Fixed
 
+- **Go:** `go get mobilityid.juherr.dev/go/mobilityid@latest` resolved to `v1.1.0`, an empty
+  module proxy.golang.org synthesized from the 2021 Scala root tag. `go.mod` now retracts
+  `v0.1.0` and `[v1.0.0, v1.1.1]`; the retract-only tag `go/v1.1.1` carries these directives so
+  that `@latest` resolves to the released version (`go/scripts/tests/retract.test.sh` proves it
+  against a file-based proxy). `go list -m -versions` hides the retracted versions.
 - **TypeScript:** `CountryCode` accepted 30 CLDR region codes that ISO 3166-1 does not assign
   (`EU`, `UK`, `XK`, `SU`, `YU`, ...) because it validated through `Intl.DisplayNames`, whose
   answer also varied with the ICU data of the running Node. The list is now generated from the
@@ -83,7 +102,7 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
-- **TypeScript (breaking):** `CountryCode` is a literal union of the 249 ISO 3166-1 alpha-2
+- **Breaking (TypeScript):** `CountryCode` is a literal union of the 249 ISO 3166-1 alpha-2
   codes (exported as `ISO_3166_ALPHA2`) instead of a branded string: `const cc: CountryCode =
   "NL"` now type-checks, `"nl"` no longer does (`CountryCode.from("nl")` still normalizes it).
   The companion API is unchanged; the other identifiers stay branded.
@@ -178,13 +197,3 @@ which requires a dated section for the version below and a matching file in
   `keywords`, `publishConfig`, `sideEffects`, bundled `LICENSE`); `scripts/verify-package.sh`
   packs, checks (content, publint) and consumes the tarball from a throw-away Node + TypeScript
   project, in CI and in the release preflight.
-
-### Added
-
-- **Java:** jqwik property-based suites for check digits and contract-id round trips; JaCoCo
-  coverage gates (90 % lines, 80 % branches); japicmp API-compatibility check against the last
-  published release; isolated consumer smoke consuming the published artifact from Java on the
-  module path and from Kotlin (classpath, strict JSpecify) (`java/scripts/verify-consumer.sh`); `java/scripts/verify.sh` as the single verification entry
-  point.
-- **Repository:** workflow linting (actionlint, zizmor), Codecov diff coverage on pull requests
-  (Java flag first), tested release scripts (`scripts/tests`: version validation, Central resolution check, npm tarball content), `CONTRIBUTING.md`, this changelog.

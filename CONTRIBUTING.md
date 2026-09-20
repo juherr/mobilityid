@@ -172,9 +172,11 @@ GitHub Release body.
 
 ## Release workflow
 
-Java and Scala (Maven Central), TypeScript (npm) and PHP (Packagist, through a split mirror; see
-"PHP and Packagist" below) are released together by the manually dispatched `Release` workflow;
-Go is released from `go/vX.Y.Z` tags by `Release Go`.
+Java and Scala (Maven Central), TypeScript (npm), PHP (Packagist, through a split mirror; see
+"PHP and Packagist" below) and Go (no registry: the `go/vX.Y.Z` tag is the release, fetched by
+proxy.golang.org on first request) are released together, from one commit, by the manually
+dispatched `Release` workflow. Every implementation carries the same version number; never tag a
+workspace-only version.
 
 1. Open and merge a release PR that turns the `Unreleased` section into `## [X.Y.Z] - YYYY-MM-DD`
    and adds `.github/release-notes/X.Y.Z.md`.
@@ -186,14 +188,18 @@ Go is released from `go/vX.Y.Z` tags by `Release Go`.
    throw-away consumer; the tarball is uploaded as an artifact), PHP (`composer check`, also
    asserting the mirror deploy key is present) and Scala (`scala/scripts/verify.sh`: the full
    gate on Scala 2.13 and 3, the release guard wiring proof and the consumer smoke, also
-   asserting the Maven Central credentials are present). Only when **all four** pass does it
+   asserting the Maven Central credentials are present) and Go (`go mod tidy -diff`, the lint,
+   vet, race-test and govulncheck gates, and `go/scripts/tests/retract.test.sh`). Only when
+   **all five** pass does it
    publish, idempotently (an already published version is skipped): Java through nmcp, Scala
    through sbt's Central Portal support (`+publishSigned` stages both Scala versions,
    `sonaRelease` uploads the bundle; the `verifyRelease` guard runs first), TypeScript by
    publishing the exact verified tarball with OIDC trusted publishing, PHP by pushing the
    `php/` split to the Packagist mirror as `vX.Y.Z`. It then waits until Maven Central resolves
-   the Java and Scala artifacts and creates the signed `vX.Y.Z` tag and the GitHub Release. A
-   failing preflight, including a missing secret, leaves every registry untouched.
+   the Java and Scala artifacts and creates the signed `vX.Y.Z` and `go/vX.Y.Z` tags on the
+   released commit (`go/` is the module subdirectory, so `go/vX.Y.Z` is what the Go toolchain
+   maps to version `vX.Y.Z` of `mobilityid.juherr.dev/go`) and the GitHub Release. A failing
+   preflight, including a missing secret, leaves every registry untouched.
 3. Re-run a failed run with `gh run rerun <run-id> --failed` rather than dispatching again, so the
    tag still points at the commit that produced the published artifacts. The Maven Central jobs
    query repo1 first (`scripts/check-central-release.sh`): a version whose every payload is
@@ -214,12 +220,65 @@ through Trusted Publishing (OIDC) bound to `release.yml` and this environment, a
 manual first publication (`ts/README.md`, "Publishing to npm"). Never add an npm token to the
 repository secrets.
 
+### Go versions and the retract-only `go/v1.1.1` tag
+
+proxy.golang.org knows two versions of `mobilityid.juherr.dev/go` that were never Go releases:
+`v1.0.0` and `v1.1.0`, synthesized from the 2021 Scala root tags before the `go/` workspace
+existed (empty modules). Because the `go` command reads `retract` directives from the *highest*
+known version, a retraction shipped only in `go/v0.2.0` would be ignored and `@latest` would keep
+resolving to the phantom `v1.1.0`. `go/go.mod` therefore retracts `v0.1.0` and
+`[v1.0.0, v1.1.1]`, and a **retract-only tag `go/v1.1.1`** must exist on a commit carrying that
+`go.mod`. Once it does, `@latest` resolves to the highest non-retracted version (`v0.2.0` at the
+first common release) and `go list -m -versions` hides the retracted ones
+(`go/scripts/tests/retract.test.sh` proves this against a file-based proxy).
+
+The tag is a one-off, created by hand right after the `0.2.0` release, on the released commit:
+
+```sh
+git fetch origin --tags
+git tag --sign --message "mobilityid-go 1.1.1 (retract-only)" go/v1.1.1 "$(git rev-list -n 1 v0.2.0)"
+git push origin refs/tags/go/v1.1.1
+GOFLAGS=-mod=mod go list -m -versions mobilityid.juherr.dev/go          # expected: v0.2.0 only
+GOFLAGS=-mod=mod go list -m mobilityid.juherr.dev/go@latest             # expected: v0.2.0
+```
+
+proxy.golang.org caches version lists for a few minutes; a `go get` of the new version
+(`go get mobilityid.juherr.dev/go/mobilityid@v0.2.0`) forces it to fetch the tag. The retract
+directives stay in `go.mod` forever: a later release must not drop them.
+
+### External verification
+
+After a release, prove every implementation from a **clean consumer** (a throw-away directory
+outside this repository, no local repositories or caches configured), then tick the checklist in
+the release issue:
+
+- **Tags:** `git rev-list -n 1 vX.Y.Z` and `git rev-list -n 1 go/vX.Y.Z` print the same commit;
+  `git tag --verify vX.Y.Z` succeeds.
+- **Scala:** `scripts/check-central-release.sh X.Y.Z --no-module mobilityid_2.13 mobilityid_3
+  mobilityid-interpolators_2.13 mobilityid-interpolators_3` reports every payload visible; an sbt
+  project with `libraryDependencies += "dev.juherr.mobilityid" %% "mobilityid" % "X.Y.Z"`
+  compiles and runs `ContractId[ISO]("NL-TNM-000122045")` on Scala 2.13 and 3.
+- **Java:** `scripts/check-central-release.sh X.Y.Z mobilityid4j` reports the artifact visible; a
+  Gradle project with `implementation("dev.juherr.mobilityid:mobilityid4j:X.Y.Z")` parses a
+  contract id (`java/scripts/verify-consumer.sh` is the model).
+- **Go:** `go list -m -versions mobilityid.juherr.dev/go` lists `vX.Y.Z` and no retracted
+  version; `go get mobilityid.juherr.dev/go/mobilityid@latest` in a fresh module selects
+  `vX.Y.Z`; a `main` package importing `mobilityid.juherr.dev/go/mobilityid` builds and runs.
+- **PHP:** `composer require juherr/mobility-id:X.Y.Z` in an empty project resolves from
+  Packagist (not from a VCS repository) and `Juherr\MobilityId\ContractIdIso::of(...)` runs.
+- **TypeScript:** `npm view @juherr/mobilityid@X.Y.Z dist.attestations` shows the provenance
+  attestation; `npm install @juherr/mobilityid@X.Y.Z` in an empty Node >= 22 project and an
+  `import { ContractId } from "@juherr/mobilityid"` (`ContractId.parseStrict(ContractIdStandards.ISO, ...)`) run (`ts/scripts/verify-package.sh`
+  does the same against the tarball).
+
 ### PHP and Packagist
 
 Packagist cannot index a package that lives in a sub-directory, so `php/` is published through a
 read-only split repository, `juherr/mobility-id-php`, that Packagist follows.
 
-One-time setup:
+One-time setup (steps 1 to 3 done on 2026-09-20: the mirror carries `main`, the deploy key is
+installed and stored as `PHP_MIRROR_DEPLOY_KEY` in the `packagist` environment, restricted to
+`main`; step 4 is pending):
 
 1. Create the empty GitHub repository `juherr/mobility-id-php` (public, no initial commit).
 2. Generate a dedicated SSH key pair (`ssh-keygen -t ed25519 -N '' -f mobility-id-php-deploy`),
