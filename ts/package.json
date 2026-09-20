@@ -46,6 +46,7 @@
   },
   "scripts": {
     "build": "vp pack",
+    "generate:iso3166": "scripts/generate-iso3166.sh",
     "lint": "vp lint src test",
     "lint:fix": "vp lint --fix src test",
     "check:headers": "scripts/tests/header-policy.test.sh",

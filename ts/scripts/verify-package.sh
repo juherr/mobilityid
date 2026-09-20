@@ -82,16 +82,20 @@ const notNull: ContractId = ContractId.parse(standard, "NL-TNM-000122045-X");
 // The result union narrows on `ok` without a cast.
 const result: ParseResult<ContractId> = ContractId.tryParse(standard, "NL-TNM-000122045-X");
 const outcome: string = result.ok ? result.value.toString() : result.error;
-// Branded string identifiers: a `CountryCode` is a string, a string is not a `CountryCode`.
-const country: CountryCode = CountryCode.from("NL");
+// `CountryCode` is a literal union: a known code type-checks as is, a string does not, and the
+// lowercase form only gets in through the parser.
+const country: CountryCode = CountryCode.from("nl");
+const literal: CountryCode = "NL";
 const widened: string = country;
-// @ts-expect-error only `CountryCode.from` produces a CountryCode
-const unbranded: CountryCode = "NL";
+// @ts-expect-error a string is not a CountryCode
+const unbranded: CountryCode = "NL" as string;
+// @ts-expect-error the union holds the uppercase codes only
+const lowercase: CountryCode = "nl";
 // Brands stay distinct through the packed declarations, even between identifiers that accept
 // the same values.
 // @ts-expect-error a ProviderId is not an OperatorIdIso
 const crossed: OperatorIdIso = ProviderId.from("TNM");
-export { strict, tolerant, notNull, outcome, widened, unbranded, crossed };
+export { strict, tolerant, notNull, outcome, literal, widened, unbranded, lowercase, crossed };
 TS
 cat > "${consumer}/tsconfig.json" <<'JSON'
 { "compilerOptions": { "module": "NodeNext", "moduleResolution": "NodeNext", "strict": true, "noEmit": true, "skipLibCheck": false, "types": [] }, "files": ["smoke.ts"] }

@@ -23,6 +23,7 @@ import {
   ContractId,
   ContractIdStandards,
   CountryCode,
+  ISO_3166_ALPHA2,
   EvseId,
   EvseIdDin,
   EvseIdIso,
@@ -44,8 +45,15 @@ const alnum = (length: number): fc.Arbitrary<string> =>
 const digits = (min: number, max: number): fc.Arbitrary<string> =>
   fc.string({ unit: fc.constantFrom(...DIGITS), minLength: min, maxLength: max });
 
-// Country codes go through Intl.DisplayNames, so the generator only draws real ISO 3166-1 codes.
-const countryCode = fc.constantFrom("NL", "DE", "FR", "BE", "IT", "ES", "PT", "GB", "AT", "CH");
+// Country codes are validated against the generated ISO 3166-1 table, so draw from it.
+const countryCode = fc.constantFrom(...ISO_3166_ALPHA2);
+const unassignedCountryCode = fc
+  .string({
+    unit: fc.constantFrom(..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")),
+    minLength: 2,
+    maxLength: 2,
+  })
+  .filter((code) => !(ISO_3166_ALPHA2 as ReadonlyArray<string>).includes(code));
 const partyCode = alnum(3);
 const instanceValue: Readonly<Record<ContractIdStandard, fc.Arbitrary<string>>> = {
   ISO: alnum(9),
@@ -201,6 +209,19 @@ describe("parser round trips", () => {
         expect(PartyId.parseStrict(`${cc}*${party}`)).toStrictEqual(id);
         expect(PartyId.parseStrict(id.toCompactString())).toStrictEqual(id);
         expect(PartyId.parseStrict(id.toString().toLowerCase())).toStrictEqual(id);
+      }),
+    );
+  });
+
+  it("CountryCode: every table entry parses in any case, every other two-letter string is rejected", () => {
+    fc.assert(
+      fc.property(countryCode.chain(mixedCase), (raw) => {
+        expect(CountryCode.parse(raw)).toBe(raw.toUpperCase());
+      }),
+    );
+    fc.assert(
+      fc.property(unassignedCountryCode.chain(mixedCase), (raw) => {
+        expect(CountryCode.parse(raw)).toBeNull();
       }),
     );
   });

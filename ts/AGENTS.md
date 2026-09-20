@@ -46,6 +46,10 @@ command below from `ts/`.
 - One test pattern: `vp test ContractId` (no coverage thresholds on a filtered run).
 - Package check (pack, content, publint, throw-away Node + TypeScript consumer): `scripts/verify-package.sh [version]`; runs in CI on Node 24.
 - Lint + headers: `bun run lint`; fix: `bun run lint:fix`.
+- ISO 3166-1 table: `bun run generate:iso3166` rewrites `src/iso3166-alpha2.ts` from the JDK's
+  `Locale.getISOCountries()` through `../go/scripts/Iso3166Codes.java` (needs the Java version
+  pinned in `../mise.toml`; not run in CI). `test/country-code.test.ts` asserts the count (249,
+  bump it with the JDK) and equality with the Go table, so regenerate both ports together.
 - Format: `bun run format`, verify: `bun run format:check`. Markdown is excluded from `vp fmt` (`vite.config.ts`): the macOS and Linux oxfmt binaries disagree on the final newline.
 
 ## Code Style

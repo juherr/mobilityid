@@ -19,6 +19,7 @@ export { checkDigitIso } from "./check-digit-iso.js";
 export { ContractId } from "./contract-id.js";
 export { ContractIdStandards, type ContractIdStandard } from "./contract-id-standard.js";
 export { CountryCode } from "./country-code.js";
+export { ISO_3166_ALPHA2 } from "./iso3166-alpha2.js";
 export { EvseId, EvseIdDin, EvseIdIso, type EvseId as EvseIdValue } from "./evse-id.js";
 export { MobilityIdParsers } from "./parsers.js";
 export { OperatorIdDin, OperatorIdIso, type OperatorId } from "./operator-id.js";
