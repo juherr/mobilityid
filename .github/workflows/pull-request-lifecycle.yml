@@ -1,0 +1,69 @@
+name: Pull Request Lifecycle
+
+# Keeps the `Trusted dependency review` status of a commit in step with events that change the
+# review set or a base without a new commit: pull request retargeted (`edited` with a base
+# change), reopened, or closed while siblings at the same head stay open. Runs `main`'s
+# definition on `pull_request_target`, which the pull request author cannot suppress, and
+# re-runs a `Dependency Submission` run of the head bound to a pull request still open there;
+# trusted-dependency-review.yml then resets the status and recomputes. Invariants: no App
+# credential here, no checkout but `scripts/` of `main`, nothing from the pull request is
+# executed (the re-run keeps the privileges of the original run). Public repositories need an
+# Actions event policy allowing `pull_request_target` for this file (GitHub's default rule
+# disables the event, enforced from 2026-11-02). CONTRIBUTING.md, "Dependency review gate".
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] no checkout, no secret: only re-runs a workflow run by id
+    types:
+      - edited
+      - reopened
+      - closed
+
+permissions: {}
+
+concurrency:
+  group: pull-request-lifecycle-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: false
+
+jobs:
+  recompute:
+    name: Re-run Dependency Submission for the head
+    # `edited` also fires for title and body changes: only a base change matters.
+    if: >-
+      github.event.action != 'edited'
+      || toJSON(github.event.changes.base) != 'null'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout scripts of the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Re-run a Dependency Submission run bound to an open pull request of the head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > "$RUNNER_TEMP/pulls.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/dependency-submission.yml/runs?event=pull_request&head_sha=${HEAD_SHA}&per_page=100" \
+            > "$RUNNER_TEMP/runs.json"
+          if ! selected=$(scripts/select-dependency-submission-run.sh "$RUNNER_TEMP/runs.json" "$RUNNER_TEMP/pulls.json" "$HEAD_SHA"); then
+            # Nothing left to review once the last pull request of that commit is closed, and no
+            # trusted status exists to refresh when the pull request run never happened.
+            echo "No Dependency Submission run bound to an open pull request at ${HEAD_SHA} (${ACTION}): nothing to recompute"
+            exit 0
+          fi
+          read -r run_id status <<< "${selected}"
+          # A run still in progress recomputes against the current bases when it completes.
+          if [[ "${status}" != "completed" ]]; then
+            echo "Dependency Submission run ${run_id} is still running: it will recompute on completion"
+            exit 0
+          fi
+          echo "Re-running Dependency Submission run ${run_id} for ${HEAD_SHA} (${ACTION})"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/${run_id}/rerun" > /dev/null

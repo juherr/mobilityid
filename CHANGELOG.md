@@ -29,6 +29,9 @@ which requires a dated section for the version below and a matching file in
 - **TypeScript:** `ValidationError`, thrown by every strict factory and parser on invalid input.
   It extends `TypeError`, so existing `instanceof TypeError` checks still hold.
 
+- **Repository:** the dependency review of pull requests, Java graph included, is now computed
+  from `main` for every pull request (forks and Dependabot included) and published as the
+  `Trusted dependency review` commit status, the check to require; setup in `CONTRIBUTING.md`.
 - **Release:** the `Release` workflow now also publishes PHP: a `Preflight PHP` job runs
   `composer check`, then `Release PHP` pushes a `git subtree split` of `php/` to the
   `juherr/mobility-id-php` mirror as `vX.Y.Z`, the repository Packagist follows (Packagist
