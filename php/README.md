@@ -78,7 +78,8 @@ fixtures, written for PHP 8.4+.
 
 ### Foundational Identifiers
 - `CountryCode`: ISO 3166-1 alpha-2 country codes (e.g., "NL", "DE"), validated with
-  `league/iso3166`.
+  `league/iso3166` minus the user-assigned codes it ships beyond the standard (`XK`), so the
+  accepted set matches the JDK list the other ports validate against.
 - `PhoneCountryCode`: Phone country codes (e.g., "+31", "+49").
 - `ProviderId`: Three-character identifier for providers (e.g., "TNM", "ABC").
 - `OperatorIdIso`: ISO-style operator ID (three alphanumeric characters).
