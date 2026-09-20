@@ -1,42 +1,19 @@
 name: Trusted Dependency Review
 
-# The dependency review that can be required on `main`: computed by this workflow, which only
-# runs from the default branch, and published as the `Trusted dependency review` commit status
-# on the pull request head by a dedicated GitHub App whose key lives in the `trusted-review`
-# environment (deployment branch policy: `main` only).
-#
-# Why not the `Dependency review` job of dependency-submission.yml: a `pull_request` run executes
-# the pull request's own workflow files, so any pull request author (fork or same-repository
-# branch) can rename or neuter that job, and every check or GITHUB_TOKEN status it produces
-# comes from the "GitHub Actions" source, which a required check cannot tell apart from a forged
-# one. Here the review runs from `main`'s definition for every pull request, and the App key is
-# out of reach of `pull_request` runs: repository secrets would be readable by any same-repository
-# branch, environment secrets only by jobs whose run ref matches the environment's branch policy.
-#
-# Every pull request gets its Java graph submitted here (job `submit`): no `pull_request` run
-# holds a write token, so dependency-submission.yml uploads the graph of the head commit as an
-# artifact and this workflow submits it once scripts/validate-dependency-graph-provenance.sh has
-# bound it to the triggering run and its pull request (checks and threat model documented there,
-# policy in CONTRIBUTING.md); a run that uploaded nothing, or a forged snapshot, fails here and
-# the status is a failure. No pull request code runs here: the checkout is a sparse checkout of
-# the default branch limited to `scripts/`, and the only untrusted input is that JSON file,
-# whose size is not bounded before download (worst case: the job's `timeout-minutes`). The
-# graph content itself is produced by the pull request, which can hide a dependency from its
-# own review, the same exposure as editing the build files, limited to that pull request.
-#
-# The check runs of a `workflow_run` workflow are attached to the default-branch commit, not to
-# the pull request, hence the commit status (job `status`, run even on failure). A commit status
-# is per commit, whatever branch or fork carries the commit: the review set is every open pull
-# request whose head is that commit (job `pulls`), the concurrency group is the commit, and a
-# previous success on that commit is reset to `pending` before anything else (job `pending`):
-# as early as `requested` or `in_progress` (the only event a re-run emits before `completed`),
-# and again, as the first job of the `completed` run, since those early runs share the
-# concurrency group and may be cancelled by it. Nothing is reviewed until that reset succeeded;
-# an unconfigured App fails it. Changes to the review set or to a base that produce no new
-# commit (pull request retargeted, reopened or closed) are caught by pull-request-lifecycle.yml,
-# which re-runs `Dependency Submission` for the head so this workflow recomputes. A
-# `workflow_run` workflow only triggers from the default branch, so changes to this file take
-# effect once merged.
+# The dependency review to require on `main`: computed here, from `main`'s definition, for every
+# pull request, and published as the `Trusted dependency review` commit status on the pull
+# request head by a dedicated GitHub App (a `workflow_run` workflow's own check runs are attached
+# to the `main` commit). Design, trust model, setup and post-merge checks: CONTRIBUTING.md,
+# "Dependency review gate". Invariants this file must keep:
+#   - the App key (`trusted-review` environment) is only used by jobs that neither check out,
+#     download nor execute pull request content; the only checkout anywhere is `scripts/` of
+#     `main`, and the pull request's artifact is extracted under the runner temp directory;
+#   - `pending` runs first, on every event, and every other job depends on it: a success already
+#     on the commit is never valid during a recomputation, and a missing App fails, never skips;
+#   - `review` never runs without `submit` having validated and submitted the graph;
+#   - the review set and the concurrency group are the commit (every open pull request at that
+#     sha, whatever its branch or fork), the status is green only when every leg passed.
+# A `workflow_run` workflow only triggers from the default branch: changes here apply once merged.
 on:
   workflow_run: # zizmor: ignore[dangerous-triggers] no checkout of the triggering ref; the artifact is validated before use
     workflows:
@@ -48,29 +25,22 @@ on:
 
 permissions: {}
 
-# Per commit, like the status: sibling runs (several pull requests, branches or forks at the
-# same sha) supersede each other and the survivor reviews every pull request of that commit.
 concurrency:
   group: trusted-dependency-review-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: true
 
 env:
-  # Job correlator gradle/actions derives from the triggering workflow and job names
-  # (`Dependency Submission` / `java-graph`); the artifact is named after it.
+  # Job correlator pinned by dependency-submission.yml; the artifact is named after it.
   CORRELATOR: dependency_submission-java-graph
-  # Pull requests the triggering run knows it belongs to: populated for same-repository and
-  # Dependabot runs, empty for forks (GitHub does not fill it for them). Only binds the snapshot
-  # provenance (job `submit`): the review set is never reduced to them, see job `pulls`.
+  # Pull requests the triggering run knows it belongs to (empty for fork runs). Provenance only:
+  # the review set (job `pulls`) is never reduced to them.
   TRUSTED_PULLS: ${{ join(github.event.workflow_run.pull_requests.*.number, ',') }}
 
 jobs:
   pending:
     name: Reset the trusted dependency review status
-    # A previous success on that commit (another pull request, another base, an earlier
-    # attempt) must not be inherited while the review is being recomputed: reset as soon as the
-    # pull request run is requested or starts, and first thing on completion (the review jobs
-    # depend on this one). The App is a prerequisite of the required check: missing
-    # credentials fail here, they are never skipped.
+    # Early on `requested`/`in_progress` (a re-run emits no `requested`), and again first thing
+    # on `completed`: those early runs share the concurrency group and may be cancelled.
     if: github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -108,14 +78,9 @@ jobs:
 
   pulls:
     name: Open pull requests of the head
-    # The commit status is per commit and shared by every open pull request whose head is this
-    # commit (siblings with different bases, branches or forks included; their runs even share
-    # the concurrency group above), so each of their bases is reviewed below (matrix) and the
-    # set is the same whichever run survives: all of them, never only the triggering run's own.
     needs: pending
     if: >-
       github.event.action == 'completed'
-      && github.event.workflow_run.event == 'pull_request'
       && github.event.workflow_run.conclusion != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -138,19 +103,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          # Every open pull request, whatever its head branch or repository: filtered on the sha.
-          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > pulls.json
-          pulls=$(scripts/list-pull-requests-of-head.sh pulls.json "$HEAD_SHA")
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq '.[]' | jq -s '.' > "$RUNNER_TEMP/pulls.json"
+          pulls=$(scripts/list-pull-requests-of-head.sh "$RUNNER_TEMP/pulls.json" "$HEAD_SHA")
           echo "pulls=${pulls}" >> "$GITHUB_OUTPUT"
 
   submit:
     name: Submit the Java dependency graph
-    # Every pull request run; cancelled runs left no artifact (the concurrency group of the
-    # triggering workflow supersedes them). A run that uploaded nothing fails here.
+    # Cancelled runs left no artifact (superseded by the triggering workflow's concurrency
+    # group); any other run that uploaded nothing fails here.
     needs: pending
     if: >-
       github.event.action == 'completed'
-      && github.event.workflow_run.event == 'pull_request'
       && github.event.workflow_run.conclusion != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -173,8 +136,7 @@ jobs:
           RUN_ID: ${{ github.event.workflow_run.id }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          # A re-run keeps the artifacts of the previous attempts on the same run id, so the
-          # artifact is selected explicitly (latest non-expired one of that name for that head).
+          # A re-run keeps the artifacts of the previous attempts on the same run id.
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?name=dependency-graph_${CORRELATOR}.json" \
             > "$RUNNER_TEMP/artifacts.json"
           artifact_id=$(scripts/select-dependency-graph-artifact.sh "$RUNNER_TEMP/artifacts.json" \
@@ -182,8 +144,6 @@ jobs:
           echo "artifact-id=${artifact_id}" >> "$GITHUB_OUTPUT"
 
       - name: Download it outside the workspace
-        # The artifact is pull request content: extracted under the runner temp directory, never
-        # in the workspace holding the trusted scripts, and only the expected file is read.
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           artifact-ids: ${{ steps.select.outputs.artifact-id }}
@@ -194,8 +154,7 @@ jobs:
       - name: Locate the snapshot
         id: download
         run: |
-          # The artifact keeps the workspace-relative path of the report (gradle/actions default
-          # `dependency-graph-report-dir`); anything else packed into it is ignored.
+          # gradle/actions' default `dependency-graph-report-dir`; anything else in the artifact is ignored.
           snapshot="$RUNNER_TEMP/snapshot/dependency-graph-reports/${CORRELATOR}.json"
           if [[ ! -f "${snapshot}" ]]; then
             echo "::error::dependency-graph-reports/${CORRELATOR}.json is missing from the artifact"
@@ -204,9 +163,8 @@ jobs:
           echo "snapshot=${snapshot}" >> "$GITHUB_OUTPUT"
 
       - name: Fetch the pull request the snapshot names
-        # The number is only parsed out of the untrusted file to look the pull request up; the
-        # provenance script does every check. Any state: a closed sibling at the same head from
-        # the same repository still binds the snapshot to that commit (lifecycle re-runs).
+        # The number is only parsed out of the untrusted file to look the pull request up (any
+        # state); the provenance script does every check.
         env:
           GH_TOKEN: ${{ github.token }}
           SNAPSHOT: ${{ steps.download.outputs.snapshot }}
@@ -251,14 +209,12 @@ jobs:
 
   review:
     name: Trusted dependency review (#${{ matrix.pull.number }})
-    # One leg per open pull request of the head, against its own base: same thresholds as
-    # `Dependency review` in dependency-submission.yml (keep them in sync), on the graph
-    # submitted by `submit` above, never without it. Separate job so the review action never
-    # holds `contents: write`.
+    # One leg per open pull request of the head, against its own base; same thresholds as
+    # `Dependency review` in dependency-submission.yml (keep them in sync). Separate job so the
+    # review action never holds `contents: write`.
     needs:
       - pulls
       - submit
-    if: needs.pulls.result == 'success' && needs.submit.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -281,11 +237,7 @@ jobs:
 
   status:
     name: Report the trusted dependency review status
-    # Publishes the outcome on the pull request head commit whatever happened above, so that a
-    # required `Trusted dependency review` status never stays pending on a failure: success only
-    # when every review leg (one per open pull request of that head) passed. The App key
-    # is an environment secret: the `trusted-review` environment only accepts `main`, which a
-    # `pull_request` run never is, so no pull request can mint this token.
+    # Whatever happened above, so that a required status never stays pending on a failure.
     needs:
       - pending
       - pulls
@@ -295,7 +247,6 @@ jobs:
       always()
       && needs.pending.result == 'success'
       && github.event.action == 'completed'
-      && github.event.workflow_run.event == 'pull_request'
       && github.event.workflow_run.conclusion != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 5

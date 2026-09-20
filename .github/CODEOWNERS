@@ -1,5 +1,0 @@
-# Workflow definitions and the scripts the trusted workflows execute from `main` decide what a
-# pull request run may do and what the required check trusts: their changes need the owner's
-# review ("Require review from Code Owners" in the branch protection of `main`).
-/.github/  @juherr
-/scripts/  @juherr

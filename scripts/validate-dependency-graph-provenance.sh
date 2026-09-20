@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
-# Validates the provenance of a GitHub dependency-graph snapshot uploaded as an artifact by an
-# untrusted `pull_request` run (fork or Dependabot) before a privileged `workflow_run` job submits
-# it. The artifact is attacker-controlled: without these checks a fork could upload a snapshot
-# carrying `ref: refs/heads/main` and the current `main` sha, and mask Dependabot alerts.
+# Validates the provenance of a GitHub dependency-graph snapshot uploaded as an artifact by a
+# `pull_request` run before the privileged `workflow_run` workflow submits it. The artifact is
+# pull request content: without these checks it could carry `ref: refs/heads/main` and the
+# current `main` sha, and mask Dependabot alerts.
 # The snapshot is accepted only when it is bound to the triggering run and its pull request:
 #   - `sha` is the head commit of the run (`workflow_run.head_sha`);
 #   - `ref` is `refs/pull/<N>/merge`, the ref gradle/actions records for a pull_request event;
 #   - `job.id` is the triggering run id and `job.correlator` the expected job correlator;
-#   - pull request <N> is in the given list (`GET /repos/{owner}/{repo}/pulls/<N>`, or the open
-#     pull requests), with that head sha and coming from the expected head repository. Its state
-#     is not provenance: a closed sibling at the same head still binds the snapshot to that
-#     commit (the review set is computed separately from the open pull requests);
+#   - pull request <N> is in the given list (`GET /repos/{owner}/{repo}/pulls/<N>`), with that
+#     head sha and coming from the expected head repository. Its state is not provenance: a
+#     closed sibling at the same head still binds the snapshot to that commit;
 #   - when the triggering run knows its pull requests (`workflow_run.pull_requests`, populated for
 #     same-repository and Dependabot runs, empty for forks), <N> is one of them. Several pull
 #     requests can share one head: for a fork run the list is empty and any sibling of the same

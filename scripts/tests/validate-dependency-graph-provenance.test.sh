@@ -59,7 +59,7 @@ expect() {
   fi
 }
 
-expect 0 "snapshot bound to the open pull request of the head commit" "${valid_snapshot}"
+expect 0 "snapshot bound to the pull request of the head commit" "${valid_snapshot}"
 expect 0 "several Java manifests" \
   "$(make_snapshot javaonly "${head_sha}" refs/pull/42/merge "${run_id}" "${correlator}" java/settings.gradle.kts java/build.gradle.kts)"
 

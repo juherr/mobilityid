@@ -74,9 +74,8 @@ vp test ContractId
 - `mise.toml` uses simplified version formats: major.minor for sbt/gradle (e.g., `2.0`, `9.7`), major only for Java/Node (e.g., `21`, `24`). See `AGENTS.md` for configuration details.
 - CI validates Gradle Wrapper integrity on every run (`gradle/actions/wrapper-validation`).
 - Gradle distribution integrity is pinned with `distributionSha256Sum` in `java/gradle/wrapper/gradle-wrapper.properties`.
-- `.github/workflows/dependency-submission.yml` submits the resolved Gradle dependency graph (transitive dependencies and build plugins included) to GitHub on `main`, and uploads the graph of the pull request head as an artifact on pull requests (no pull request run holds a write token); GitHub parses the npm, Composer, Go and Actions manifests itself.
-- Pull requests run a first dependency review (`actions/dependency-review-action`, high+ in any scope) in the same workflow, on the manifest ecosystems; Dependabot alerts cover `main` continuously.
-- `.github/workflows/trusted-dependency-review.yml` submits the uploaded Java graph of every pull request after provenance validation, recomputes the review from `main` and publishes it as the `Trusted dependency review` commit status through a dedicated GitHub App, the check to require (see `CONTRIBUTING.md`).
+- `.github/workflows/dependency-submission.yml` submits the resolved Gradle dependency graph (transitive dependencies and build plugins included) to GitHub on `main`; GitHub parses the npm, Composer, Go and Actions manifests itself.
+- Pull requests get a dependency review gate (`actions/dependency-review-action`, high+ in any scope): the `Trusted dependency review` commit status, computed from `main` by `.github/workflows/trusted-dependency-review.yml` (see `CONTRIBUTING.md`); Dependabot alerts cover `main` continuously.
 - OWASP Dependency-Check scans the full Java dependency set weekly on `main` (and on demand) in `.github/workflows/security.yml`; it is not a pull request gate.
 
 ## Java release checks

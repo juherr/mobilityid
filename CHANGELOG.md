@@ -29,15 +29,9 @@ which requires a dated section for the version below and a matching file in
 - **TypeScript:** `ValidationError`, thrown by every strict factory and parser on invalid input.
   It extends `TypeError`, so existing `instanceof TypeError` checks still hold.
 
-- **Repository:** `Trusted Dependency Review` workflow (`workflow_run` from `main`): recomputes
-  the dependency review of every pull request from the default branch and publishes it as the
-  `Trusted dependency review` commit status through a dedicated GitHub App (environment
-  `trusted-review`, branch policy `main`), so that no pull request author can forge the required
-  check; it also submits the Java dependency graph of every pull request (no pull request run
-  holds a write token any more) once the provenance of the uploaded snapshot is validated
-  (bound to the triggering run and its pull request); `Pull Request Lifecycle` keeps that status
-  in step when a pull request is retargeted, reopened or closed without a new commit.
-  `.github/CODEOWNERS` routes changes under `.github/` and `scripts/` to the owner.
+- **Repository:** the dependency review of pull requests, Java graph included, is now computed
+  from `main` for every pull request (forks and Dependabot included) and published as the
+  `Trusted dependency review` commit status, the check to require; setup in `CONTRIBUTING.md`.
 - **Release:** the `Release` workflow now also publishes PHP: a `Preflight PHP` job runs
   `composer check`, then `Release PHP` pushes a `git subtree split` of `php/` to the
   `juherr/mobility-id-php` mirror as `vX.Y.Z`, the repository Packagist follows (Packagist

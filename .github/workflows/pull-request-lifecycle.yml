@@ -1,19 +1,14 @@
 name: Pull Request Lifecycle
 
 # Keeps the `Trusted dependency review` status of a commit in step with events that change the
-# review set or a base without producing a new commit: a pull request retargeted to another
-# base (`edited` with a base change), reopened, or closed while siblings at the same head stay
-# open. `Dependency Submission` only reacts to the default `pull_request` activity types, and
-# its triggers live in the pull request's own workflow file anyway, so this workflow — run from
-# `main`'s definition on `pull_request_target`, which the pull request author cannot suppress —
-# re-runs the latest `Dependency Submission` run of the head commit; trusted-dependency-review.yml
-# then resets the status to `pending` and recomputes it against the current set of bases.
-#
-# Metadata only: the checkout is a sparse checkout of `scripts/` on `main`, no artifact, no App
-# credential, nothing from the pull request is executed. The re-run keeps the privileges of the
-# original run (read-only for forks). The run to re-run is one bound to a pull request still
-# open at that head (scripts/select-dependency-submission-run.sh): the latest run may belong to
-# the pull request that has just been closed.
+# review set or a base without a new commit: pull request retargeted (`edited` with a base
+# change), reopened, or closed while siblings at the same head stay open. Runs `main`'s
+# definition on `pull_request_target`, which the pull request author cannot suppress, and
+# re-runs a `Dependency Submission` run of the head bound to a pull request still open there;
+# trusted-dependency-review.yml then resets the status and recomputes. Invariants: no App
+# credential here, no checkout but `scripts/` of `main`, nothing from the pull request is
+# executed (the re-run keeps the privileges of the original run). CONTRIBUTING.md, "Dependency
+# review gate".
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] no checkout, no secret: only re-runs a workflow run by id
     types:

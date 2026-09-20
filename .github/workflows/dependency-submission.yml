@@ -7,10 +7,9 @@ name: Dependency Submission
 # Dependency Review compares the snapshot of the pull request head with the one of its merge
 # base on `main`, so every commit of `main` and every pull request head needs a snapshot.
 #
-# Only `main` submits directly (`contents: write`). A `pull_request` run executes the pull
-# request's own workflow files, so no pull request run holds a write token: it generates the
-# graph of its head commit and uploads it as an artifact, and `trusted-dependency-review.yml`
-# (a `workflow_run` from `main`) validates its provenance, submits it and reviews it.
+# Only `main` submits directly. A pull request run generates the graph of its head commit and
+# uploads it as an artifact for `trusted-dependency-review.yml`, which validates its provenance,
+# submits it and reviews it (CONTRIBUTING.md, "Dependency review gate").
 on:
   push:
     branches:
@@ -68,18 +67,15 @@ jobs:
 
   java-graph-upload:
     name: Java dependency graph (upload)
-    # Every pull request, fork or same-repository: same steps as above, read-only token, graph
-    # uploaded for `trusted-dependency-review.yml`. Generated from the head commit, not from the
-    # merge commit of the default checkout: the snapshot is recorded for the head sha, which
-    # sibling pull requests towards different bases share.
+    # Read-only, from the head commit rather than the merge commit of the default checkout: the
+    # snapshot is recorded for the head sha, which sibling pull requests share.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
     env:
-      # Job correlator (and artifact name) expected by trusted-dependency-review.yml; the value
-      # gradle/actions would derive for the `java-graph` job above, kept stable on purpose.
+      # Correlator (hence artifact name) expected by trusted-dependency-review.yml.
       GITHUB_DEPENDENCY_GRAPH_JOB_CORRELATOR: dependency_submission-java-graph
 
     steps:
@@ -116,12 +112,9 @@ jobs:
 
   dependency-review:
     name: Dependency review
-    # Fast feedback inside the pull request run, on the manifest ecosystems GitHub parses itself
-    # (npm, Composer, Go, Actions): the Java graph of the head is not submitted yet at this
-    # point. This run is controlled by the pull request author, so the review to require on
-    # `main` is the `Trusted dependency review` status (`trusted-dependency-review.yml`),
-    # computed from `main` once this workflow completes, Java included. The job runs even when
-    # the upload failed and fails itself, because a skipped job satisfies a required check.
+    # Fast feedback on the manifest ecosystems (the Java graph is not submitted yet); the check
+    # to require is the `Trusted dependency review` status. Runs even when the upload failed and
+    # fails itself, so that the failure shows in the pull request.
     needs: java-graph-upload
     if: github.event_name == 'pull_request' && !cancelled()
     runs-on: ubuntu-latest

@@ -169,15 +169,13 @@ signing inputs required, `verifyRelease` scheduled before the nmcp upload task.
 - GitHub cannot parse Gradle builds: `.github/workflows/dependency-submission.yml` generates the
   resolved graph with `gradle/actions/dependency-submission` (every configuration, build plugins
   included) and submits it for each commit of `main`; for a pull request it uploads the graph of
-  the head commit, which `.github/workflows/trusted-dependency-review.yml` submits.
+  the head commit and `.github/workflows/trusted-dependency-review.yml` submits it.
   `scripts/verify-dependency-graph.sh` then asserts the snapshot carries known transitive
   dependencies (`opentest4j` via JUnit, Guava via Error Prone), so a graph reduced to declared
   coordinates fails the job.
-- Pull requests run a first dependency review in the same workflow (job `Dependency review`,
-  high+, every scope, manifest ecosystems) that fails when the upload failed. The check to
-  require is the `Trusted dependency review` status, computed from `main` by
-  `.github/workflows/trusted-dependency-review.yml` once it has validated the provenance of the
-  uploaded graph and submitted it (see `CONTRIBUTING.md`).
+- Pull requests are reviewed (high+, every scope) by the `Trusted dependency review` commit
+  status, computed from `main` by `.github/workflows/trusted-dependency-review.yml` (see
+  `CONTRIBUTING.md`, "Dependency review gate").
 - OWASP Dependency-Check runs weekly on `main` and on `workflow_dispatch` in
   `.github/workflows/security.yml`, failing on CVSS >= 7.0 (same bar as the PR gate). The NVD
   database is cached between runs under `~/.gradle/dependency-check-data`. Locally:
