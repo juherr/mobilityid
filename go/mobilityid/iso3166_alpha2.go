@@ -188,6 +188,7 @@ var iso3166Alpha2 = map[string]struct{}{
 	"NG": {},
 	"NI": {},
 	"NL": {},
+	"XK": {},
 	"NO": {},
 	"NP": {},
 	"NR": {},
