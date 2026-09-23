@@ -50,7 +50,7 @@ jobs:
           cache: sbt
 
       - name: Setup sbt
-        uses: sbt/setup-sbt@dd1ef7d7798fab5ce802a6adab3b782817b8c2d0 # v1
+        uses: sbt/setup-sbt@82da71df4e122282484a99a8d70096bc2369dbd8 # v1
 
       - name: Headers, Scalafmt, Scalafix, tests and MiMa (`gate` alias in build.sbt)
         shell: bash
@@ -90,7 +90,7 @@ jobs:
           cache: sbt
 
       - name: Setup sbt
-        uses: sbt/setup-sbt@dd1ef7d7798fab5ce802a6adab3b782817b8c2d0 # v1
+        uses: sbt/setup-sbt@82da71df4e122282484a99a8d70096bc2369dbd8 # v1
 
       - name: Verify the release guard wiring (SNAPSHOT, credentials, GPG key, MiMa baseline)
         run: scripts/verify-release-wiring.sh
