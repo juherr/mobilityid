@@ -28,6 +28,12 @@ which requires a dated section for the version below and a matching file in
   reason without exceptions.
 - **TypeScript:** `ValidationError`, thrown by every strict factory and parser on invalid input.
   It extends `TypeError`, so existing `instanceof TypeError` checks still hold.
+- **TypeScript:** `tryParse` failures carry a stable, machine-readable `reason` next to the
+  human `error`: a closed `ParseFailureReason` union (`format`, `country-code`,
+  `phone-country-code`, `provider-id`, `operator-id`, `id-type`, `power-outlet-id`, `instance`,
+  `check-digit`, `unconvertible`), also exposed as `ValidationError.reason`. A component code is
+  given only when the failing part can be told apart (the starred EVSE form, a component
+  factory), anything else is `format` (#92). The table is in `ts/README.md`.
 
 - **Repository:** the dependency review of pull requests, Java graph included, is now computed
   from `main` for every pull request (forks and Dependabot included) and published as the
@@ -51,6 +57,15 @@ which requires a dated section for the version below and a matching file in
 
 ### Fixed
 
+- **Scala, Java, TypeScript, PHP:** ISO EVSE ids with a lowercase `e` id type
+  (`fr*55c*e84400*svg*1`) are accepted like the rest of the id already was, and still render
+  `FR*55C*E84400*SVG*1`; they used to be rejected because only that letter was matched
+  case-sensitively (#92). DIN parsing is unchanged.
+- **Go:** every parser now uppercases ASCII letters only. `strings.ToUpper` also maps some
+  non-ASCII letters to ASCII ones (`ſ` U+017F to `S`, `ı` U+0131 to `I`), so ids such as
+  `FR*55C*E84400*ſVG*1` or the country code `ſe` were accepted where the other ports reject them.
+  Values that `go/v0.1.0` accepted are therefore rejected (observable change). Lowercase ASCII
+  input, the `e` id type included, was and stays accepted.
 - **TypeScript:** `CountryCode` accepted 30 CLDR region codes that ISO 3166-1 does not assign
   (`EU`, `UK`, `XK`, `SU`, `YU`, ...) because it validated through `Intl.DisplayNames`, whose
   answer also varied with the ICU data of the running Node. The list is now generated from the
