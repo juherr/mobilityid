@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { type ParseResult, ValidationError, attempt, valueOrNull } from "./parse-result.js";
+import {
+  type ParseFailureReason,
+  type ParseResult,
+  ValidationError,
+  attempt,
+  valueOrNull,
+} from "./parse-result.js";
 
 declare const brand: unique symbol;
 
@@ -27,10 +33,11 @@ declare const brand: unique symbol;
  */
 export type StringId<B extends string> = string & { readonly [brand]: B };
 
-/** Validation rule of a string identifier: the predicate and the `ValidationError` message. */
+/** Validation rule of a string identifier: the predicate, the `ValidationError` message and reason. */
 export type StringIdSpec = Readonly<{
   isValid: (raw: string) => boolean;
   message: (raw: string) => string;
+  reason: ParseFailureReason;
 }>;
 
 /**
@@ -53,7 +60,7 @@ export type StringIdCompanion<T extends string> = Readonly<{
 export function defineStringId<T extends string>(spec: StringIdSpec): StringIdCompanion<T> {
   const from = (raw: string): T => {
     if (!spec.isValid(raw)) {
-      throw new ValidationError(spec.message(raw));
+      throw new ValidationError(spec.message(raw), spec.reason);
     }
 
     return raw.toUpperCase() as T;

@@ -341,7 +341,7 @@ describe("parse, parseStrict and tryParse agree on any input", () => {
             expect(String(result.value)).not.toBe("");
           } else {
             expect(parse(raw)).toBeNull();
-            expect(() => strict(raw)).toThrow(new ValidationError(result.error));
+            expect(() => strict(raw)).toThrow(new ValidationError(result.error, result.reason));
           }
         }),
       );

@@ -21,13 +21,17 @@ const OPERATOR_DIN_REGEX = /^[0-9]{3,6}$/;
 
 export type OperatorIdIso = StringId<"OperatorIdIso">;
 
-export const OperatorIdIso: StringIdCompanion<OperatorIdIso> = defineStringId(partyCodeSpec);
+export const OperatorIdIso: StringIdCompanion<OperatorIdIso> = defineStringId({
+  ...partyCodeSpec,
+  reason: "operator-id",
+});
 
 export type OperatorIdDin = StringId<"OperatorIdDin">;
 
 export const OperatorIdDin: StringIdCompanion<OperatorIdDin> = defineStringId({
   isValid: (raw) => OPERATOR_DIN_REGEX.test(raw),
   message: () => "OperatorId must have a length of 3-6 chars and be digits",
+  reason: "operator-id",
 });
 
 export type OperatorId = OperatorIdIso | OperatorIdDin;

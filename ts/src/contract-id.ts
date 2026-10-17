@@ -90,6 +90,7 @@ export class ContractId {
     if (!parser.instanceRegex.test(normalizedInstance)) {
       throw new ValidationError(
         `${instanceValue} is not a valid instance value for ${parser.name} format`,
+        "instance",
       );
     }
 
@@ -97,6 +98,7 @@ export class ContractId {
     if (checkDigit !== undefined && checkDigit.toUpperCase() !== computed) {
       throw new ValidationError(
         `Given check digit '${checkDigit}' is not equal to computed '${computed}'`,
+        "check-digit",
       );
     }
 
@@ -152,6 +154,7 @@ export class ContractId {
       if (!this.instanceValue.startsWith("C0")) {
         throw new ValidationError(
           `${this.toString()} cannot be converted to ${parsers.DIN.name} format`,
+          "unconvertible",
         );
       }
 
@@ -170,6 +173,7 @@ export class ContractId {
       if (!this.instanceValue.startsWith("00")) {
         throw new ValidationError(
           `${this.toString()} cannot be converted to ${parsers.DIN.name} format`,
+          "unconvertible",
         );
       }
 
@@ -215,6 +219,7 @@ export class ContractId {
 
     throw new ValidationError(
       `It is not possible to convert ${this.standard} to ${targetStandard}`,
+      "unconvertible",
     );
   }
 

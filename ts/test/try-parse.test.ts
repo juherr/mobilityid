@@ -32,6 +32,7 @@ import {
   PhoneCountryCode,
   ProviderId,
   ValidationError,
+  type ParseFailureReason,
   type ParseResult,
 } from "../src/index.js";
 import { attempt } from "../src/parse-result.js";
@@ -45,6 +46,26 @@ function expectFailure<T>(result: ParseResult<T>): string {
   }
   expect(result).not.toHaveProperty("value");
   return result.error;
+}
+
+function expectReason<T>(result: ParseResult<T>): ParseFailureReason {
+  expectFailure(result);
+  if (result.ok) {
+    throw new Error("expected a failure");
+  }
+  return result.reason;
+}
+
+function thrownBy(strict: () => unknown): ValidationError {
+  try {
+    strict();
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return error;
+    }
+    throw error;
+  }
+  throw new Error("expected a ValidationError");
 }
 
 function expectSuccess<T>(result: ParseResult<T>): T {
@@ -92,15 +113,77 @@ describe("tryParse", () => {
     ];
 
     for (const [tryParse, strict] of cases) {
-      let thrown: unknown;
-      try {
-        strict();
-      } catch (error) {
-        thrown = error;
-      }
-      expect(thrown).toBeInstanceOf(TypeError);
-      expect(expectFailure(tryParse())).toBe((thrown as TypeError).message);
+      const thrown = thrownBy(strict);
+      expect(expectFailure(tryParse())).toBe(thrown.message);
+      expect(expectReason(tryParse())).toBe(thrown.reason);
     }
+  });
+
+  it("gives a stable reason code, a component one only when it can be told apart", () => {
+    const cases: ReadonlyArray<readonly [ParseResult<unknown>, ParseFailureReason]> = [
+      [CountryCode.tryParse("ZZ"), "country-code"],
+      [CountryCode.tryParse("N"), "country-code"],
+      [PhoneCountryCode.tryParse("+4A"), "phone-country-code"],
+      [ProviderId.tryParse("T|M"), "provider-id"],
+      [OperatorIdIso.tryParse("ABCD"), "operator-id"],
+      [OperatorIdDin.tryParse("12A"), "operator-id"],
+      [PartyId.tryParse("XY-TNM"), "country-code"],
+      [PartyId.tryParse("NL"), "format"],
+      [ContractId.tryParse(ContractIdStandards.ISO, "NL-TNM-000122045-X"), "check-digit"],
+      [ContractId.tryParse(ContractIdStandards.ISO, "ZZ-TNM-000122045"), "country-code"],
+      [ContractId.tryParse(ContractIdStandards.DIN, "NL-TNM-00012"), "format"],
+      // Starred ISO form: every segment is known, so the failing one is named.
+      [EvseIdIso.tryParse("FR*DEMO*E1"), "operator-id"],
+      [EvseIdIso.tryParse("NL*TNM*840*6487"), "id-type"],
+      [EvseIdIso.tryParse("ZZ*TNM*E840"), "country-code"],
+      [EvseIdIso.tryParse("F1*TNM*E840"), "country-code"],
+      [EvseIdIso.tryParse("NL*TNM*E"), "power-outlet-id"],
+      [EvseIdIso.tryParse(`NL*TNM*E${"7".repeat(32)}`), "power-outlet-id"],
+      [EvseIdIso.tryParse("NL*TNM*E84é"), "power-outlet-id"],
+      // Compact or partly starred ISO forms cannot be split reliably.
+      [EvseIdIso.tryParse("NLDEMOE1"), "format"],
+      [EvseIdIso.tryParse("NL*TNM"), "format"],
+      [EvseIdIso.tryParse("NLTNM*E84é"), "format"],
+      [EvseIdIso.tryParse(`NL*TNME${"7".repeat(32)}*1`), "format"],
+      [EvseIdIso.tryParse(""), "format"],
+      [EvseIdDin.tryParse("+4A*810*000"), "phone-country-code"],
+      [EvseIdDin.tryParse("+49*AB7*840"), "operator-id"],
+      [EvseIdDin.tryParse("+49*810*00A"), "power-outlet-id"],
+      [EvseIdDin.tryParse("+49810000"), "format"],
+      // EvseId takes the reason of the format the input looks like.
+      [EvseId.tryParse("FR*DEMO*E1"), "operator-id"],
+      [EvseId.tryParse("NL*TNM*840*6487"), "id-type"],
+      [EvseId.tryParse("+49*AB7*840"), "operator-id"],
+      [EvseId.tryParse("49*810*00A"), "power-outlet-id"],
+      [EvseId.tryParse("*NL*TNM*E840"), "format"],
+    ];
+
+    for (const [result, reason] of cases) {
+      expect(expectReason(result)).toBe(reason);
+    }
+  });
+
+  it("gives the reason of the failed part to the strict factories", () => {
+    expect(
+      thrownBy(() => ContractId.fromParts(ContractIdStandards.ISO, "NL", "T|M", "000122045"))
+        .reason,
+    ).toBe("provider-id");
+    expect(
+      thrownBy(() => ContractId.fromParts(ContractIdStandards.ISO, "NL", "TNM", "0001")).reason,
+    ).toBe("instance");
+    expect(
+      thrownBy(() =>
+        ContractId.fromParts(ContractIdStandards.EMI3, "NL", "TNM", "C10122045").convertTo(
+          ContractIdStandards.DIN,
+        ),
+      ).reason,
+    ).toBe("unconvertible");
+    expect(thrownBy(() => EvseId.fromParts("ZZ", "TNM", "840")).reason).toBe("country-code");
+    expect(thrownBy(() => EvseId.fromParts("NL", "DEMO", "840")).reason).toBe("operator-id");
+    expect(thrownBy(() => EvseId.fromParts("NL", "TNM", "84é")).reason).toBe("power-outlet-id");
+    expect(thrownBy(() => EvseId.fromParts("+49", "AB7", "840")).reason).toBe("operator-id");
+    expect(thrownBy(() => checkDigitIso("")).reason).toBe("format");
+    expect(new ValidationError("x").reason).toBe("format");
   });
 
   it("names the failed field, not just the input", () => {

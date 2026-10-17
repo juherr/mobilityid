@@ -29,4 +29,5 @@ export type CountryCode = (typeof ISO_3166_ALPHA2)[number];
 export const CountryCode: StringIdCompanion<CountryCode> = defineStringId({
   isValid: (raw) => COUNTRY_CODE_REGEX.test(raw) && KNOWN_CODES.has(raw.toUpperCase()),
   message: () => "Country Code must be valid according to ISO 3166-1 alpha-2",
+  reason: "country-code",
 });
