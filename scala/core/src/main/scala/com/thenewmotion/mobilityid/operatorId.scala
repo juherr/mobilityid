@@ -50,7 +50,7 @@ object OperatorIdDin {
 
   def apply(id: String): OperatorIdDin =
     if (isValid(id)) {
-      OperatorIdDinImpl(id.toUpperCase)
+      OperatorIdDinImpl(Ascii.toUpperCase(id))
     } else throw new IllegalArgumentException(
       "OperatorId must have a length of 3-6 chars and be digits"
     )

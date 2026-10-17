@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { asciiUpperCase } from "./ascii.js";
 import { CountryCode } from "./country-code.js";
 import { OperatorIdDin, OperatorIdIso, type OperatorId } from "./operator-id.js";
 import {
@@ -73,9 +74,9 @@ export class EvseIdIso extends EvseIdBase {
     powerOutletId: string,
   ): EvseIdIso {
     return createIso(
-      countryCode.toUpperCase(),
-      operatorId.toUpperCase(),
-      powerOutletId.toUpperCase(),
+      asciiUpperCase(countryCode),
+      asciiUpperCase(operatorId),
+      asciiUpperCase(powerOutletId),
     );
   }
 
@@ -93,7 +94,7 @@ export class EvseIdIso extends EvseIdBase {
       throw new ValidationError(`Invalid ISO EVSE ID: ${raw}`, diagnoseIso(raw));
     }
 
-    return createIso(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
+    return createIso(asciiUpperCase(match[1]), asciiUpperCase(match[2]), asciiUpperCase(match[3]));
   }
 
   public get partyId(): PartyId {
@@ -132,9 +133,9 @@ export class EvseIdDin extends EvseIdBase {
     powerOutletId: string,
   ): EvseIdDin {
     return createDin(
-      countryCode.toUpperCase(),
-      operatorId.toUpperCase(),
-      powerOutletId.toUpperCase(),
+      asciiUpperCase(countryCode),
+      asciiUpperCase(operatorId),
+      asciiUpperCase(powerOutletId),
     );
   }
 
@@ -152,7 +153,7 @@ export class EvseIdDin extends EvseIdBase {
       throw new ValidationError(`Invalid DIN EVSE ID: ${raw}`, diagnoseDin(raw));
     }
 
-    return createDin(match[1].toUpperCase(), match[2].toUpperCase(), match[3].toUpperCase());
+    return createDin(asciiUpperCase(match[1]), asciiUpperCase(match[2]), asciiUpperCase(match[3]));
   }
 
   public toString(): string {
@@ -227,7 +228,7 @@ function diagnoseIso(raw: string): ParseFailureReason {
   if (operator.length > 3 && ISO_OPERATOR_AND_ID_TYPE_REGEX.test(operator)) {
     return "format";
   }
-  if (!ISO_COUNTRY_REGEX.test(country ?? "")) {
+  if (!CountryCode.isValid(country ?? "")) {
     return "country-code";
   }
   if (!ISO_OPERATOR_REGEX.test(operator)) {
@@ -256,6 +257,9 @@ function diagnoseDin(raw: string): ParseFailureReason {
 function createIso(countryCode: string, operatorId: string, powerOutletId: string): EvseIdIso {
   const country = CountryCode.from(countryCode);
   const operator = OperatorIdIso.from(operatorId);
+  if (!ISO_POWER_OUTLET_REGEX.test(powerOutletId)) {
+    throw new ValidationError("Invalid powerOutletId for ISO format", "power-outlet-id");
+  }
   // The E type marker is part of the rendering, not of the power outlet id: parsing already
   // consumed it and a power outlet id given by parts may itself start with E (as in Scala).
   return new EvseIdIso(country, operator, powerOutletId);
@@ -265,6 +269,9 @@ function createDin(countryCode: string, operatorId: string, powerOutletId: strin
   const countryWithPlus = countryCode.startsWith("+") ? countryCode : `+${countryCode}`;
   const country = PhoneCountryCode.from(countryWithPlus);
   const operator = OperatorIdDin.from(operatorId);
+  if (!DIN_POWER_OUTLET_REGEX.test(powerOutletId)) {
+    throw new ValidationError("Invalid powerOutletId for DIN format", "power-outlet-id");
+  }
   return new EvseIdDin(country, operator, powerOutletId);
 }
 
@@ -272,9 +279,9 @@ export type EvseId = EvseIdIso | EvseIdDin;
 
 export const EvseId = {
   fromParts(countryCode: string, operatorId: string, powerOutletId: string): EvseId {
-    const normalizedCountry = countryCode.toUpperCase();
-    const normalizedOperator = operatorId.toUpperCase();
-    const normalizedPowerOutlet = powerOutletId.toUpperCase();
+    const normalizedCountry = asciiUpperCase(countryCode);
+    const normalizedOperator = asciiUpperCase(operatorId);
+    const normalizedPowerOutlet = asciiUpperCase(powerOutletId);
 
     const isoError = validateIso(normalizedCountry, normalizedOperator, normalizedPowerOutlet);
     if (isoError === null) {

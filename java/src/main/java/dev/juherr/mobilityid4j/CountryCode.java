@@ -45,7 +45,7 @@ public record CountryCode(String value) {
         if (!PATTERN.matcher(value).matches()) {
             throw new IllegalArgumentException("Country Code must be valid according to ISO 3166-1 alpha-2");
         }
-        var normalized = value.toUpperCase(Locale.ROOT);
+        var normalized = Ascii.toUpperCase(value);
         if (!ISO_COUNTRIES.contains(normalized)) {
             throw new IllegalArgumentException("Country Code must be valid according to ISO 3166-1 alpha-2");
         }

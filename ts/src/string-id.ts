@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { asciiUpperCase } from "./ascii.js";
 import {
   type ParseFailureReason,
   type ParseResult,
@@ -63,7 +64,7 @@ export function defineStringId<T extends string>(spec: StringIdSpec): StringIdCo
       throw new ValidationError(spec.message(raw), spec.reason);
     }
 
-    return raw.toUpperCase() as T;
+    return asciiUpperCase(raw) as T;
   };
   const tryParse = (raw: string): ParseResult<T> => attempt(() => from(raw));
   const parse = (raw: string): T | null => valueOrNull(tryParse(raw));

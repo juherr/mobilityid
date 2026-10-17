@@ -61,11 +61,21 @@ which requires a dated section for the version below and a matching file in
   (`fr*55c*e84400*svg*1`) are accepted like the rest of the id already was, and still render
   `FR*55C*E84400*SVG*1`; they used to be rejected because only that letter was matched
   case-sensitively (#92). DIN parsing is unchanged.
-- **Go:** every parser now uppercases ASCII letters only. `strings.ToUpper` also maps some
-  non-ASCII letters to ASCII ones (`ſ` U+017F to `S`, `ı` U+0131 to `I`), so ids such as
-  `FR*55C*E84400*ſVG*1` or the country code `ſe` were accepted where the other ports reject them.
-  Values that `go/v0.1.0` accepted are therefore rejected (observable change). Lowercase ASCII
-  input, the `e` id type included, was and stays accepted.
+- **Scala, Java, TypeScript, Go:** every factory, parser and check-digit function now
+  uppercases ASCII letters only, as PHP already did (#92). This is an observable change:
+  inputs that used to be accepted are now rejected. Lowercase ASCII input, the `e` id type
+  included, stays accepted.
+  - The cause: Unicode case mapping turns some non-ASCII letters into ASCII ones (`ſ` U+017F to
+    `S`, `ı` U+0131 to `I`), and the ports uppercased before validating.
+  - Go accepted such letters everywhere, `FR*55C*E84400*ſVG*1` and the country code `ſe`
+    included. Values that `go/v0.1.0` accepted are therefore rejected.
+  - Scala, Java and TypeScript accepted them only in the from-parts factories and the
+    check-digit functions: `EvseIdIso("FR", "55C", "84400*ſVG*1")`, a contract id instance or
+    check digit in `ı`, `CheckDigitIso("NLſVG000122045")`.
+- **TypeScript:** `EvseIdIso.fromParts` and `EvseIdDin.fromParts` now validate the power outlet
+  id, as `EvseId.fromParts` and the parsers already did; `("+49", "810", "abc")` used to build
+  `+49*810*ABC`. They throw `Invalid powerOutletId for ISO format` (or `DIN`), reason
+  `power-outlet-id`.
 - **TypeScript:** `CountryCode` accepted 30 CLDR region codes that ISO 3166-1 does not assign
   (`EU`, `UK`, `XK`, `SU`, `YU`, ...) because it validated through `Intl.DisplayNames`, whose
   answer also varied with the ICU data of the running Node. The list is now generated from the

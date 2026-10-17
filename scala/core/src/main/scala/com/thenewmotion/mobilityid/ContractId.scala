@@ -206,7 +206,12 @@ object ContractId {
       instanceValue: String,
       checkDigit: Option[Char]
   )(implicit p: ContractIdParser[T]): ContractId[T] =
-    applyToUpperCase(countryCode, providerId, instanceValue.toUpperCase, checkDigit.map(_.toUpper))
+    applyToUpperCase(
+      countryCode,
+      providerId,
+      Ascii.toUpperCase(instanceValue),
+      checkDigit.map(Ascii.toUpperCase(_: Char))
+    )
 
   def apply[T <: ContractIdStandard](
       countryCode: String,

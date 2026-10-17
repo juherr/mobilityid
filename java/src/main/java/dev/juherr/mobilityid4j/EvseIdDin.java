@@ -16,7 +16,6 @@
  */
 package dev.juherr.mobilityid4j;
 
-import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
@@ -37,7 +36,7 @@ public record EvseIdDin(PhoneCountryCode countryCode, OperatorIdDin operatorId, 
      * Creates and validates a DIN EVSE identifier.
      */
     public EvseIdDin {
-        var normalizedPower = powerOutletId.toUpperCase(Locale.ROOT);
+        var normalizedPower = Ascii.toUpperCase(powerOutletId);
         if (!POWER_OUTLET.matcher(normalizedPower).matches()) {
             throw new IllegalArgumentException("Invalid powerOutletId for DIN format");
         }
@@ -58,7 +57,7 @@ public record EvseIdDin(PhoneCountryCode countryCode, OperatorIdDin operatorId, 
             throw new IllegalArgumentException(error.orElseThrow().description());
         }
         return new EvseIdDin(
-                PhoneCountryCode.of(countryCode), OperatorIdDin.of(operatorId), powerOutletId.toUpperCase(Locale.ROOT));
+                PhoneCountryCode.of(countryCode), OperatorIdDin.of(operatorId), Ascii.toUpperCase(powerOutletId));
     }
 
     /**
@@ -86,9 +85,9 @@ public record EvseIdDin(PhoneCountryCode countryCode, OperatorIdDin operatorId, 
         if (countryCode == null || operatorId == null || powerOutletId == null) {
             return Optional.of(new EvseValidationError(1, "Invalid countryCode for ISO or DIN format"));
         }
-        var cc = countryCode.toUpperCase(Locale.ROOT);
-        var op = operatorId.toUpperCase(Locale.ROOT);
-        var po = powerOutletId.toUpperCase(Locale.ROOT);
+        var cc = Ascii.toUpperCase(countryCode);
+        var op = Ascii.toUpperCase(operatorId);
+        var po = Ascii.toUpperCase(powerOutletId);
 
         if (PhoneCountryCode.parse(cc) == null) {
             return Optional.of(new EvseValidationError(1, "Invalid countryCode for ISO or DIN format"));

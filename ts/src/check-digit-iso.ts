@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { asciiUpperCase } from "./ascii.js";
 import { ValidationError } from "./parse-result.js";
 
 type Matrix = Readonly<{ m11: number; m12: number; m21: number; m22: number }>;
@@ -113,7 +114,7 @@ for (let index = 0; index < 14; index += 1) {
 const negP2minus15: Matrix = { m11: 0, m12: 2, m21: 2, m22: 1 };
 
 export function checkDigitIso(code: string): string {
-  const normalized = code.toUpperCase();
+  const normalized = asciiUpperCase(code);
 
   if (normalized.length !== p1s.length || normalized.length !== p2s.length) {
     throw new ValidationError(`Code must have a length of ${p1s.length}`);

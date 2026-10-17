@@ -24,7 +24,7 @@ private[mobilityid] object CheckDigitIso {
   import LookupTables._
   import MatrixUtil._
 
-  def apply(code: String): Char = applyToUpperCaseString(code.toUpperCase)
+  def apply(code: String): Char = applyToUpperCaseString(Ascii.toUpperCase(code))
 
   private def applyToUpperCaseString(code: String): Char = {
     require(code.length == p1s.length, s"Code must have a length of ${p1s.length}")
@@ -128,7 +128,7 @@ private[mobilityid] object CheckDigitDin {
   def apply(contractId: String): Char = {
     def mult(value: Int, coeff: Int) = value * math.pow(2, coeff).toInt
 
-    val theString = contractId.toUpperCase
+    val theString = Ascii.toUpperCase(contractId)
     val lookupResults = theString map toNumericValue
 
     @tailrec

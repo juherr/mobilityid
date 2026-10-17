@@ -137,6 +137,8 @@ describe("tryParse", () => {
       [EvseIdIso.tryParse("NL*TNM*840*6487"), "id-type"],
       [EvseIdIso.tryParse("ZZ*TNM*E840"), "country-code"],
       [EvseIdIso.tryParse("F1*TNM*E840"), "country-code"],
+      // Segments are checked left to right: an unknown country wins over a missing `E`.
+      [EvseIdIso.tryParse("ZZ*TNM*840"), "country-code"],
       [EvseIdIso.tryParse("NL*TNM*E"), "power-outlet-id"],
       [EvseIdIso.tryParse(`NL*TNM*E${"7".repeat(32)}`), "power-outlet-id"],
       [EvseIdIso.tryParse("NL*TNM*E84é"), "power-outlet-id"],

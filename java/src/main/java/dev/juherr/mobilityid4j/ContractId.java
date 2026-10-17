@@ -16,7 +16,6 @@
  */
 package dev.juherr.mobilityid4j;
 
-import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
@@ -140,11 +139,11 @@ public final class ContractId {
             String instanceValue,
             Optional<Character> checkDigit) {
         validateInstanceValue(standard, instanceValue);
-        var normalizedInstance = instanceValue.toUpperCase(Locale.ROOT);
+        var normalizedInstance = Ascii.toUpperCase(instanceValue);
         var computedCheck = computeCheckDigit(standard, countryCode + providerId.id() + normalizedInstance);
 
         if (checkDigit.isPresent()) {
-            var provided = Character.toUpperCase(checkDigit.orElseThrow());
+            var provided = Ascii.toUpperCase(checkDigit.orElseThrow());
             if (provided != computedCheck) {
                 throw new IllegalArgumentException(
                         "Given check digit '" + provided + "' is not equal to computed '" + computedCheck + "'");
