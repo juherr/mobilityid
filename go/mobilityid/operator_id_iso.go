@@ -19,7 +19,6 @@ package mobilityid
 
 import (
 	"fmt"
-	"strings"
 )
 
 // OperatorIDISO represents an ISO 15118-compliant operator identifier.
@@ -31,7 +30,7 @@ type OperatorIDISO struct {
 // NewOperatorIDISO creates a new OperatorIDISO if the provided value is valid.
 // It returns an error if the value does not conform to the expected format and validation rules.
 func NewOperatorIDISO(id string) (*OperatorIDISO, error) {
-	normalized := strings.ToUpper(id)
+	normalized := asciiUpper(id)
 	if !isValidOperatorIDISO(normalized) {
 		return nil, fmt.Errorf("%w: '%s' is not a valid ISO 15118 operator id", ErrInvalidOperatorID, id)
 	}

@@ -20,7 +20,6 @@ package mobilityid
 import (
 	"fmt"
 	"regexp"
-	"strings"
 )
 
 // OperatorIDDIN represents a DIN-compliant operator identifier.
@@ -35,7 +34,7 @@ var operatorIDDINRegex = regexp.MustCompile(`^[0-9]{3,6}$`)
 // NewOperatorIDDIN creates a new OperatorIDDIN if the provided value is valid.
 // It returns an error if the value does not conform to the expected format and validation rules.
 func NewOperatorIDDIN(id string) (*OperatorIDDIN, error) {
-	normalized := strings.ToUpper(id)
+	normalized := asciiUpper(id)
 	if !isValidOperatorIDDIN(normalized) {
 		return nil, fmt.Errorf("%w: '%s' is not a valid DIN operator id", ErrInvalidOperatorID, id)
 	}

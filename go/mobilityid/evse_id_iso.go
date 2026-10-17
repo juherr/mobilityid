@@ -48,7 +48,7 @@ func NewEvseIDISO(id string) (*EvseIDISO, error) {
 
 // parseEvseIDISO does the work of NewEvseIDISO and returns the bare error of the failing part.
 func parseEvseIDISO(id string) (*EvseIDISO, error) {
-	matches := evseIDISORegex.FindStringSubmatch(strings.ToUpper(id))
+	matches := evseIDISORegex.FindStringSubmatch(asciiUpper(id))
 	if len(matches) != 4 {
 		return nil, errors.New("does not match the ISO 15118 format")
 	}
@@ -83,7 +83,7 @@ func NewEvseIDISOFromParts(countryCode string, operatorID string, powerOutletID 
 
 	// The "E" id type is added by String(); a power outlet id starting with "E" keeps it, as
 	// in the Scala reference.
-	normalizedPowerOutletID := strings.ToUpper(powerOutletID)
+	normalizedPowerOutletID := asciiUpper(powerOutletID)
 
 	if !evseIDISOFromPartsPowerOutletRegex.MatchString(normalizedPowerOutletID) {
 		return nil, fmt.Errorf("%w: invalid power outlet id '%s' for ISO format", ErrInvalidEvseID, powerOutletID)

@@ -31,7 +31,9 @@ type FormatError = Readonly<{ priority: number; description: string }>;
 const ISO_COUNTRY_REGEX = /^([A-Za-z]{2})$/;
 const ISO_OPERATOR_REGEX = /^([A-Za-z0-9]{3})$/;
 const ISO_POWER_OUTLET_REGEX = /^([A-Za-z0-9*]{1,31})$/;
-const ISO_EVSE_REGEX = /^([A-Za-z]{2})\*?([A-Za-z0-9]{3})\*?E([A-Za-z0-9*]{1,31})$/;
+// The E id type is matched case-insensitively like the rest of the id (OCPI CiString, OCHP ABNF);
+// toString() renders it in uppercase.
+const ISO_EVSE_REGEX = /^([A-Za-z]{2})\*?([A-Za-z0-9]{3})\*?[Ee]([A-Za-z0-9*]{1,31})$/;
 
 const DIN_COUNTRY_REGEX = /^(\+?[0-9]{1,3})$/;
 const DIN_OPERATOR_REGEX = /^([0-9]{3,6})$/;

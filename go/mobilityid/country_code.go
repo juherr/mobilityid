@@ -19,7 +19,6 @@ package mobilityid
 
 import (
 	"fmt"
-	"strings"
 )
 
 // CountryCode represents a two-letter country code as defined by ISO 3166-1 alpha-2.
@@ -30,7 +29,7 @@ type CountryCode struct {
 // NewCountryCode creates a new CountryCode if the provided value is valid.
 // It returns an error if the value is not a valid ISO 3166-1 alpha-2 code.
 func NewCountryCode(code string) (*CountryCode, error) {
-	normalized := strings.ToUpper(code)
+	normalized := asciiUpper(code)
 	if !isValidCountryCode(normalized) {
 		return nil, fmt.Errorf("%w: '%s'", ErrInvalidCountryCode, code)
 	}

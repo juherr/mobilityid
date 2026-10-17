@@ -147,7 +147,9 @@ object EvseIdIso extends EvseIdFormat[EvseIdIso] {
   val OperatorCode = PartyCode.Regex
   val IdType = "E"
   val PowerOutletId = """([A-Za-z0-9\*]{1,31})""".r
-  val EvseIdRegex = s"""$CountryCodeRegex\\*?$OperatorCode\\*?$IdType$PowerOutletId""".r
+  // The id type is matched case-insensitively like the rest of the id (OCPI CiString, OCHP ABNF);
+  // rendering keeps the uppercase IdType.
+  val EvseIdRegex = s"""$CountryCodeRegex\\*?$OperatorCode\\*?[Ee]$PowerOutletId""".r
 
   def apply(cc: CountryCode, o: OperatorIdIso, powerOutletId: String): EvseIdIso =
     EvseIdIsoImpl(cc, o, powerOutletId)

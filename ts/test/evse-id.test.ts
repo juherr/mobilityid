@@ -25,6 +25,13 @@ describe("EvseId", () => {
     expect(EvseId.parse("DE*DES*E*BMW*0113*2")?.toString()).toBe("DE*DES*E*BMW*0113*2");
   });
 
+  it("parses ISO input in any case, the `E` id type included, and renders it in uppercase", () => {
+    expect(EvseId.parse("fr*55c*e84400*svg*1")?.toString()).toBe("FR*55C*E84400*SVG*1");
+    expect(EvseIdIso.parse("fr*55c*e84400*svg*1")?.toString()).toBe("FR*55C*E84400*SVG*1");
+    expect(EvseId.parse("Fr*55C*e84400*SvG*1")).toStrictEqual(EvseId.parse("FR*55C*E84400*SVG*1"));
+    expect(EvseId.parse("fr55ce844001")?.toString()).toBe("FR*55C*E844001");
+  });
+
   it("parses DIN input", () => {
     expect(EvseId.parse("+49*810*000*438")?.toString()).toBe("+49*810*000*438");
     expect(EvseId.parse("49*810*000*438")?.toString()).toBe("+49*810*000*438");
