@@ -25,6 +25,8 @@ and status are in `README.md`. Run every command below from `go/`.
 - No third-party dependency; keep it that way unless the domain requires one.
 - CI (`.github/workflows/ci-go.yml`): `golangci-lint-action` (version annotated for Renovate),
   `go vet`, `go test -race -cover`, `govulncheck` (`go run …@vX`, version annotated for Renovate).
+- When the CI matrix gains a Go version, check golangci-lint reads it: an older binary fails with
+  `export data version N is greater than maximum supported version M` (2.13 vs Go 1.27.2, fixed by 2.15).
 - Releases use `go/vX.Y.Z` tags (`.github/workflows/release-go.yml`); the version follows the
   common `vX.Y.Z` line of the repository (never pick a Go-only number), see #70 for the
   published-version state.

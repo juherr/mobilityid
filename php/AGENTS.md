@@ -24,6 +24,8 @@ from `php/`.
   Rector, PHPUnit 13, Infection (minimum MSI 95 %), composer-normalize.
 - Configuration files: `.php-cs-fixer.dist.php`, `phpstan.neon`, `rector.php`,
   `infection.json5`, `phpunit.xml`.
+- `phpunit.xml` points `xsi:noNamespaceSchemaLocation` at `vendor/phpunit/phpunit/phpunit.xsd`; keep it
+  local (Infection validates it, and `schema.phpunit.de` has served a 404 body).
 
 ## Commands
 

@@ -45,6 +45,7 @@ command below from `ts/`.
   `bun run check` runs them plus `bun run check:shape` (`publint --strict`, `attw`).
 - One test pattern: `vp test ContractId` (no coverage thresholds on a filtered run).
 - Package check (pack, content, publint, throw-away Node + TypeScript consumer): `scripts/verify-package.sh [version]`; runs in CI on Node 24.
+  Extend its `smoke.mjs`/`smoke.ts` when adding public behavior or types: they run against the packed tarball.
 - Lint + headers: `bun run lint`; fix: `bun run lint:fix`.
 - ISO 3166-1 table: `bun run generate:iso3166` rewrites `src/iso3166-alpha2.ts` from the JDK's
   `Locale.getISOCountries()` through `../go/scripts/Iso3166Codes.java` (needs the Java version

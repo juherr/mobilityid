@@ -20,5 +20,6 @@ coding agents also need; only Claude Code specifics belong in `CLAUDE.md` files.
 - Project permissions live in `.claude/settings.local.json`, which is not versioned: a fresh clone
   prompts on first use for `sbt`, `./gradlew build`, PHPUnit, PHPStan and `composer test`.
 - Run the single-suite command from the workspace `AGENTS.md` first, then its full gate.
+- Running several workspace gates in parallel: give each background job its own `cd "$ROOT/<ws>"` inside the subshell; a `cd` before `&&` in front of the first `( … ) &` only moves that job.
 - Language policy from the user config applies: discussion in French, code, comments, commits, PR
   titles/descriptions and changelog entries in English, Conventional Commits.
