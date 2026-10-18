@@ -96,8 +96,9 @@ final class EvseIdTest extends TestCase
         self::assertInstanceOf(EvseIdIso::class, $evseId);
         self::assertSame('NL', (string) $evseId->countryCode);
         self::assertSame('TNM', (string) $evseId->operatorId);
-        self::assertSame('840*6487', $evseId->powerOutletId);
-        self::assertSame('NL*TNM*E840*6487', (string) $evseId);
+        self::assertSame('E840*6487', $evseId->powerOutletId);
+        self::assertSame('NL*TNM*EE840*6487', (string) $evseId);
+        self::assertEquals($evseId, EvseIdIso::of((string) $evseId));
     }
 
     public function testOfPartsValidIsoWithoutEPrefix(): void

@@ -108,6 +108,11 @@ which requires a dated section for the version below and a matching file in
   the power outlet id; as in Scala and Java, `("NL", "TNM", "E840*6487")` keeps
   `powerOutletId === "E840*6487"` and renders `NL*TNM*EE840*6487`. Found by the new
   render/parse round-trip property.
+- **PHP:** `EvseIdIso::ofParts` and `EvseId::ofParts` no longer drop a leading `E` from the power
+  outlet id; as in Scala, Java, Go and TypeScript, `("NL", "TNM", "E840*6487")` keeps
+  `powerOutletId === 'E840*6487'` and renders `NL*TNM*EE840*6487` (the first `E` is the ISO id
+  type, added by the renderer). This is an observable change: an `E` followed by 31 characters is
+  now rejected, and `E` alone is now accepted (#98).
 
 ### Changed
 
