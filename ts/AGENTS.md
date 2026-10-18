@@ -68,7 +68,7 @@ command below from `ts/`.
   anything else propagates. Mirror all three in `MobilityIdParsers`.
 - Single-valued identifiers are plain strings with a companion: `export type X = StringId<"X">`
   (a brand, for an open set of values) plus
-  `export const X: StringIdCompanion<X> = defineStringId({ isValid, message })` in the same file
+  `export const X: StringIdCompanion<X> = defineStringId({ isValid, message, reason })` in the same file
   (type and value share the name). No wrapper class, no `.value`; add a new one the same way.
   `CountryCode` is the exception: a closed set, so its type is the literal union of the generated
   `ISO_3166_ALPHA2` table and only its companion goes through `defineStringId`.
