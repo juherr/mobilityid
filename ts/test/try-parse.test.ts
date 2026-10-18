@@ -146,6 +146,9 @@ describe("tryParse", () => {
       [EvseIdIso.tryParse("NLDEMOE1"), "format"],
       [EvseIdIso.tryParse("NL*TNM"), "format"],
       [EvseIdIso.tryParse("NLTNM*E84é"), "format"],
+      // A compact id whose power outlet id holds separators has more than two starred segments.
+      [EvseIdIso.tryParse("DEAB7E840*6487*1é"), "format"],
+      [EvseId.tryParse("DEAB7E840*6487*1é"), "format"],
       [EvseIdIso.tryParse(`NL*TNME${"7".repeat(32)}*1`), "format"],
       [EvseIdIso.tryParse(""), "format"],
       [EvseIdDin.tryParse("+4A*810*000"), "phone-country-code"],
@@ -180,6 +183,16 @@ describe("tryParse", () => {
         ),
       ).reason,
     ).toBe("unconvertible");
+    // A valid ISO id whose instance is not an EMI3 one: the conversion fails, not the instance.
+    const isoWithoutC = ContractId.parseStrict(ContractIdStandards.ISO, "NL-TNM-000122045-U");
+    const conversion = thrownBy(() => isoWithoutC.convertTo(ContractIdStandards.EMI3));
+    expect(conversion.reason).toBe("unconvertible");
+    expect(conversion.message).toBe("000122045 is not a valid instance value for EMI3 format");
+    expect(
+      ContractId.parseStrict(ContractIdStandards.ISO, "NL-TNM-C00122045-K")
+        .convertTo(ContractIdStandards.EMI3)
+        .toString(),
+    ).toBe("NL-TNM-C00122045-K");
     expect(thrownBy(() => EvseId.fromParts("ZZ", "TNM", "840")).reason).toBe("country-code");
     expect(thrownBy(() => EvseId.fromParts("NL", "DEMO", "840")).reason).toBe("operator-id");
     expect(thrownBy(() => EvseId.fromParts("NL", "TNM", "84é")).reason).toBe("power-outlet-id");

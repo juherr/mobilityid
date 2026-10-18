@@ -209,6 +209,14 @@ export class ContractId {
     }
 
     if (this.standard === ContractIdStandards.ISO && targetStandard === ContractIdStandards.EMI3) {
+      // A valid ISO instance that is not an EMI3 one (no leading C) makes the conversion fail,
+      // not the instance: fromParts would report it as an invalid instance.
+      if (!parsers.EMI3.instanceRegex.test(this.instanceValue)) {
+        throw new ValidationError(
+          `${this.instanceValue} is not a valid instance value for ${parsers.EMI3.name} format`,
+          "unconvertible",
+        );
+      }
       return ContractId.fromParts(
         ContractIdStandards.EMI3,
         this.countryCode,

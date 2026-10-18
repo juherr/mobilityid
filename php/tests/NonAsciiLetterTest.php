@@ -56,9 +56,9 @@ final class NonAsciiLetterTest extends TestCase
     {
         yield 'ISO EVSE id power outlet' => [static fn (): mixed => EvseIdIso::ofParts(CountryCode::of('FR'), OperatorIdIso::of('55C'), '84400*ſVG*1')];
 
-        yield 'ISO EVSE id country code' => [static fn (): mixed => CountryCode::of('ſe')];
+        yield 'country code' => [static fn (): mixed => CountryCode::of('ſe')];
 
-        yield 'ISO EVSE id operator id' => [static fn (): mixed => OperatorIdIso::of('ıBM')];
+        yield 'ISO operator id' => [static fn (): mixed => OperatorIdIso::of('ıBM')];
 
         yield 'EVSE id power outlet' => [static fn (): mixed => EvseId::ofParts('FR', '55C', '84400*ſVG*1')];
 

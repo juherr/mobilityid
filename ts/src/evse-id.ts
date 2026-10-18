@@ -33,10 +33,11 @@ type FormatError = Readonly<{ priority: number; description: string; reason: Par
 const ISO_COUNTRY_REGEX = /^([A-Za-z]{2})$/;
 const ISO_OPERATOR_REGEX = /^([A-Za-z0-9]{3})$/;
 const ISO_POWER_OUTLET_REGEX = /^([A-Za-z0-9*]{1,31})$/;
-// A first starred segment that is a country and an operator without separator, or a second one
-// that is an operator and the id type without separator: the input mixes the compact and starred
-// forms, so its segments cannot be attributed reliably.
-const ISO_COUNTRY_AND_OPERATOR_REGEX = /^[A-Za-z]{2}[A-Za-z0-9]{3}$/;
+// A first starred segment that starts with a country and an operator without separator, or a
+// second one that starts with an operator and the id type: the input is compact or mixes the
+// compact and starred forms (a power outlet id may hold separators), so its segments cannot be
+// attributed reliably.
+const ISO_COUNTRY_AND_OPERATOR_REGEX = /^[A-Za-z]{2}[A-Za-z0-9]{3}/;
 const ISO_OPERATOR_AND_ID_TYPE_REGEX = /^[A-Za-z0-9]{3}[Ee]/;
 // The E id type is matched case-insensitively like the rest of the id (OCPI CiString, OCHP ABNF);
 // toString() renders it in uppercase.
