@@ -20,7 +20,7 @@
 val mobilityidVersion = sys.env.getOrElse("MOBILITYID_VERSION", sys.error("MOBILITYID_VERSION is required"))
 val smokeRepository = sys.env.getOrElse("SMOKE_REPOSITORY", sys.error("SMOKE_REPOSITORY is required"))
 
-scalaVersion := "3.9.0"
+scalaVersion := "3.10.0"
 crossScalaVersions := Seq("2.13.18", "3.9.0")
 name := "mobilityid-consumer-smoke"
 publish / skip := true
