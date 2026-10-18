@@ -155,6 +155,10 @@ describe("tryParse", () => {
       [EvseIdDin.tryParse("+49*AB7*840"), "operator-id"],
       [EvseIdDin.tryParse("+49*810*00A"), "power-outlet-id"],
       [EvseIdDin.tryParse("+49810000"), "format"],
+      // A digit run too long for its segment may be a missing separator: not attributable.
+      [EvseIdDin.tryParse("+49810*000*00A"), "format"],
+      [EvseIdDin.tryParse("+49*8100001*438"), "format"],
+      [EvseId.tryParse("+49810*000*00A"), "format"],
       // EvseId takes the reason of the format the input looks like.
       [EvseId.tryParse("FR*DEMO*E1"), "operator-id"],
       [EvseId.tryParse("NL*TNM*840*6487"), "id-type"],

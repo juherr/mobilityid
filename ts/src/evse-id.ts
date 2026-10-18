@@ -46,6 +46,9 @@ const ISO_EVSE_REGEX = /^([A-Za-z]{2})\*?([A-Za-z0-9]{3})\*?[Ee]([A-Za-z0-9*]{1,
 const DIN_COUNTRY_REGEX = /^(\+?[0-9]{1,3})$/;
 const DIN_OPERATOR_REGEX = /^([0-9]{3,6})$/;
 const DIN_POWER_OUTLET_REGEX = /^([0-9*]{1,32})$/;
+// More digits than a phone country code or an operator id holds.
+const DIN_COUNTRY_AND_OPERATOR_REGEX = /^\+?[0-9]{4,}$/;
+const DIN_OVERLONG_OPERATOR_REGEX = /^[0-9]{7,}$/;
 const DIN_EVSE_REGEX = /^(\+?[0-9]{1,3})\*([0-9]{3,6})\*([0-9*]{1,32})$/;
 
 abstract class EvseIdBase {
@@ -245,10 +248,19 @@ function diagnoseIso(raw: string): ParseFailureReason {
   return "format";
 }
 
-/** Names the failing segment of a DIN EVSE id, whose separators are mandatory. */
+/**
+ * Names the failing segment of a DIN EVSE id, whose separators are mandatory. A digit run too
+ * long for its segment may be a missing separator (`+49810*000*1`), so it is `format`.
+ */
 function diagnoseDin(raw: string): ParseFailureReason {
   const [country, operator, ...rest] = raw.split("*");
   if (operator === undefined || rest.length === 0) {
+    return "format";
+  }
+  if (
+    DIN_COUNTRY_AND_OPERATOR_REGEX.test(country ?? "") ||
+    DIN_OVERLONG_OPERATOR_REGEX.test(operator)
+  ) {
     return "format";
   }
   const error = validateDin(country ?? "", operator, rest.join("*"));
