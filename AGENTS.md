@@ -131,6 +131,7 @@ Language-specific rules live in each workspace `AGENTS.md`. Across all ports:
 - Model identifiers as immutable value types with validation centralized in one factory/constructor.
 - Two entry points per identifier: a strict one that throws on invalid input and a forgiving one that returns the language's "absent" value.
 - Normalize to uppercase where the domain requires it; validate by regex + semantic checks (country code, lengths, check digits); error messages name the failed field.
+- Uppercase through the port's ASCII-only helper (`asciiUpper` Go, `Ascii.toUpperCase` Java/Scala, `asciiUpperCase` TS; PHP `strtoupper` already is), never Unicode `toUpperCase`/`strings.ToUpper`: they turn `ſ`/`ı` into `S`/`I`, and Scala's follows the JVM locale (`i` → `İ` in Turkish).
 - Keep deterministic precedence when several parsers are tried (ISO before DIN for EVSE IDs).
 - Preserve check-digit behavior exactly; every port ships the same positive and negative fixtures.
 - Comments only for non-obvious intent (algorithm details, standards mapping).
@@ -142,6 +143,7 @@ Before finalizing a change, an agent should:
 1. Run targeted tests for touched suites.
 2. Run the workspace full gate (table above) before finishing.
 3. For domain changes, run the full gate of every workspace you touched and check the ports stay in parity.
+   For a validation or normalization change, run the shared vectors through every entry point: full-string parser, from-parts factory, check-digit functions.
 4. Confirm no accidental API/signature changes.
 5. Keep thrown error behavior backward compatible unless requested.
 
