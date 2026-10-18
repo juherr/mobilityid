@@ -19,7 +19,7 @@ and status are in `README.md`. Run every command below from `go/`.
 
 - `go.mod` declares the oldest Go version supported upstream (`go 1.26.0`), no `toolchain`
   directive; CI runs 1.26.x and 1.27.x with `GOTOOLCHAIN=local`. Bump the directive only when
-  upstream drops the version. `mise.toml` pins the development Go and golangci-lint (2.13).
+  upstream drops the version. `mise.toml` pins the development Go and golangci-lint (2.15).
 - golangci-lint v2 config (`.golangci.yml`): formatters `gofumpt` (superset of `gofmt -s`) and `goimports`;
   `goheader` enforces the license header (block comment, both copyright lines).
 - No third-party dependency; keep it that way unless the domain requires one.
