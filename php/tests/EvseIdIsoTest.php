@@ -141,8 +141,14 @@ final class EvseIdIsoTest extends TestCase
     public function testOfPartsNormalizesPowerOutletIdToUppercase(): void
     {
         $evseId = EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), 'e84a*6b87');
-        self::assertSame('84A*6B87', $evseId->powerOutletId);
-        self::assertSame('NL*TNM*E84A*6B87', (string) $evseId);
+        self::assertSame('E84A*6B87', $evseId->powerOutletId);
+        self::assertSame('NL*TNM*EE84A*6B87', (string) $evseId);
+    }
+
+    public function testOfPartsKeepsALowercaseLeadingEInThePowerOutletId(): void
+    {
+        $evseId = EvseIdIso::ofParts(CountryCode::of('nl'), OperatorIdIso::of('tnm'), 'e840*6487');
+        self::assertSame('NL*TNM*EE840*6487', (string) $evseId);
     }
 
     /**
@@ -174,13 +180,30 @@ final class EvseIdIsoTest extends TestCase
         EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), str_repeat('1', 32));
     }
 
-    public function testOfPartsValidIsoEvseIdWithEPrefix(): void
+    /**
+     * Scala: the `E` id type is added by the renderer, a leading `E` given by parts belongs to the power outlet id.
+     */
+    public function testOfPartsKeepsALeadingEInThePowerOutletId(): void
     {
-        $countryCode = CountryCode::of('NL');
-        $operatorId = OperatorIdIso::of('TNM');
-        $evseId = EvseIdIso::ofParts($countryCode, $operatorId, 'E840*6487');
-        self::assertSame('840*6487', $evseId->powerOutletId);
-        self::assertSame('NL*TNM*E840*6487', (string) $evseId);
+        $evseId = EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), 'E840*6487');
+        self::assertSame('E840*6487', $evseId->powerOutletId);
+        self::assertSame('NL*TNM*EE840*6487', (string) $evseId);
+        self::assertEquals($evseId, EvseIdIso::of((string) $evseId));
+    }
+
+    public function testOfPartsAcceptsALoneEAsThePowerOutletId(): void
+    {
+        $evseId = EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), 'E');
+        self::assertSame('E', $evseId->powerOutletId);
+        self::assertSame('NL*TNM*EE', (string) $evseId);
+        self::assertEquals($evseId, EvseIdIso::of((string) $evseId));
+    }
+
+    public function testOfPartsRejectsALeadingEFollowedByThirtyOneCharacters(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageIs("'EE" . str_repeat('1', 31) . "' is not a valid ISO Power Outlet ID");
+        EvseIdIso::ofParts(CountryCode::of('NL'), OperatorIdIso::of('TNM'), 'E' . str_repeat('1', 31));
     }
 
     public function testOfNormalizesPowerOutletIdToUppercase(): void
