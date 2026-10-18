@@ -17,7 +17,6 @@
 package dev.juherr.mobilityid4j;
 
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -41,7 +40,7 @@ public final class CheckDigitIso {
      * @return computed check digit
      */
     public static char compute(String code) {
-        String normalized = code.toUpperCase(Locale.ROOT);
+        String normalized = Ascii.toUpperCase(code);
         if (normalized.length() != P1S.length) {
             throw new IllegalArgumentException("Code must have a length of " + P1S.length);
         }

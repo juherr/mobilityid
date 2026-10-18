@@ -68,6 +68,28 @@ vp test ContractId
 - PHP-specific docs and design choices: `php/README.md`
 - TypeScript-specific docs and design choices: `ts/README.md`
 
+## EVSE id case and protocol notes
+
+Every port parses ISO EVSE ids case-insensitively, the `E` id type included, and renders them in
+uppercase: `fr*55c*e84400*svg*1` is `FR*55C*E84400*SVG*1`. Only ASCII letters are folded. DIN ids
+are digits only and are unaffected. Protocols disagree on case and length, and the parsers
+follow the most tolerant of them:
+
+- [OCPI 2.3.0](https://github.com/ocpi/ocpi/blob/2.3.0/release/core/mod_locations.asciidoc)
+  types `EVSE.evse_id` as `CiString(48)`, a case-insensitive string. The
+  [CDRs module](https://github.com/ocpi/ocpi/blob/2.3.0/release/core/mod_cdrs.asciidoc) does the
+  same.
+- [OCHP](https://github.com/e-clearing-net/OCHP/blob/master/OCHP.md) writes the id type as the
+  ABNF literal `"E"`. Quoted ABNF strings are case-insensitive
+  ([RFC 5234 §2.3](https://www.rfc-editor.org/rfc/rfc5234#section-2.3)). OCHP allows 31
+  characters after it, as these parsers do.
+- [OICP 2.3](https://github.com/hubject/oicp/blob/master/OICP-2.3/OICP%202.3%20EMP/03_EMP_Data_Types.asciidoc)
+  `EvseIDType` is an uppercase-only pattern with an outlet suffix of up to 30 characters.
+  An id these parsers accept can therefore still be refused by OICP. Render it with
+  `toString()` to get the uppercase form, and check the length where OICP applies.
+
+The libraries do not ship protocol-specific validators.
+
 ## Dependency updates
 
 - Renovate manages GitHub Actions, Gradle, npm, sbt/Scala, and `mise.toml` tool versions (`.github/renovate.json`).

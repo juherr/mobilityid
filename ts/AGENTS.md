@@ -61,12 +61,14 @@ command below from `ts/`.
 - Three parsing entry points per identifier, sharing one validation path: strict
   (`from`/`parseStrict`, throws `ValidationError`, a `TypeError` subclass from
   `parse-result.ts`; never throw a bare `TypeError` for invalid input), `tryParse`
-  (`ParseResult<T>`, frozen `{ ok: true, value } | { ok: false, error }` with the strict message)
+  (`ParseResult<T>`, frozen `{ ok: true, value } | { ok: false, error, reason }` with the strict
+  message and `ValidationError.reason`, a closed `ParseFailureReason` code; adding a code is a
+  breaking change, document it in `README.md`)
   and tolerant `parse` (`T | null`, derived from `tryParse`). Only `ValidationError` is captured;
   anything else propagates. Mirror all three in `MobilityIdParsers`.
 - Single-valued identifiers are plain strings with a companion: `export type X = StringId<"X">`
   (a brand, for an open set of values) plus
-  `export const X: StringIdCompanion<X> = defineStringId({ isValid, message })` in the same file
+  `export const X: StringIdCompanion<X> = defineStringId({ isValid, message, reason })` in the same file
   (type and value share the name). No wrapper class, no `.value`; add a new one the same way.
   `CountryCode` is the exception: a closed set, so its type is the literal union of the generated
   `ISO_3166_ALPHA2` table and only its companion goes through `defineStringId`.

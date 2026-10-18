@@ -50,13 +50,13 @@ object CountryCode {
   lazy val isoCountries: Set[String] = Locale.getISOCountries.toSet
 
   def isValid(countryCode: String): Boolean = countryCode match {
-    case Regex(_) if isoCountries.contains(countryCode.toUpperCase) => true
+    case Regex(_) if isoCountries.contains(Ascii.toUpperCase(countryCode)) => true
     case _ => false
   }
 
   def apply(countryCode: String): CountryCode =
     if (isValid(countryCode)) {
-      CountryCodeImpl(countryCode.toUpperCase)
+      CountryCodeImpl(Ascii.toUpperCase(countryCode))
     } else throw new IllegalArgumentException(
       "Country Code must be valid according to ISO 3166-1 alpha-2"
     )
@@ -79,7 +79,7 @@ object PhoneCountryCode {
 
   def apply(countryCode: String): PhoneCountryCode =
     if (isValid(countryCode)) {
-      PhoneCountryCodeImpl(countryCode.toUpperCase)
+      PhoneCountryCodeImpl(Ascii.toUpperCase(countryCode))
     } else throw new IllegalArgumentException(
       s"phone Country Code must start with a '+' sign and be followed by 1-3 digits. (Was: $countryCode)"
     )
@@ -150,7 +150,7 @@ private object PartyCode {
 
   def apply(id: String): PartyCode =
     if (isValid(id)) {
-      PartyCodeImpl(id.toUpperCase)
+      PartyCodeImpl(Ascii.toUpperCase(id))
     } else throw new IllegalArgumentException(
       "OperatorId must have a length of 3 and be ASCII letters or digits"
     )

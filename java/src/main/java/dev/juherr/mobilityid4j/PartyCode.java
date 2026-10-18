@@ -16,7 +16,6 @@
  */
 package dev.juherr.mobilityid4j;
 
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 record PartyCode(String value) {
@@ -29,7 +28,7 @@ record PartyCode(String value) {
         if (!PATTERN.matcher(value).matches()) {
             throw new IllegalArgumentException("OperatorId must have a length of 3 and be ASCII letters or digits");
         }
-        value = value.toUpperCase(Locale.ROOT);
+        value = Ascii.toUpperCase(value);
     }
 
     @Override

@@ -17,7 +17,6 @@
 package dev.juherr.mobilityid4j;
 
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -35,7 +34,7 @@ public final class CheckDigitDin {
      * @return computed check digit
      */
     public static char compute(String contractId) {
-        String normalized = contractId.toUpperCase(Locale.ROOT);
+        String normalized = Ascii.toUpperCase(contractId);
         int[] values = new int[normalized.length()];
         for (int i = 0; i < normalized.length(); i++) {
             Character c = normalized.charAt(i);

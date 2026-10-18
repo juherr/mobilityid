@@ -19,12 +19,11 @@ package mobilityid
 
 import (
 	"fmt"
-	"strings"
 )
 
 // CalculateISO7064Mod37_2 computes the ISO 7064 Mod 37, 2 check digit for a given input string.
 func CalculateISO7064Mod37_2(code string) (string, error) {
-	upperCode := strings.ToUpper(code)
+	upperCode := asciiUpper(code)
 
 	// Check for character validity
 	for _, r := range upperCode {
@@ -80,7 +79,7 @@ func VerifyISO7064Mod37_2(codeWithCD string) bool {
 	if len(codeWithCD) < 1 {
 		return false
 	}
-	normalized := strings.ToUpper(codeWithCD)
+	normalized := asciiUpper(codeWithCD)
 	codeWithoutCD := normalized[:len(normalized)-1]
 	expectedCD, err := CalculateISO7064Mod37_2(codeWithoutCD)
 	if err != nil {

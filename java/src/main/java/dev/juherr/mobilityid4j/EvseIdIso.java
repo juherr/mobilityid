@@ -16,7 +16,6 @@
  */
 package dev.juherr.mobilityid4j;
 
-import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
@@ -30,13 +29,15 @@ import org.jspecify.annotations.Nullable;
  */
 public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, String powerOutletId) implements EvseId {
     private static final Pattern POWER_OUTLET = Pattern.compile("[A-Za-z0-9*]{1,31}");
-    private static final Pattern FULL = Pattern.compile("^([A-Za-z]{2})\\*?([A-Za-z0-9]{3})\\*?E([A-Za-z0-9*]{1,31})$");
+    // The id type is matched case-insensitively like the rest of the id; toString() renders "E".
+    private static final Pattern FULL =
+            Pattern.compile("^([A-Za-z]{2})\\*?([A-Za-z0-9]{3})\\*?[Ee]([A-Za-z0-9*]{1,31})$");
 
     /**
      * Creates and validates an ISO EVSE identifier.
      */
     public EvseIdIso {
-        var normalizedPower = powerOutletId.toUpperCase(Locale.ROOT);
+        var normalizedPower = Ascii.toUpperCase(powerOutletId);
         if (!POWER_OUTLET.matcher(normalizedPower).matches()) {
             throw new IllegalArgumentException("Invalid powerOutletId for ISO format");
         }
@@ -57,7 +58,7 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
             throw new IllegalArgumentException(error.orElseThrow().description());
         }
         return new EvseIdIso(
-                CountryCode.of(countryCode), OperatorIdIso.of(operatorId), powerOutletId.toUpperCase(Locale.ROOT));
+                CountryCode.of(countryCode), OperatorIdIso.of(operatorId), Ascii.toUpperCase(powerOutletId));
     }
 
     /**
@@ -85,9 +86,9 @@ public record EvseIdIso(CountryCode countryCode, OperatorIdIso operatorId, Strin
         if (countryCode == null || operatorId == null || powerOutletId == null) {
             return Optional.of(new EvseValidationError(1, "Invalid countryCode for ISO or DIN format"));
         }
-        var cc = countryCode.toUpperCase(Locale.ROOT);
-        var op = operatorId.toUpperCase(Locale.ROOT);
-        var po = powerOutletId.toUpperCase(Locale.ROOT);
+        var cc = Ascii.toUpperCase(countryCode);
+        var op = Ascii.toUpperCase(operatorId);
+        var po = Ascii.toUpperCase(powerOutletId);
 
         if (CountryCode.parse(cc) == null) {
             return Optional.of(new EvseValidationError(1, "Invalid countryCode for ISO or DIN format"));

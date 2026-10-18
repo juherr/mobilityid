@@ -176,12 +176,24 @@ describe("parser round trips", () => {
         const id = EvseIdIso.fromParts(cc, operator, powerOutlet);
         expect(EvseIdIso.parseStrict(id.toString())).toStrictEqual(id);
         expect(EvseId.parseStrict(id.toString())).toStrictEqual(id);
-        // Country and operator are case-insensitive; the `E` type marker is not (as in Scala).
-        expect(
-          EvseIdIso.parseStrict(
-            `${cc.toLowerCase()}*${operator.toLowerCase()}*E${id.powerOutletId}`,
-          ),
-        ).toStrictEqual(id);
+      }),
+    );
+  });
+
+  it("EvseIdIso: any casing of the canonical or compact rendering, `E` included, parses alike", () => {
+    const outlet = fc.string({ unit: fc.constantFrom(...ALNUM, "*"), minLength: 1, maxLength: 31 });
+    const evseIdAndCasings = fc
+      .tuple(countryCode, partyCode, outlet)
+      .map(([cc, operator, powerOutlet]) => EvseIdIso.fromParts(cc, operator, powerOutlet))
+      .chain((id) =>
+        fc.tuple(fc.constant(id), mixedCase(id.toString()), mixedCase(id.toCompactString())),
+      );
+    fc.assert(
+      fc.property(evseIdAndCasings, ([id, canonical, compact]) => {
+        expect(EvseIdIso.parseStrict(canonical)).toStrictEqual(id);
+        expect(EvseId.parseStrict(canonical)).toStrictEqual(id);
+        // A power outlet id made of separators only has no compact form, whatever the case.
+        expect(EvseIdIso.parse(compact)).toStrictEqual(EvseIdIso.parse(compact.toUpperCase()));
       }),
     );
   });
@@ -329,7 +341,7 @@ describe("parse, parseStrict and tryParse agree on any input", () => {
             expect(String(result.value)).not.toBe("");
           } else {
             expect(parse(raw)).toBeNull();
-            expect(() => strict(raw)).toThrow(new ValidationError(result.error));
+            expect(() => strict(raw)).toThrow(new ValidationError(result.error, result.reason));
           }
         }),
       );

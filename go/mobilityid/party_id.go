@@ -20,7 +20,6 @@ package mobilityid
 import (
 	"fmt"
 	"regexp"
-	"strings"
 )
 
 // PartyID represents a unique identifier for a party, often used in e-roaming contexts.
@@ -35,7 +34,7 @@ var partyIDRegex = regexp.MustCompile(`^([A-Z]{2})[-*]?([A-Z0-9]{3})$`)
 // NewPartyID creates a new PartyID if the provided value is valid.
 // It returns an error if the value does not conform to the expected format.
 func NewPartyID(id string) (*PartyID, error) {
-	matches := partyIDRegex.FindStringSubmatch(strings.ToUpper(id))
+	matches := partyIDRegex.FindStringSubmatch(asciiUpper(id))
 	if len(matches) != 3 {
 		return nil, fmt.Errorf("%w: '%s'", ErrInvalidPartyID, id)
 	}

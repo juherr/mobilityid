@@ -43,7 +43,7 @@ trait EvseIdFormat[T <: EvseId] {
   def EvseIdRegex: Regex
 
   def apply(countryCode: String, operatorId: String, powerOutletId: String): T =
-    validateAndCreate(countryCode.toUpperCase, operatorId.toUpperCase, powerOutletId.toUpperCase)
+    validateAndCreate(Ascii.toUpperCase(countryCode), Ascii.toUpperCase(operatorId), Ascii.toUpperCase(powerOutletId))
 
   private[mobilityid] def create(countryCode: String, operatorId: String, powerOutletId: String): T
 
@@ -76,7 +76,7 @@ trait EvseIdFormat[T <: EvseId] {
         PowerOutletId,
         Error(3, s"Invalid powerOutletId for $Description format")
       )
-    } yield create(countryCode.toUpperCase, operatorId.toUpperCase, powerOutletId.toUpperCase)
+    } yield create(Ascii.toUpperCase(countryCode), Ascii.toUpperCase(operatorId), Ascii.toUpperCase(powerOutletId))
   }
 
   private[mobilityid] def validateAndCreate(countryCode: String, operatorId: String, powerOutletId: String): T =
@@ -104,9 +104,9 @@ object EvseId {
   def apply(evseId: String): Option[EvseId] =
     evseId match {
       case EvseIdIso.EvseIdRegex(c, o, po) =>
-        Try(EvseIdIso.create(c.toUpperCase, o.toUpperCase, po.toUpperCase)).toOption
+        Try(EvseIdIso.create(Ascii.toUpperCase(c), Ascii.toUpperCase(o), Ascii.toUpperCase(po))).toOption
       case EvseIdDin.EvseIdRegex(c, o, po) =>
-        Try(EvseIdDin.create(c.toUpperCase, o.toUpperCase, po.toUpperCase)).toOption
+        Try(EvseIdDin.create(Ascii.toUpperCase(c), Ascii.toUpperCase(o), Ascii.toUpperCase(po))).toOption
       case _ => None
     }
 
@@ -147,7 +147,9 @@ object EvseIdIso extends EvseIdFormat[EvseIdIso] {
   val OperatorCode = PartyCode.Regex
   val IdType = "E"
   val PowerOutletId = """([A-Za-z0-9\*]{1,31})""".r
-  val EvseIdRegex = s"""$CountryCodeRegex\\*?$OperatorCode\\*?$IdType$PowerOutletId""".r
+  // The id type is matched case-insensitively like the rest of the id (OCPI CiString, OCHP ABNF);
+  // rendering keeps the uppercase IdType.
+  val EvseIdRegex = s"""$CountryCodeRegex\\*?$OperatorCode\\*?[Ee]$PowerOutletId""".r
 
   def apply(cc: CountryCode, o: OperatorIdIso, powerOutletId: String): EvseIdIso =
     EvseIdIsoImpl(cc, o, powerOutletId)

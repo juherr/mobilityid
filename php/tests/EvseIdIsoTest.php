@@ -190,6 +190,25 @@ final class EvseIdIsoTest extends TestCase
         self::assertSame('NL*TNM*EAB12', (string) $evseId);
     }
 
+    // "Accept a lowercase ISO EvseId String, id type separator included"
+    public function testOfAcceptsALowercaseIdTypeSeparator(): void
+    {
+        self::assertSame('FR*55C*E84400*SVG*1', (string) EvseIdIso::of('fr*55c*e84400*svg*1'));
+        self::assertSame('FR*55C*E84400*SVG*1', (string) EvseId::of('fr*55c*e84400*svg*1'));
+    }
+
+    // "Accept a mixed case ISO EvseId String as the same id"
+    public function testOfParsesMixedCaseToTheSameId(): void
+    {
+        self::assertEquals(EvseIdIso::of('FR*55C*E84400*SVG*1'), EvseIdIso::of('Fr*55C*e84400*SvG*1'));
+    }
+
+    // "Accept a lowercase compact ISO EvseId String"
+    public function testOfAcceptsALowercaseCompactString(): void
+    {
+        self::assertSame('FR*55C*E844001', (string) EvseIdIso::of('fr55ce844001'));
+    }
+
     // "Reject EvseIdDin's country/operator codes when creating EvseIdIso"
     public function testOfPartsRejectDinCodesForIso(): void
     {

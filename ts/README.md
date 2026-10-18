@@ -65,6 +65,41 @@ same test fixtures, written for TypeScript.
   MobilityIdParsers.tryParseEvseId("NL*TNM*840*6487").ok; // false, with both ISO and DIN reasons
   ```
 
+  A failure also carries `reason`, a stable `ParseFailureReason` code to count failures or
+  report a broken record on (`error` is for humans and may be reworded). The union is closed: a
+  `switch` over it is exhaustiveness-checkable, and a new code is a breaking change.
+
+  | `reason` | Failing part |
+  |---|---|
+  | `format` | The overall shape, or a part that cannot be told apart reliably |
+  | `country-code` | ISO 3166-1 alpha-2 country code |
+  | `phone-country-code` | DIN phone country code |
+  | `provider-id` | Provider id of a contract id, party code of a party id |
+  | `operator-id` | Operator id of an EVSE id (ISO or DIN) |
+  | `id-type` | ISO EVSE id without the `E` id type |
+  | `power-outlet-id` | Power outlet id of an EVSE id |
+  | `instance` | Instance value of a contract id |
+  | `check-digit` | Check digit of a contract id differs from the computed one |
+  | `unconvertible` | `ContractId.convertTo` cannot reach the requested standard |
+
+  A component code is given only when the failing component is certain. Otherwise the reason
+  is `format`.
+  - Component factories and `fromParts` know the component they validate.
+  - A full EVSE id is split only in its starred form (`FR*DEMO*E1` is `operator-id`,
+    `NL*TNM*840*6487` is `id-type`).
+  - The compact form, or a mix of starred and compact, is `format`.
+  - `EvseId.tryParse` reports the reason of the format the input looks like. A leading letter
+    is ISO, a leading `+` or digit is DIN.
+  - Codes check structure and the standards' tables, never real-world registrations.
+  - `ValidationError.reason` carries the same code for `parseStrict` callers.
+
+  ```ts
+  const result = MobilityIdParsers.tryParseEvseId("FR*DEMO*E1");
+  if (!result.ok) {
+    result.reason; // "operator-id"
+  }
+  ```
+
   `parse` is derived from `tryParse`, so the three entry points share one validation path. Only
   `ValidationError` is turned into a failure or `null`: any other exception (a plain `TypeError`
   from a programming mistake included) is a bug and propagates through all three entry points.

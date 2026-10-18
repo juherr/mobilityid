@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { asciiUpperCase } from "./ascii.js";
 import { checkDigitDin } from "./check-digit-din.js";
 import { checkDigitIso } from "./check-digit-iso.js";
 import { ContractIdStandards, type ContractIdStandard } from "./contract-id-standard.js";
@@ -85,18 +86,20 @@ export class ContractId {
     const parser = parsers[standard];
     const cc = CountryCode.from(countryCode);
     const provider = ProviderId.from(providerId);
-    const normalizedInstance = instanceValue.toUpperCase();
+    const normalizedInstance = asciiUpperCase(instanceValue);
 
     if (!parser.instanceRegex.test(normalizedInstance)) {
       throw new ValidationError(
         `${instanceValue} is not a valid instance value for ${parser.name} format`,
+        "instance",
       );
     }
 
     const computed = parser.computeCheckDigit(`${cc}${provider}${normalizedInstance}`);
-    if (checkDigit !== undefined && checkDigit.toUpperCase() !== computed) {
+    if (checkDigit !== undefined && asciiUpperCase(checkDigit) !== computed) {
       throw new ValidationError(
         `Given check digit '${checkDigit}' is not equal to computed '${computed}'`,
+        "check-digit",
       );
     }
 
@@ -152,6 +155,7 @@ export class ContractId {
       if (!this.instanceValue.startsWith("C0")) {
         throw new ValidationError(
           `${this.toString()} cannot be converted to ${parsers.DIN.name} format`,
+          "unconvertible",
         );
       }
 
@@ -170,6 +174,7 @@ export class ContractId {
       if (!this.instanceValue.startsWith("00")) {
         throw new ValidationError(
           `${this.toString()} cannot be converted to ${parsers.DIN.name} format`,
+          "unconvertible",
         );
       }
 
@@ -204,6 +209,14 @@ export class ContractId {
     }
 
     if (this.standard === ContractIdStandards.ISO && targetStandard === ContractIdStandards.EMI3) {
+      // A valid ISO instance that is not an EMI3 one (no leading C) makes the conversion fail,
+      // not the instance: fromParts would report it as an invalid instance.
+      if (!parsers.EMI3.instanceRegex.test(this.instanceValue)) {
+        throw new ValidationError(
+          `${this.instanceValue} is not a valid instance value for ${parsers.EMI3.name} format`,
+          "unconvertible",
+        );
+      }
       return ContractId.fromParts(
         ContractIdStandards.EMI3,
         this.countryCode,
@@ -215,6 +228,7 @@ export class ContractId {
 
     throw new ValidationError(
       `It is not possible to convert ${this.standard} to ${targetStandard}`,
+      "unconvertible",
     );
   }
 

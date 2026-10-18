@@ -28,6 +28,12 @@ which requires a dated section for the version below and a matching file in
   reason without exceptions.
 - **TypeScript:** `ValidationError`, thrown by every strict factory and parser on invalid input.
   It extends `TypeError`, so existing `instanceof TypeError` checks still hold.
+- **TypeScript:** `tryParse` failures carry a stable, machine-readable `reason` next to the
+  human `error`: a closed `ParseFailureReason` union (`format`, `country-code`,
+  `phone-country-code`, `provider-id`, `operator-id`, `id-type`, `power-outlet-id`, `instance`,
+  `check-digit`, `unconvertible`), also exposed as `ValidationError.reason`. A component code is
+  given only when the failing part can be told apart (the starred EVSE form, a component
+  factory), anything else is `format` (#92). The table is in `ts/README.md`.
 
 - **Repository:** the dependency review of pull requests, Java graph included, is now computed
   from `main` for every pull request (forks and Dependabot included) and published as the
@@ -51,6 +57,28 @@ which requires a dated section for the version below and a matching file in
 
 ### Fixed
 
+- **Scala, Java, TypeScript, PHP:** ISO EVSE ids with a lowercase `e` id type
+  (`fr*55c*e84400*svg*1`) are accepted like the rest of the id already was, and still render
+  `FR*55C*E84400*SVG*1`; they used to be rejected because only that letter was matched
+  case-sensitively (#92). DIN parsing is unchanged.
+- **Scala, Java, TypeScript, Go:** every factory, parser and check-digit function now
+  uppercases ASCII letters only, as PHP already did (#92). This is an observable change:
+  inputs that used to be accepted are now rejected. Lowercase ASCII input, the `e` id type
+  included, stays accepted.
+  - The cause: Unicode case mapping turns some non-ASCII letters into ASCII ones (`ſ` U+017F to
+    `S`, `ı` U+0131 to `I`), and the ports uppercased before validating.
+  - Go accepted such letters everywhere, `FR*55C*E84400*ſVG*1` and the country code `ſe`
+    included. Values that `go/v0.1.0` accepted are therefore rejected.
+  - Scala, Java and TypeScript accepted them only in the from-parts factories and the
+    check-digit functions: `EvseIdIso("FR", "55C", "84400*ſVG*1")`, a contract id instance or
+    check digit in `ı`, `CheckDigitIso("NLſVG000122045")`.
+  - Scala also uppercased with the JVM default locale. Under a Turkish locale, lowercase input
+    containing an `i` (the country code `it`, for example) was rejected, because `i` uppercased
+    to `İ`.
+- **TypeScript:** `EvseIdIso.fromParts` and `EvseIdDin.fromParts` now validate the power outlet
+  id, as `EvseId.fromParts` and the parsers already did; `("+49", "810", "abc")` used to build
+  `+49*810*ABC`. They throw `Invalid powerOutletId for ISO format` (or `DIN`), reason
+  `power-outlet-id`.
 - **TypeScript:** `CountryCode` accepted 30 CLDR region codes that ISO 3166-1 does not assign
   (`EU`, `UK`, `XK`, `SU`, `YU`, ...) because it validated through `Intl.DisplayNames`, whose
   answer also varied with the ICU data of the running Node. The list is now generated from the
@@ -83,6 +111,12 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
+- **Go:** golangci-lint 2.15 in CI and `mise.toml`. 2.13 could not read the export data of
+  Go 1.27.2 (`export data version 5 is greater than maximum supported version 4`), which failed
+  the Go 1.27 lint leg.
+- **PHP:** `phpunit.xml` validates against the PHPUnit XSD installed by Composer instead of
+  `https://schema.phpunit.de/13.3/phpunit.xsd`. That URL stopped serving the schema, so
+  Infection failed in CI. The installed XSD always matches the locked PHPUnit version.
 - **TypeScript (breaking):** `CountryCode` is a literal union of the 249 ISO 3166-1 alpha-2
   codes (exported as `ISO_3166_ALPHA2`) instead of a branded string: `const cc: CountryCode =
   "NL"` now type-checks, `"nl"` no longer does (`CountryCode.from("nl")` still normalizes it).

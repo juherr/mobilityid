@@ -20,7 +20,6 @@ package mobilityid
 import (
 	"fmt"
 	"regexp"
-	"strings"
 )
 
 // ProviderID represents a unique identifier for a Charge Point Operator (CPO) or e-Mobility Service Provider (EMP).
@@ -35,7 +34,7 @@ var partyCodeRegex = regexp.MustCompile(`^[A-Z0-9]{3}$`)
 
 // NewProviderID creates a new ProviderID from a 3-character party code.
 func NewProviderID(id string) (*ProviderID, error) {
-	upperID := strings.ToUpper(id)
+	upperID := asciiUpper(id)
 	if !partyCodeRegex.MatchString(upperID) {
 		return nil, fmt.Errorf("%w: '%s' must be 3 alphanumeric characters", ErrInvalidProviderID, id)
 	}

@@ -37,6 +37,14 @@ class EvseIdTest {
     }
 
     @Test
+    void parsesIsoCaseInsensitivelyIdTypeIncluded() {
+        assertThat(EvseId.parse("fr*55c*e84400*svg*1")).hasToString("FR*55C*E84400*SVG*1");
+        assertThat(EvseIdIso.parse("fr*55c*e84400*svg*1")).hasToString("FR*55C*E84400*SVG*1");
+        assertThat(EvseId.parse("Fr*55C*e84400*SvG*1")).isEqualTo(EvseId.parse("FR*55C*E84400*SVG*1"));
+        assertThat(EvseId.parse("fr55ce844001")).hasToString("FR*55C*E844001");
+    }
+
+    @Test
     void rejectsInvalidIsoStrings() {
         String tooLongOutletId = "77777777777777777777777777777777";
         assertThat(EvseId.parse("DE*AB7*E" + tooLongOutletId)).isNull();

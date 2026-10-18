@@ -48,7 +48,7 @@ func NewEvseIDDIN(id string) (*EvseIDDIN, error) {
 
 // parseEvseIDDIN does the work of NewEvseIDDIN and returns the bare error of the failing part.
 func parseEvseIDDIN(id string) (*EvseIDDIN, error) {
-	matches := evseIDDINRegex.FindStringSubmatch(strings.ToUpper(id))
+	matches := evseIDDINRegex.FindStringSubmatch(asciiUpper(id))
 	if len(matches) != 4 {
 		return nil, errors.New("does not match the DIN format")
 	}
@@ -75,7 +75,7 @@ func parseEvseIDDIN(id string) (*EvseIDDIN, error) {
 
 // NewEvseIDDINFromParts builds a DIN EVSE ID from its components.
 func NewEvseIDDINFromParts(countryCode string, operatorID string, powerOutletID string) (*EvseIDDIN, error) {
-	ccRaw := strings.ToUpper(countryCode)
+	ccRaw := asciiUpper(countryCode)
 	if !strings.HasPrefix(ccRaw, "+") {
 		ccRaw = "+" + ccRaw
 	}
@@ -90,7 +90,7 @@ func NewEvseIDDINFromParts(countryCode string, operatorID string, powerOutletID 
 		return nil, fmt.Errorf("%w: %w", ErrInvalidEvseID, err)
 	}
 
-	normalizedPowerOutletID := strings.ToUpper(powerOutletID)
+	normalizedPowerOutletID := asciiUpper(powerOutletID)
 	if !evseIDDINFromPartsPowerOutletRegex.MatchString(normalizedPowerOutletID) {
 		return nil, fmt.Errorf("%w: invalid power outlet id '%s' for DIN format", ErrInvalidEvseID, powerOutletID)
 	}

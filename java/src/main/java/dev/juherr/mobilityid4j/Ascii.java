@@ -16,8 +16,26 @@
  */
 package dev.juherr.mobilityid4j;
 
+/**
+ * ASCII-only character classes and case folding. {@link String#toUpperCase(java.util.Locale)} also
+ * maps some non-ASCII letters to ASCII ones ('ſ' U+017F to 'S', 'ı' U+0131 to 'I'), which would let
+ * the ASCII-only patterns accept them; every factory and parser normalizes through
+ * {@link #toUpperCase(String)} instead, like the other ports.
+ */
 final class Ascii {
     private Ascii() {}
+
+    static String toUpperCase(String value) {
+        var chars = value.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            chars[i] = toUpperCase(chars[i]);
+        }
+        return new String(chars);
+    }
+
+    static char toUpperCase(char c) {
+        return isLower(c) ? (char) (c - ('a' - 'A')) : c;
+    }
 
     static boolean isUpper(char c) {
         return c >= 'A' && c <= 'Z';

@@ -24,4 +24,5 @@ export const PhoneCountryCode: StringIdCompanion<PhoneCountryCode> = defineStrin
   isValid: (raw) => PHONE_COUNTRY_CODE_REGEX.test(raw),
   message: (raw) =>
     `phone Country Code must start with a '+' sign and be followed by 1-3 digits. (Was: ${raw})`,
+  reason: "phone-country-code",
 });

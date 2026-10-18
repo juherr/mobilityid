@@ -78,7 +78,7 @@ final class EvseIdParser
                . '\*?' // Separator is optional
                . self::getIsoOperatorCodeRegex()
                . '\*?' // Separator is optional
-               . 'E' // IdType
+               . '[Ee]' // IdType, case-insensitive like the rest of the id; rendering uses ID_TYPE
                . self::getIsoPowerOutletIdRegex()
                . '$/';
     }

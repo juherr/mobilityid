@@ -20,7 +20,6 @@ package mobilityid
 import (
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 var dinToNumericValue map[rune]int
@@ -39,7 +38,7 @@ func init() {
 
 // CalculateDIN7064ModXY computes a DIN 7064 Mod X, Y check digit for a given input string.
 func CalculateDIN7064ModXY(code string) (string, error) {
-	upperCode := strings.ToUpper(code)
+	upperCode := asciiUpper(code)
 
 	// Weighted sum of the character values with growing powers of two, as in the reference
 	// (DIN SPEC 91286): a digit d at coefficient c adds d*2^c and advances c by one; a letter
@@ -79,7 +78,7 @@ func VerifyDIN7064ModXY(codeWithCD string) bool {
 	if len(codeWithCD) < 1 {
 		return false
 	}
-	normalized := strings.ToUpper(codeWithCD)
+	normalized := asciiUpper(codeWithCD)
 	codeWithoutCD := normalized[:len(normalized)-1]
 	expectedCD, err := CalculateDIN7064ModXY(codeWithoutCD)
 	if err != nil {

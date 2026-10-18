@@ -48,6 +48,19 @@ class EvseIdSpec extends mutable.Specification {
         EvseId("DE*TNM*ETWL*HEDWIGLAUDIENRING*LS12001*0") must beSome
       }
 
+      "Accept a lowercase ISO EvseId String, id type separator included" in {
+        EvseId("fr*55c*e84400*svg*1").map(_.toString) must beSome("FR*55C*E84400*SVG*1")
+        EvseIdIso("fr*55c*e84400*svg*1").map(_.toString) must beSome("FR*55C*E84400*SVG*1")
+      }
+
+      "Accept a mixed case ISO EvseId String as the same id" in {
+        EvseId("Fr*55C*e84400*SvG*1") must_== EvseId("FR*55C*E84400*SVG*1")
+      }
+
+      "Accept a lowercase compact ISO EvseId String" in {
+        EvseId("fr55ce844001").map(_.toString) must beSome("FR*55C*E844001")
+      }
+
       "Reject an ISO EvseId String that is too long" in {
         val tooLongOutledId = Seq.fill(32)(7).mkString
         EvseId(s"DE*AB7*E$tooLongOutledId") must beNone

@@ -42,7 +42,7 @@ JSON
 npm install --silent --no-audit --no-fund --prefix "${consumer}" "${tarball}"
 
 cat > "${consumer}/smoke.mjs" <<'JS'
-import { ContractId, ContractIdStandards, CountryCode, ISO_3166_ALPHA2, MobilityIdParsers, ValidationError } from "@juherr/mobilityid";
+import { ContractId, ContractIdStandards, CountryCode, EvseIdIso, ISO_3166_ALPHA2, MobilityIdParsers, ValidationError } from "@juherr/mobilityid";
 
 const strict = ContractId.parseStrict(ContractIdStandards.ISO, "NL-TNM-000122045-U");
 if (strict.toCompactString() !== "NLTNM000122045U") throw new Error("unexpected rendering " + strict);
@@ -58,6 +58,19 @@ if (evse === null) throw new Error("expected a DIN EVSE id");
 if (strict.countryCode !== "NL") throw new Error("string identifiers are plain strings at runtime");
 if (ISO_3166_ALPHA2.length !== 249 || !ISO_3166_ALPHA2.includes("NL")) throw new Error("ISO_3166_ALPHA2 is not the 249-code table");
 if (CountryCode.isValid("EU") || !CountryCode.isValid("nl")) throw new Error("CountryCode must accept ISO 3166-1 codes only");
+// ISO EVSE ids are case-insensitive, the `e` id type included, and render in uppercase; only ASCII
+// letters are folded.
+if (String(MobilityIdParsers.parseEvseId("fr*55c*e84400*svg*1")) !== "FR*55C*E84400*SVG*1") throw new Error("lowercase ISO EVSE id not accepted");
+if (MobilityIdParsers.parseEvseId("FR*55C*E84400*\u017fVG*1") !== null) throw new Error("non-ASCII letter accepted");
+// Failures carry a stable reason code, also on the strict parser's ValidationError.
+const failed = MobilityIdParsers.tryParseEvseId("FR*DEMO*E1");
+if (failed.ok || failed.reason !== "operator-id" || !Object.isFrozen(failed)) throw new Error("unexpected reason " + JSON.stringify(failed));
+try {
+  EvseIdIso.parseStrict("NL*TNM*840*6487");
+  throw new Error("strict parser should throw");
+} catch (error) {
+  if (!(error instanceof ValidationError) || error.reason !== "id-type") throw error;
+}
 console.log("@juherr/mobilityid consumer smoke (node): OK", String(strict), String(evse));
 JS
 node "${consumer}/smoke.mjs"
@@ -74,6 +87,7 @@ import {
   OperatorIdIso,
   ProviderId,
   type ContractIdStandard,
+  type ParseFailureReason,
   type ParseResult,
 } from "@juherr/mobilityid";
 
@@ -85,6 +99,29 @@ const notNull: ContractId = ContractId.parse(standard, "NL-TNM-000122045-X");
 // The result union narrows on `ok` without a cast.
 const result: ParseResult<ContractId> = ContractId.tryParse(standard, "NL-TNM-000122045-X");
 const outcome: string = result.ok ? result.value.toString() : result.error;
+// The reason only exists on a failure, and the closed union is exhaustiveness-checkable.
+const reason: ParseFailureReason | undefined = result.ok ? undefined : result.reason;
+// @ts-expect-error a success has no reason
+const noReason = result.ok && result.reason;
+function label(code: ParseFailureReason): string {
+  switch (code) {
+    case "format":
+    case "country-code":
+    case "phone-country-code":
+    case "provider-id":
+    case "operator-id":
+    case "id-type":
+    case "power-outlet-id":
+    case "instance":
+    case "check-digit":
+    case "unconvertible":
+      return code;
+    default: {
+      const unreachable: never = code;
+      return unreachable;
+    }
+  }
+}
 // `CountryCode` is a literal union: a known code type-checks as is, a string does not, and the
 // lowercase form only gets in through the parser.
 const country: CountryCode = CountryCode.from("nl");
@@ -99,7 +136,7 @@ const lowercase: CountryCode = "nl";
 // the same values.
 // @ts-expect-error a ProviderId is not an OperatorIdIso
 const crossed: OperatorIdIso = ProviderId.from("TNM");
-export { strict, tolerant, notNull, outcome, literal, first, widened, unbranded, lowercase, crossed };
+export { strict, tolerant, notNull, outcome, reason, noReason, label, literal, first, widened, unbranded, lowercase, crossed };
 TS
 cat > "${consumer}/tsconfig.json" <<'JSON'
 { "compilerOptions": { "module": "NodeNext", "moduleResolution": "NodeNext", "strict": true, "noEmit": true, "skipLibCheck": false, "types": [] }, "files": ["smoke.ts"] }

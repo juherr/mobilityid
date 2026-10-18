@@ -52,7 +52,7 @@ func NewContractID(id string, standard ContractIDStandard) (*ContractID, error) 
 // parseContractID does the work of NewContractID and returns the bare error of the failing
 // part; NewContractID adds the contract id sentinel and the input once.
 func parseContractID(id string, standard ContractIDStandard) (*ContractID, error) {
-	upperID := strings.ToUpper(id)
+	upperID := asciiUpper(id)
 
 	if len(upperID) < minContractIDLength { // Basic length check
 		return nil, errors.New("too short")

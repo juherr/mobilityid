@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { asciiUpperCase } from "./ascii.js";
 import { ValidationError } from "./parse-result.js";
 
 const values = new Map<string, number>();
@@ -27,7 +28,7 @@ for (let index = 0; index < 26; index += 1) {
 }
 
 export function checkDigitDin(code: string): string {
-  const normalized = code.toUpperCase();
+  const normalized = asciiUpperCase(code);
   const lookup = Array.from(normalized, (char) => {
     const value = values.get(char);
     if (value === undefined) {
