@@ -72,6 +72,9 @@ which requires a dated section for the version below and a matching file in
   - Scala, Java and TypeScript accepted them only in the from-parts factories and the
     check-digit functions: `EvseIdIso("FR", "55C", "84400*ſVG*1")`, a contract id instance or
     check digit in `ı`, `CheckDigitIso("NLſVG000122045")`.
+  - Scala also uppercased with the JVM default locale. Under a Turkish locale, lowercase input
+    containing an `i` (the country code `it`, for example) was rejected, because `i` uppercased
+    to `İ`.
 - **TypeScript:** `EvseIdIso.fromParts` and `EvseIdDin.fromParts` now validate the power outlet
   id, as `EvseId.fromParts` and the parsers already did; `("+49", "810", "abc")` used to build
   `+49*810*ABC`. They throw `Invalid powerOutletId for ISO format` (or `DIN`), reason
@@ -108,6 +111,12 @@ which requires a dated section for the version below and a matching file in
 
 ### Changed
 
+- **Go:** golangci-lint 2.15 in CI and `mise.toml`. 2.13 could not read the export data of
+  Go 1.27.2 (`export data version 5 is greater than maximum supported version 4`), which failed
+  the Go 1.27 lint leg.
+- **PHP:** `phpunit.xml` validates against the PHPUnit XSD installed by Composer instead of
+  `https://schema.phpunit.de/13.3/phpunit.xsd`. That URL stopped serving the schema, so
+  Infection failed in CI. The installed XSD always matches the locked PHPUnit version.
 - **TypeScript (breaking):** `CountryCode` is a literal union of the 249 ISO 3166-1 alpha-2
   codes (exported as `ISO_3166_ALPHA2`) instead of a branded string: `const cc: CountryCode =
   "NL"` now type-checks, `"nl"` no longer does (`CountryCode.from("nl")` still normalizes it).
