@@ -2,7 +2,7 @@
 // isolated repository, the way a downstream application would. Driven by scripts/verify-consumer.sh.
 plugins {
   application
-  kotlin("jvm") version "2.4.20"
+  kotlin("jvm") version "2.4.21"
 }
 
 val mobilityidVersion = providers.gradleProperty("mobilityidVersion")
