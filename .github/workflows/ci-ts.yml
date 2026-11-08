@@ -121,7 +121,7 @@ jobs:
       - name: Setup Vite+ and Node 24
         uses: voidzero-dev/setup-vp@250f29ce396baf5e8f24498e17c0dfdebabc26eb # v1
         with:
-          node-version: "24"
+          node-version: "26"
           cache: true
           working-directory: ts
 
